@@ -7,7 +7,7 @@ recorded-by: port
 evidence: .github/workflows/guard.yml
 ---
 
-# A merge made through GitHub fails this fork's publish guard
+# GitHub merges stamped addresses the publish guard rejected (fixed by ragesaq-003)
 
 Observed on 2026-11-24. Port merged PR #1 through the GitHub API at the
 operator's direction, with the merge method `merge`. GitHub stamped the merge
