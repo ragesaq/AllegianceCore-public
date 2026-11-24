@@ -65,6 +65,21 @@
         "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-24"
+    },
+    {
+      "id": "ragesaq-003",
+      "title": "Let merges made through GitHub pass the publish guard",
+      "owner": "ragesaq",
+      "status": "review",
+      "needs": [
+        "ragesaq-001"
+      ],
+      "next": "Guard change and memory/mem-005 update on branch port/guard-github-merges, awaiting cross-family review and then ragesaq's merge. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
+      "links": [
+        "memory/mem-005-github-merge-identity.md",
+        "scripts/publish-guard.sh"
+      ],
+      "updated": "2026-11-24"
     }
   ]
 }
