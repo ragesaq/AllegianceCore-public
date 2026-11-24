@@ -4,6 +4,20 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-24: PR #1 HyperBench enrollment, round 2
+
+- Record: [summary](patch-review-2026-11-24T09-03-37Z-allegiancecore-enrollment-r2/summary.md), [receipt](patch-review-2026-11-24T09-03-37Z-allegiancecore-enrollment-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged (it holds no machine paths or email addresses).
+- Reviewed head `3ca08ba`, tree `fcfe4df`, the delta `f4d61cb..3ca08ba` that answers round 1. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Both round 1 findings are closed, and the reviewer agrees with the dispute of finding 2
+  (`README.md:160` names the x64 downloads). The redacted round 1 summary differs from the original by exactly the
+  one stated line. Two informational notes, no action taken:
+  - The `AGENTS.md` Git Bash line assumes a CRLF checkout, which is what `core.autocrlf=true` gives; Git Bash parses
+    the script either way.
+  - The round 1 receipt's earlier-attempt row rests on the first attempt's own folder on the reviewing host, not on
+    the files of the run it records.
+
 ## 2026-11-24: PR #1 HyperBench enrollment, round 1
 
 - Record: [summary](patch-review-2026-11-24T08-42-33Z-allegiancecore-enrollment-r1/summary.md), [receipt](patch-review-2026-11-24T08-42-33Z-allegiancecore-enrollment-r1/receipt.md)
