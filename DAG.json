@@ -40,11 +40,11 @@
       "id": "ragesaq-001",
       "title": "Enroll the fork in HyperBench (memory, work map, knowledge, recall)",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-000"
       ],
-      "next": "Enrollment PR #1 (branch port/hyperbench-enrollment): cross-family review round 1 at f4d61cb gave PASS-WITH-CONDITIONS, and round 2 at 3ca08ba gave PASS with both findings closed (.hyperreview/README.md). Round 3 at 1122bce gave PASS on Socket's noreply identity (memory/mem-004). Waits on ragesaq's merge. After it merges, the first session here flips this node to done with its ledger line.",
+      "next": "Done: PR #1 merged on 2026-11-24 as merge commit daaeaf9 (reviewed head c9082ec, cross-family review rounds 1 to 3, final PASS). Merged by Port at ragesaq's direction; memory/mem-005 records the merge commit's identity.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/1",
         "STARTER_MANIFEST.json",
