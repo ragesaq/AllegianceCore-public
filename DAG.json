@@ -44,8 +44,9 @@
       "needs": [
         "ragesaq-000"
       ],
-      "next": "Enrollment PR (branch port/hyperbench-enrollment) awaits a cross-family review and the operator's merge. After it merges, the first session here flips this node to done with its ledger line.",
+      "next": "Enrollment PR #1 (branch port/hyperbench-enrollment) awaits a cross-family review and the operator's merge. After it merges, the first session here flips this node to done with its ledger line.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/1",
         "STARTER_MANIFEST.json",
         "AGENTS.md"
       ],
