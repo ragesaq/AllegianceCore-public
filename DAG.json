@@ -90,7 +90,7 @@
       "needs": [
         "ragesaq-003"
       ],
-      "next": "PR #4 (stacked on PR #3): the guard fails when it cannot list its range, and guard.yml scans new and force-pushed branches from their merge base with the default branch (memory/mem-007). Awaits cross-family review, then ragesaq's merge after PR #2 and PR #3.",
+      "next": "PR #4 (stacked on PR #3): the guard fails when it cannot list its range, and guard.yml scans new and force-pushed branches from their merge base with the default branch (memory/mem-007). Cross-family review round 1 at 6528bdb gave PASS with three low findings, now fixed (.hyperreview/README.md); the fix awaits a round 2 delta review, then the operator's approval to merge after PR #2 and PR #3.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/4",
         "memory/mem-007-guard-range.md",
