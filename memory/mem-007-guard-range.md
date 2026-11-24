@@ -24,4 +24,11 @@ commit `daaeaf9` (memory/mem-005) is one.
 ragesaq-004 fixes both. The guard fails when it cannot list the range. The
 workflow scans a new branch, or a force-pushed branch, from its merge base
 with the default branch. A force-push that rewrites the default branch from a
-tip no ref holds fails closed. The pre-push hook already used the merge base.
+tip no ref holds fails closed, and so does a branch that shares no history
+with the default branch: a range from its root commit would leave that root
+commit out. Only the push that creates the default branch is still scanned
+from the root commit. The pre-push hook already used the merge base.
+
+The workflow passes the branch name to the script through `env:`. Pasted in
+as `${{ github.ref }}`, a branch named with `$(...)` ran its command (the
+review of PR #4 found it, and the test harness confirmed it).
