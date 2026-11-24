@@ -98,6 +98,21 @@
         ".github/workflows/guard.yml"
       ],
       "updated": "2026-11-24"
+    },
+    {
+      "id": "ragesaq-005",
+      "title": "Agents merge and change settings only with the operator's approval",
+      "owner": "ragesaq",
+      "status": "review",
+      "needs": [
+        "ragesaq-004"
+      ],
+      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Awaits cross-family review, then the operator's approval to merge after PR #2, #3 and #4.",
+      "links": [
+        "AGENTS.md",
+        "memory/mem-008-merge-and-settings-approval.md"
+      ],
+      "updated": "2026-11-24"
     }
   ]
 }

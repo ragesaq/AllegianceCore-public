@@ -48,8 +48,14 @@ commit `e98c3185`, HyperBench 0.43.0). [`STARTER_MANIFEST.json`](STARTER_MANIFES
    native `file:line` citations, both HUD styles, a build with 0 warnings, failing-first tests. Put VR work behind
    clear seams (new projects and files where possible, small hooks into existing code). HyperBench files stay out of
    any PR to upstream.
-4. **Changes land by pull request; the operator merges.** Assistants never merge and never change repository
-   settings or access.
+4. **Changes land by pull request. An agent merges a pull request only with the operator's approval for that
+   pull request**, given in a comment on it or in a working session. Approval of one pull request does not carry
+   over to another. Before merging, check that the head is the one that was reviewed and approved, and stop if it
+   has moved. After merging, record the merge commit on the work map node (`memory/mem-005` says how GitHub
+   stamps it). **Repository settings and access change only with the operator's explicit approval of that
+   change**, such as turning off one workflow. Make only the approved change and record it in the Issue or pull
+   request where it was asked for. Without that approval, never change settings, access, branch protection or
+   visibility (`memory/mem-008`).
 
 ## Start of a session
 
@@ -133,7 +139,7 @@ commit `e98c3185`, HyperBench 0.43.0). [`STARTER_MANIFEST.json`](STARTER_MANIFES
 
 | Actor | GitHub identity | Git author | Role |
 |---|---|---|---|
-| **ragesaq** | [@ragesaq](https://github.com/ragesaq) | `ragesaq` | Operator. Owns the fork. Decisions, approvals, merges, headset testing |
+| **ragesaq** | [@ragesaq](https://github.com/ragesaq) | `ragesaq` | Operator. Owns the fork. Decisions, approvals (of merges and of settings changes), headset testing |
 | **Port** | `psiclawops-port` | `Port <323790917+psiclawops-port@users.noreply.github.com>` | Claude Code agent on the operator's Windows host |
 | **Socket** | `psiclawops-socket` | `Socket <323031202+psiclawops-socket@users.noreply.github.com>` | Codex agent on the same host |
 
