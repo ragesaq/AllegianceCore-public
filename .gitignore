@@ -63,3 +63,12 @@ TestResults/
 
 # allegiance-mcp bot worker stderr, written to the launch directory (tools/allegiance-mcp/WorkerRpc.cs)
 err.worker-*.log
+
+# HyperBench recall cache (word index, vectors, model copy); per working tree, never committed
+/.hyperbench-recall/
+
+# Review wrapper state and logs hold machine paths; only summary.md and receipt.md are committed
+/.hyperreview/*/run_state.json
+/.hyperreview/*/launcher.txt
+/.hyperreview/*/launcher.out
+/.hyperreview/*/activity.log
