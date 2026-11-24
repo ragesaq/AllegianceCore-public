@@ -1,0 +1,24 @@
+# HyperBench-owned paths in this fork (see AGENTS.md): LF in every checkout, whatever core.autocrlf says.
+# Files are named one by one because docs/ and tools/ also hold upstream files, which keep their own bytes.
+/AGENTS.md text eol=lf
+/GROUND_RULES.md text eol=lf
+/STARTER_MANIFEST.json text eol=lf
+/DAG.json text eol=lf
+/LEDGER.md text eol=lf
+/RECALL_GLOSSARY.json text eol=lf
+/docs/MEMORY_PROTOCOL.md text eol=lf
+/docs/KNOWLEDGE_NOTES.md text eol=lf
+/docs/RECALL.md text eol=lf
+/tools/check_map.py text eol=lf
+/tools/check_memory.py text eol=lf
+/tools/check_node_loss.py text eol=lf
+/tools/hb_modules.py text eol=lf
+/tools/check_data_boundary.py text eol=lf
+/tools/check_tracking.py text eol=lf
+/tools/recall.py text eol=lf
+/tools/recall_vectors.py text eol=lf
+/memory/** text eol=lf
+/knowledge/** text eol=lf
+/.claude/** text eol=lf
+/.hyperreview/** text eol=lf
+/.gitattributes text eol=lf
