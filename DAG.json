@@ -109,6 +109,7 @@
       ],
       "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Awaits cross-family review, then the operator's approval to merge after PR #2, #3 and #4.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/5",
         "AGENTS.md",
         "memory/mem-008-merge-and-settings-approval.md"
       ],
