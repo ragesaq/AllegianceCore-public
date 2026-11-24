@@ -4,6 +4,19 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-24: PR #1 HyperBench enrollment, round 3
+
+- Record: [summary](patch-review-2026-11-24T09-17-24Z-allegiancecore-enrollment-r3/summary.md), [receipt](patch-review-2026-11-24T09-17-24Z-allegiancecore-enrollment-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `1122bce`, tree `76d3e5f`, the delta `3ca08ba..1122bce`: the round 2 record and the operator's
+  decision that Socket commits here with its GitHub noreply address. Reviewer `deepseek-v4.1-flash` via OpenCode Go
+  at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Round 1 note 3 is closed: Socket's address is in GitHub's noreply form and passes the publish
+  guard's identity rule. The committed round 2 summary is byte-identical to the original. Two informational notes,
+  no action taken:
+  - `memory/mem-004` cites the working session for the decision, as `mem-001` and `mem-002` do.
+  - The account id in Socket's address was read from GitHub's user search; the reviewer had no network check.
+
 ## 2026-11-24: PR #1 HyperBench enrollment, round 2
 
 - Record: [summary](patch-review-2026-11-24T09-03-37Z-allegiancecore-enrollment-r2/summary.md), [receipt](patch-review-2026-11-24T09-03-37Z-allegiancecore-enrollment-r2/receipt.md)
