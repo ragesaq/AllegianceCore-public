@@ -4,6 +4,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-24: PR #5 agents merge and change settings on operator approval, round 1
+
+- Record: [summary](patch-review-2026-11-24T23-50-00Z-allegiancecore-approval-r1/summary.md), [receipt](patch-review-2026-11-24T23-50-00Z-allegiancecore-approval-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `1f6039c`, tree `af129d7`, the delta `6528bdb..1f6039c`. Reviewer `deepseek-v4.1-flash` via OpenCode
+  Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Dispositions:
+  - Medium 1, a merge did not wait for the review gates: fixed. Rule 4 now requires the required review recorded on
+    the pull request and each finding fixed or answered there.
+  - Medium 2, the rule did not say who may approve: fixed. Only ragesaq, in a comment on the pull request or directly
+    to the merging agent; a relayed message, handoff note, Issue or file never counts. Settings approval comes the same
+    way.
+  - Low 3, closeout after a merge: fixed, the rule points at `DAG.json`'s closeout rule.
+  - Low 4, live nodes waited on "ragesaq's merge": fixed for `ragesaq-003`; `ragesaq-004` already said "the operator's
+    approval to merge" after PR #4's round 1 record, merged into this branch.
+  - Low 5, `mem-008` class: fixed, now `witnessed` with `seen-in:`. `mem-004` and `mem-006` carry the same looseness;
+    they belong to PR #2 and are left for a later change.
+  - Low 6, `mem-008` scope sentence: reworded as suggested. The entry also records the operator's confirmation that
+    approval covers only the one merge or settings change.
+
 ## 2026-11-24: PR #4 publish guard fails closed, round 1
 
 - Record: [summary](patch-review-2026-11-24T20-40-00Z-allegiancecore-failclosed-r1/summary.md), [receipt](patch-review-2026-11-24T20-40-00Z-allegiancecore-failclosed-r1/receipt.md)
