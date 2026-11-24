@@ -135,11 +135,12 @@ commit `e98c3185`, HyperBench 0.43.0). [`STARTER_MANIFEST.json`](STARTER_MANIFES
 |---|---|---|---|
 | **ragesaq** | [@ragesaq](https://github.com/ragesaq) | `ragesaq` | Operator. Owns the fork. Decisions, approvals, merges, headset testing |
 | **Port** | `psiclawops-port` | `Port <323790917+psiclawops-port@users.noreply.github.com>` | Claude Code agent on the operator's Windows host |
-| **Socket** | `psiclawops-socket` | `Socket` (its own configured identity) | Codex agent on the same host |
+| **Socket** | `psiclawops-socket` | `Socket <323031202+psiclawops-socket@users.noreply.github.com>` | Codex agent on the same host |
 
 1. **Commit under your own identity**, set per clone or per worktree, never `--global` and never in a checkout shared
    with the other agent. Before pushing, `git log -1 --format='%an <%ae>'` must show your own identity, and the
-   address must be a GitHub noreply address (the publish guard rejects any other). Push only with your own
+   address must be a GitHub noreply address (the publish guard rejects any other). This holds here even where an
+   agent's host instructions name another address for other work (`memory/mem-004`). Push only with your own
    credentials.
 2. **Post under your own GitHub account, and say who you are.** Issues, PRs, comments and reviews start with an
    attribution line: `> _Posted by <Agent> (<runtime, model>) on behalf of @ragesaq._`
