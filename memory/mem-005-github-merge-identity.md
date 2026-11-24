@@ -20,7 +20,12 @@ Actions run in this fork. They did not run on PR #1: it showed no checks.
 
 The committer address alone fails the guard, so this holds for any merge,
 squash or rebase made in GitHub, whoever does it. The account address is now
-in the public history of `master`, which is never rewritten here. Ways to
-avoid it next time are an operator decision: a merge made locally with noreply
-identities and pushed, or "keep my email address private" on the merging
-account (which covers the author but not GitHub's committer address).
+in the public history of `master`, which is never rewritten here.
+
+The operator decided on 2026-11-24, in the working session, to keep merging
+through GitHub and accept that the guard fails on merge pushes ("Accept it").
+The alternatives declined were a merge made locally with noreply identities
+and pushed, and "keep my email address private" on the merging account (which
+covers the author but not GitHub's committer address). So a red guard run on a
+push to `master` that consists only of a GitHub merge commit is expected. The
+guard still applies, and must pass, on every pull request's own commits.
