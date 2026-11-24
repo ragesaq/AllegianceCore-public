@@ -17,8 +17,11 @@ per-eye rendering can attach, and what the first milestone should be.
   OpenXR has no Direct3D 9 binding, and a modified C++ client can play on the public FreeAllegiance lobby only once
   upstream accepts the change. The full survey, the lobby checks and the community sources are in
   [AllegianceVR's survey note](https://github.com/ragesaq/AllegianceVR/blob/port/allegiancecore-decision/knowledge/openxr-port-survey.md).
-- What informed it *(derived from the README and the code read below)*: this client renders through OpenGL with
-  shaders and builds for 64-bit, and OpenXR has an OpenGL binding. Risks kept with the decision: one upstream author
+- What informed it *(derived from the `MonoGame.Framework.DesktopGL` package in
+  `src/Allegiance.ClientCore.MonoGame/Allegiance.ClientCore.MonoGame.csproj:25`, the release targets
+  `linux-x64`, `win-x64` and `osx-arm64` in `.github/workflows/release.yml:38`, the README's x64 downloads
+  (`README.md:160`) and the code read below)*: this client renders through OpenGL with shaders and builds for
+  64-bit, and OpenXR has an OpenGL binding. Risks kept with the decision: one upstream author
   and a fast-moving codebase; MonoGame does not expose its GL context or textures publicly; and AllegianceCore runs
   its own server and lobby, so VR play here does not reach the FreeAllegiance lobby.
 

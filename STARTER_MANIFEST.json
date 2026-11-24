@@ -36,6 +36,7 @@
     "knowledge/README.md",
     "memory/CANARY.md",
     "memory/README.md",
+    "memory/mem-001-hyperbench-scope.md",
     "tools/check_data_boundary.py",
     "tools/check_map.py",
     "tools/check_node_loss.py"

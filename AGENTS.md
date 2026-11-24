@@ -158,6 +158,7 @@ python tools\recall.py check-glossary
 ```
 
 Before pushing, run the upstream publish guard on the new commits: `bash scripts/publish-guard.sh origin/master HEAD`.
+On Windows, run it from Git Bash: the script is checked out with CRLF there, and WSL's `bash` cannot parse it.
 
 Expected warnings, which do not fail the checks: `check_map.py` reports `line-endings` as a floor module that this
 repo skips, and `check_memory.py` reports that a `recorded-by` name has no `people/` folder. `memory/mem-001` explains
