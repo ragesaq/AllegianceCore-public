@@ -3,7 +3,7 @@
 **Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
 **Status:** in progress (milestone 1 built, reviewed and seen in the headset as a floating screen, as designed;
-milestone 2 approved by ragesaq, in progress)
+milestone 2 merged and seen in the headset: the 3-D scene in stereo; the sky and the HUD need follow-up work)
 
 ## What this answers
 
@@ -135,7 +135,7 @@ as `DAG.json` node `ragesaq-007`.
 
 ## Milestone 2 as built (branch `port/vr-m2`)
 
-Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
+Built on `port/vr-m2`, stacked on `port/vr-m1`; merged as `2572cdd`. Seen in the headset: see the next section.
 
 - **The scene runs in a loop, not a new method.** The plan above said to move the scene pass into a method. As built,
   `Draw` resolves the camera once and wraps the scene, from the bloom redirect to the end of post-processing, in
@@ -185,6 +185,27 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   frames per 5 s, 75 per second after halving (the trap below), against a 13.33 ms display period, with no `[vr]`
   error. Whether the picture is upright, the eyes converge and the HUD sits right is for the headset.
 
+## Milestone 2 in the headset (2026-11-25)
+
+ragesaq wore the headset with a build whose source matches `master` at `e73b573` (`--training --vr`, SteamVR/OpenXR
+2.18.4, lighthouse headset). The session reached Focused with two 3708x3564 eye swapchains *(observed 2026-11-25 by
+ragesaq, reported in Port's working session with a screenshot of SteamVR's VR View, which is not committed)*.
+
+- **Upright:** yes. The row flip is right.
+- **3-D objects:** correct, with good distance and scale. One game unit as one metre feels right.
+- **Background:** the starfield, planets and galaxies show double vision; the eyes do not converge on them. Cause
+  *(derived from the code, not yet confirmed by a fix)*: `NativeSkyPlacement.SkyProjection` rebuilds the sky's
+  projection from the scene projection's `M11` and `M22` only, which gives a symmetric frustum. An eye's projection
+  is off-centre (`M31` and `M32` are not zero), so each eye's sky is shifted sideways, the two in opposite
+  directions. All three sky tiers call it. Node `ragesaq-009`.
+- **HUD:** shown, and fixed ahead of the seat as designed, but close and large. At 2 m and sized to the game
+  camera's default 50° vertical field of view it is about 3.3 m by 1.9 m, about 80° by 50° of view. Some elements
+  appear twice, overlapping, at different slants. The flat HUD at 1280x720 does not overlap *(observed in a flat
+  replay frame)*. Whether the second copies are 3-D cockpit screens drawn in the eye passes is not checked yet.
+  Node `ragesaq-010`.
+- **Capture:** ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which is on its own quad
+  layer *(observed by ragesaq)*. Node `ragesaq-011`.
+
 ## Traps
 
 - **Replay frames are byte-identical only when the capture has the GPU to itself.** A recapture run beside a stereo
@@ -200,6 +221,10 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   which keeps the flat choice for a fallback and leaves the headset in charge *(derived from the code)*.
 - **Creating an OpenXR instance starts SteamVR** when it is not running *(observed 2026-11)*. A probe run is not free
   of side effects on the desktop.
+- **A projection rebuilt from its field of view loses an eye's off-centre terms.** `NativeSkyPlacement.SkyProjection`
+  keeps only `M11` and `M22` of the scene projection, so in an eye pass the sky is drawn with a symmetric frustum
+  and does not converge *(observed in the headset 2026-11-25; cause derived from the code)*. In a pass that runs per
+  eye, keep `M31` and `M32` and replace only the depth terms.
 - **A far plane recovered from a float projection is about 0.1% off.** `M43 / (M33 + 1)` at near 0.5 m and far
   10 000 m gives 10 010.8 *(observed 2026-11 in a unit test)*: `M33 + 1` cancels to a few ulps. Copy `M33` and `M43`
   instead of rebuilding a projection from recovered planes.
@@ -222,7 +247,7 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 ## Open questions
 
 - What one game unit is in metres. It sets the eye separation and the cockpit scale. *(Answered above: one metre,
-  derived; the headset test will show whether the cockpit scale feels right.)*
+  derived; the scale felt right in the headset, 2026-11-25.)*
 - Whether bloom, HDR output and FSR can run per eye at headset frame rates, or must be cut in VR mode.
 - Whether upstream would accept a VR head if it stays behind a clear seam.
 
@@ -248,3 +273,6 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 - 2026-11-25: PR #9's first `build-and-test` against `master` failed in a step the public log does not show; the
   rerun on the records-only head `c19e5ce` passed, and PR #9 merged as `2572cdd`. ragesaq's headset test of
   milestone 2 is next.
+- 2026-11-25: ragesaq's headset test of milestone 2: upright, and the 3-D scene converges at the right scale. The
+  sky does not converge, the HUD is close and large with doubled elements, and capture misses the HUD: nodes
+  `ragesaq-009` to `ragesaq-011`.

@@ -120,11 +120,11 @@
       "id": "ragesaq-007",
       "title": "VR milestone 2: per-eye rendering with the head pose",
       "owner": "ragesaq",
-      "status": "waiting",
+      "status": "done",
       "needs": [
         "ragesaq-002"
       ],
-      "next": "Merged: PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9) merged on 2026-11-25 as merge commit 2572cdd, at reviewed head c19e5ce, which adds only records after the closeout review at 36989f0. Cross-family rounds 1 and 2 and the closeout passed (.hyperreview/README.md); build-and-test green on c19e5ce. ragesaq approved the merge in Port's working session (\"PR #7, then PR #9\"). Waits on: ragesaq's headset test of a master build with --vr: the picture upright, the eyes converge and the scale feels right, the HUD's edges clean and over what it marks, the HUD fixed ahead of the seat. Then: done, with its ledger line (commit 2572cdd); a failed check becomes a new node.",
+      "next": "Done: PR #9 merged on 2026-11-25 as merge commit 2572cdd. ragesaq's headset test the same day passed for the picture upright, the 3-D scene's convergence and scale, and the HUD fixed ahead of the seat. It found the sky not converging (ragesaq-009), the HUD too close and large with doubled elements (ragesaq-010), and the HUD missing from ragesaq's OpenXR capture tool (ragesaq-011) (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\").",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/9",
         "knowledge/vr-client-survey.md"
@@ -140,6 +140,42 @@
       "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. PR #9 merged as 2572cdd, so it no longer waits on that. Waits on: ragesaq's go-ahead; then a branch port/vr-eye-target-fallback from master.",
       "links": [
         ".hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md",
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-009",
+      "title": "VR: draw the sky at infinity in each eye",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [],
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): the starfield, planets and galaxies do not converge. NativeSkyPlacement.SkyProjection rebuilds a symmetric projection from M11 and M22 and drops an eye projection's off-centre terms M31 and M32. Fix: when M31 or M32 is not zero, copy the scene projection and replace only its depth terms with the sky's 1 to 80000 range, so the flat path keeps its bytes; a unit test with an off-centre projection; flat replay frames unchanged; a headset check. Owner of the work: Port. Waits on: ragesaq's go-ahead; then a branch port/vr-sky-stereo from master.",
+      "links": [
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-010",
+      "title": "VR: a usable HUD in the headset",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [],
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): the HUD quad is close and large (about 80 by 50 degrees of view at 2 m) and some elements appear twice, overlapping, at different slants. The quad is sized to the game camera's field of view so its markers sit over what they mark; shrinking or moving it breaks that. First step: check in the flat game's cockpit view whether the doubled elements are 3-D cockpit screens. Then a design choice for ragesaq: keep one quad, or draw the markers per eye in the scene and put the panels on a smaller, farther quad. Owner of the work: Port. Waits on: ragesaq's choice.",
+      "links": [
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-011",
+      "title": "VR: the HUD in OpenXR capture",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [],
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submits as its own quad layer. Options: the capture composites quad layers (a change in the capture tool), or the game gains an option to draw the HUD into the eye images (depends on ragesaq-010's design). Waits on: ragesaq's choice of where to fix it.",
+      "links": [
         "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-25"
