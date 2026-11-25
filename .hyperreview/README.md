@@ -4,6 +4,53 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 4
+
+- Record: [summary](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/summary.md), [receipt](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `326f945`, tree `0c76fc1`, the delta `309921b..326f945`, in a standalone clone. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All three round 3 findings are closed. Rule 4 read cold: "including these" reads as
+  examples, and the new Issue sentence adds a place to record, not authority. Dispositions:
+  - Low 1, the PR body named only the `line-endings` warning: fixed in the body, which now names both warnings
+    `memory/mem-001` documents.
+  - Low 2, the round 3 summary calls its range three commits: it holds four, with PR #4's merged `610ef8c`. Fixed in
+    the round 3 entry above; the summary stays the reviewer's text.
+- Both fixes are records only, made in this record commit, so no round 5 runs: `AGENTS.md`'s gates let prose-only
+  changes skip review.
+
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 3
+
+- Record: [summary](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/summary.md), [receipt](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `309921b`, tree `8cd1ba7`, the delta `e4e159a..309921b`, in a standalone clone: three authored
+  commits plus PR #4's `610ef8c`, which the merge brought in (the summary says three; round 4 below). Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All five round 2 findings are closed (New 5 in substance). Dispositions:
+  - Low 1, the PR body said `check_map.py` passes without saying where: fixed in the body. The checks ran in the
+    author's clone, where `origin/master` exists; in a clone without it, the node-loss gate cannot compare.
+  - Low 2, "any build and test gate they name" had no clear antecedent and left out committing the summary: fixed.
+    Rule 4 now says "each build and test gate listed there passes" and that the review result "is committed and
+    posted as a comment on the pull request".
+  - Low 3, the round 2 receipt's read-only check had no evidence: fixed. That receipt now says the check was
+    author-attested and the listing was not kept; this round's receipt records the listing's digest.
+
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 2
+
+- Record: [summary](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/summary.md), [receipt](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `e4e159a`, tree `1241018`, PR #5's own delta `0b032b7..e4e159a`, in a standalone clone. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All six round 1 findings are closed. Dispositions:
+  - New 1 (medium), "recorded on the pull request" was ambiguous and PR #5 had no review comment: fixed. Rule 4 now
+    says the result is posted as a comment on the pull request. The round 1 comment was posted after this review's
+    snapshot was taken, and this round's is posted too.
+  - New 2, the PR body described the round 1 text: fixed, the body now describes the rule as it stands.
+  - New 3, `mem-004` was said to belong to PR #2: fixed, it merged with PR #1.
+  - New 4, `mem-008`'s `seen-in:` named no runtime: fixed, it names Port (Claude Code, Claude Opus 5.5).
+  - New 5, the gloss of "the review gates" left out the build gate: fixed, rule 4 now says any build and test gate
+    the section names must pass as well.
+
 ## 2026-11-25: PR #4 publish guard fails closed, round 2
 
 - Record: [summary](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/summary.md), [receipt](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/receipt.md)
@@ -17,6 +64,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
     mode in the upstream author's script, which is outside this change.
   - Low 2, the round 1 records overstated the fixes: fixed. The round 1 entry, its receipt, `mem-007` and
     `ragesaq-004` now say Low 1 was fixed in part and Low 2 declined.
+
+## 2026-11-24: PR #5 agents merge and change settings on operator approval, round 1
+
+- Record: [summary](patch-review-2026-11-24T23-50-00Z-allegiancecore-approval-r1/summary.md), [receipt](patch-review-2026-11-24T23-50-00Z-allegiancecore-approval-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `1f6039c`, tree `af129d7`, the delta `6528bdb..1f6039c`. Reviewer `deepseek-v4.1-flash` via OpenCode
+  Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Dispositions:
+  - Medium 1, a merge did not wait for the review gates: fixed. Rule 4 now requires the required review recorded on
+    the pull request and each finding fixed or answered there.
+  - Medium 2, the rule did not say who may approve: fixed. Only ragesaq, in a comment on the pull request or directly
+    to the merging agent; a relayed message, handoff note, Issue or file never counts. Settings approval comes the same
+    way.
+  - Low 3, closeout after a merge: fixed, the rule points at `DAG.json`'s closeout rule.
+  - Low 4, live nodes waited on "ragesaq's merge": fixed for `ragesaq-003`; `ragesaq-004` already said "the operator's
+    approval to merge" after PR #4's round 1 record, merged into this branch.
+  - Low 5, `mem-008` class: fixed, now `witnessed` with `seen-in:`. `mem-006` (PR #2) and `mem-004` (merged with
+    PR #1) carry the same looseness; they are left for a later change.
+  - Low 6, `mem-008` scope sentence: reworded as suggested. The entry also records the operator's confirmation that
+    approval covers only the one merge or settings change.
 
 ## 2026-11-24: PR #4 publish guard fails closed, round 1
 

@@ -74,7 +74,7 @@
       "needs": [
         "ragesaq-001"
       ],
-      "next": "PR #3 (stacked on PR #2): guard change and memory/mem-005 update. Cross-family review round 1 at 2ca409f gave PASS (.hyperreview/README.md); its one low finding is fixed. Waits on ragesaq's merge, after PR #2. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
+      "next": "PR #3 (stacked on PR #2): guard change and memory/mem-005 update. Cross-family review round 1 at 2ca409f gave PASS (.hyperreview/README.md); its one low finding is fixed. Waits on the operator's approval to merge, after PR #2. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/3",
         "memory/mem-005-github-merge-identity.md",
@@ -96,6 +96,22 @@
         "memory/mem-007-guard-range.md",
         "scripts/publish-guard.sh",
         ".github/workflows/guard.yml"
+      ],
+      "updated": "2026-11-24"
+    },
+    {
+      "id": "ragesaq-005",
+      "title": "Agents merge and change settings only with the operator's approval",
+      "owner": "ragesaq",
+      "status": "review",
+      "needs": [
+        "ragesaq-004"
+      ],
+      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 to 4 (1f6039c, e4e159a, 309921b, 326f945) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); round 4's two findings were record fixes. Waits on the operator's approval to merge after PR #2, #3 and #4.",
+      "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/5",
+        "AGENTS.md",
+        "memory/mem-008-merge-and-settings-approval.md"
       ],
       "updated": "2026-11-24"
     }
