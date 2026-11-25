@@ -135,6 +135,31 @@ Not decided; a proposal for ragesaq to accept or change when the work starts.
 
 The in-game binding screen is a later step, scoped with ragesaq.
 
+## First PR as built
+
+ragesaq said to start the first PR *(Port's working session 2026-11-25: "Start it")*. What it does, and where it
+departs from the proposal above *(observed in the code and its tests, `JoystickBindingResolverTests`)*:
+
+- Every connected joystick is read each update. Each one is matched to a device profile by a case-insensitive part
+  of its name (`DisplayName`), not by its SDL index. The proposal named `Identifier` as well; the name alone is used
+  because a player can read it and write it in a file, and the name is enough to tell ragesaq's three devices apart
+  *(derived)*.
+- A profile binds the yaw, pitch, roll and throttle roles to an axis and an invert flag, and the Fire, FireMissile
+  and Booster commands to buttons. Hats are not bound yet.
+- Built-in profiles: the VKB Gunfighter stick (X yaw, Y pitch, twist roll, as native's role order gives; trigger
+  stages 0 and 1 fire and missile, as `defaultinputmap.mdl` gives) and the VPC throttle (left lever, axis 3,
+  inverted). Stick X as yaw follows native; whether ragesaq wants X as roll is for the flight test.
+- A player file `joystick.json` beside `player.json` adds profiles that are tried before the built-in ones. A file
+  that cannot be parsed is logged and ignored.
+- When two bound devices give the same role, the lower SDL index wins; a command is held when any device holds it.
+- A device that matches no profile while another does is ignored, so pedals feed nothing unless a profile binds them.
+  When no device matches, the first joystick is read with the port's earlier layout (`DjiFpvRc3`, fire button 1,
+  booster button 2), as before this change.
+- A button already held when its device appears counts only after it is released once, so latched switches and a hat
+  that reads held while idle do not fire. This also applies to the earlier layout, which is the one change in
+  behaviour for a setup that worked before.
+- The log names each device and whether it uses a profile, the earlier layout, or is ignored.
+
 ## Open questions
 
 - Which button pair is which rotary encoder on the throttle.
@@ -152,6 +177,8 @@ The in-game binding screen is a later step, scoped with ragesaq.
   (table above); a few throttle axes and rest states remain open.
 - 2026-11-25 — a second capture, one throttle control at a time with ragesaq naming the order, mapped every throttle
   axis and settled the rest states; only the encoders' button pairs remain open.
+- 2026-11-25 — the first binding PR: per-device profiles by name, built-in stick and throttle profiles, a player
+  file, the earlier layout as the fallback, held buttons ignored until released.
 
 ## Boundary
 

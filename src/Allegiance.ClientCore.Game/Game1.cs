@@ -1189,7 +1189,14 @@ public sealed partial class Game1 : Game
     // post-Translate exactly like the mouse virtual-joystick above, and
     // joystick buttons OR into stateM alongside the keyboard (never replace).
     private readonly JoystickFlightController _joystickFlight = new();
-    private int? _joystickIndex;   // cached connected joystick index (hotplug re-resolved each frame)
+    // Per-device joystick bindings (split HOTAS): every connected joystick is
+    // sampled once per update and resolved against the device profiles.
+    private JoystickBindingResolver? _joystickBindings;
+    private readonly List<JoystickDeviceSample> _joystickSamples = new();
+    private readonly Dictionary<int, bool[]> _joystickButtonBuffers = new();
+    private long _joystickFrameTicks = -1;
+    private JoystickBindingFrame _joystickFrame;
+    private string _joystickDevicesLogged = "";
 
     // P499 — Bluetooth gamepad flight input (Android head + any desktop pad).
     // The MonoGame GamePad analog sticks are converted to role axes by the pure

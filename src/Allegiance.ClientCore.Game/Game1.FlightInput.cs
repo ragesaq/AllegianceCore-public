@@ -34,40 +34,79 @@ public sealed partial class Game1
 
 
     /// <summary>
-    /// P380 — the live MonoGame joystick state for the first connected joystick,
-    /// or <c>null</c> when no joystick is connected (or the platform reports the
-    /// joystick API unsupported). The connected index is cached so the cheap
-    /// path is a single <c>GetState</c>; if it stops reporting connected
-    /// (hot-unplug), the cache is dropped and the list re-scanned so a
-    /// reconnect is picked up next frame. When it returns <c>null</c> the
-    /// keyboard-only flight path is untouched.
+    /// The bound joystick input for this update: every connected joystick is
+    /// sampled and resolved against the device profiles (<see cref="JoystickBindingResolver"/>),
+    /// once per update however many callers ask. <c>AnyBound</c> is false when no
+    /// joystick is connected (or the platform reports the joystick API unsupported);
+    /// the keyboard-only flight path is then untouched. Hot-plug is picked up on the
+    /// next update because the device list is re-read each time.
     /// </summary>
-    private JoystickState? CurrentJoystickState()
+    private JoystickBindingFrame CurrentJoystickFrame(GameTime gameTime)
     {
-        if (!Joystick.IsSupported)
-        {
-            _joystickIndex = null;
-            return null;
-        }
+        long ticks = gameTime.TotalGameTime.Ticks;
+        if (ticks == _joystickFrameTicks) return _joystickFrame;
+        _joystickFrameTicks = ticks;
+        _joystickBindings ??= new JoystickBindingResolver(LoadJoystickProfiles());
 
-        if (_joystickIndex is int cached && Joystick.GetCapabilities(cached).IsConnected)
-            return Joystick.GetState(cached);
-
-        _joystickIndex = null;
-        for (int i = 0; i <= Math.Max(Joystick.LastConnectedIndex, 0); i++)
+        _joystickSamples.Clear();
+        if (Joystick.IsSupported)
         {
-            if (Joystick.GetCapabilities(i).IsConnected)
+            for (int i = 0; i <= Math.Max(Joystick.LastConnectedIndex, 0); i++)
             {
-                _joystickIndex = i;
-                return Joystick.GetState(i);
+                var caps = Joystick.GetCapabilities(i);
+                if (!caps.IsConnected) continue;
+                var st = Joystick.GetState(i);
+                if (!st.IsConnected) continue;
+                if (!_joystickButtonBuffers.TryGetValue(i, out var pressed) || pressed.Length != st.Buttons.Length)
+                    _joystickButtonBuffers[i] = pressed = new bool[st.Buttons.Length];
+                for (int b = 0; b < pressed.Length; b++)
+                    pressed[b] = st.Buttons[b] == ButtonState.Pressed;
+                _joystickSamples.Add(new JoystickDeviceSample(i, caps.DisplayName ?? "", st.Axes, pressed));
             }
         }
-        return null;
+        LogJoystickDevicesIfChanged();
+        _joystickFrame = _joystickBindings.Resolve(_joystickSamples);
+        return _joystickFrame;
     }
 
-    /// <summary>P380 — whether the given joystick button is currently pressed.</summary>
-    private static bool IsJoystickButtonPressed(ButtonState[] buttons, int index) =>
-        index >= 0 && index < buttons.Length && buttons[index] == ButtonState.Pressed;
+    /// <summary>The player's device profiles from <see cref="JoystickBindingFile.FileName"/>
+    /// beside the other client settings, or none when the file is absent or unreadable.</summary>
+    private static IReadOnlyList<JoystickDeviceProfile> LoadJoystickProfiles()
+    {
+        string path = System.IO.Path.Combine(PlayerConfig.DirectoryPath, JoystickBindingFile.FileName);
+        try
+        {
+            if (!System.IO.File.Exists(path)) return [];
+            var (profiles, error) = JoystickBindingFile.Parse(System.IO.File.ReadAllText(path));
+            if (error is not null)
+                Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} ignored: {error}");
+            return profiles;
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} not read: {e.Message}");
+            return [];
+        }
+    }
+
+    private void LogJoystickDevicesIfChanged()
+    {
+        if (_joystickSamples.Count == 0 && _joystickDevicesLogged.Length == 0) return;
+        var sb = new StringBuilder();
+        foreach (var s in _joystickSamples)
+            sb.Append(s.Index).Append(':').Append(s.Name).Append(';');
+        string now = sb.ToString();
+        if (now == _joystickDevicesLogged) return;
+        _joystickDevicesLogged = now;
+        bool anyMatched = _joystickSamples.Any(s => _joystickBindings!.ProfileFor(s.Name) is not null);
+        foreach (var s in _joystickSamples)
+        {
+            string use = _joystickBindings!.ProfileFor(s.Name) is { } p ? $"profile \"{p.Match}\""
+                : anyMatched ? "no profile, ignored"
+                : s.Index == _joystickSamples[0].Index ? "no profile, legacy layout" : "no profile, ignored";
+            Console.WriteLine($"[monogame] joystick {s.Index} \"{s.Name}\": {use}");
+        }
+    }
 
     // ── P499 — Bluetooth gamepad input (Android head + any desktop pad) ──────
     //
@@ -1745,7 +1784,7 @@ public sealed partial class Game1
         // unclaimed by every other binding (W/S/Q/E/Arrows/A/D/Shift/R/M/V/T/G/
         // Enter/Back/Escape/Space/K/C/N/OemTilde/[ /] all taken) and the common
         // flight-sim missile-fire convention (the brief's own suggestion).
-        bool missileCtrl = ActionDown(ks, "FireMissile");
+        bool missileCtrl = ActionDown(ks, "FireMissile") || CurrentJoystickFrame(gameTime).FireMissile;
         if (!composing && missileCtrl)
         {
             long nowMs = ClientNowMilliseconds;
@@ -2052,11 +2091,10 @@ public sealed partial class Game1
         bool joystickTurnActive = false;
         if (!composing)
         {
-            var jsState = CurrentJoystickState();
-            if (jsState is { IsConnected: true } jst)
+            var jsFrame = CurrentJoystickFrame(gameTime);
+            if (jsFrame.AnyBound)
             {
-                var raw = JoystickFlightController.GatherRoles(jst.Axes, JoystickAxisLayout.DjiFpvRc3);
-                var jsr = _joystickFlight.Update(raw);
+                var jsr = _joystickFlight.Update(jsFrame.Axes);
                 cmd = cmd with
                 {
                     Controls = cmd.Controls with
@@ -2078,9 +2116,9 @@ public sealed partial class Game1
                 // IsTrekKeyDown(TK_*, bReadKeyboard) unified check): fire uses the
                 // same group/single-weapon selection as the Space key, booster the
                 // same AfterburnerButton bit as Shift.
-                if (IsJoystickButtonPressed(jst.Buttons, JoystickFlightController.FireButton))
+                if (jsFrame.Fire)
                     cmd = cmd with { StateM = cmd.StateM | FlightInput.FireContribution(true, _groupFire, _selectedMount) };
-                if (IsJoystickButtonPressed(jst.Buttons, JoystickFlightController.BoosterButton))
+                if (jsFrame.Booster)
                     cmd = cmd with { StateM = cmd.StateM | ShipControlState.AfterburnerButton };
             }
         }
