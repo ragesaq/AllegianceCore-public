@@ -1,8 +1,9 @@
 # VR client survey: where OpenXR attaches to the AllegianceCore client
 
-**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-24 · **Review by:** 2027-02-24
+**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
-**Status:** in progress
+**Status:** in progress (milestone 1 built, reviewed and seen in the headset as a floating screen, as designed;
+milestone 2 approved by ragesaq, in progress)
 
 ## What this answers
 
@@ -62,9 +63,95 @@ runtime is present, the game runs flat. This proves the binding, the texture acc
 fallback before any stereo work. Milestone 2 is per-eye rendering of the scene with the head pose, and the HUD on its
 own quad.
 
+## Milestone 1 as built (branch `port/vr-m1`)
+
+- **Binding: Silk.NET.OpenXR 2.23.0 with Silk.NET.OpenXR.Extensions.KHR 2.23.0.** *(decided 2026-11 by ragesaq,
+  approving milestone 1 as proposed in the working session of 2026-11-24: "restore the NuGet packages, including
+  Silk.NET.OpenXR")* Rejected: hand-written P/Invoke over the loader (more code to review for the same calls), and
+  Khronos' `OpenXR.Loader` NuGet package as the native loader *(observed 2026-11: unlisted, last version 1.0.10)*.
+- **No native loader ships with the game.** Silk.NET carries managed bindings only *(observed 2026-11)*. The loader is
+  found through `ALLEGIANCE_OPENXR_LOADER` (a path to `openxr_loader.dll`, for example the one SteamVR installs in its
+  `bin\win64` folder), then the default library search (`src/Allegiance.ClientCore.Vr/VrOptions.cs`).
+- **Where it attaches** *(derived from the code)*: the OpenXR code is a library, `src/Allegiance.ClientCore.Vr`,
+  referenced only by the desktop head. The shared game library holds just the `IVrFrameSink` seam
+  (`src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`), the host that attaches, feeds and drops a sink
+  (`Vr/VrFrameSinkHost.cs`) and `Game1.Vr.cs`. `EndDraw` hands the finished back buffer to
+  the sink just before the window present (`Game1.GpuBudget.cs`). This differs from the proposal above: it copies
+  framebuffer 0 rather than redirecting `Draw` into an offscreen target, so `Draw` is unchanged.
+- **Opt-in and fallback** *(derived from the code)*: `--vr` or `ALLEGIANCE_VR=1`. OpenXR starts on the first frame, on
+  the render thread with MonoGame's context current. A loader, runtime, headset, OpenXR or GL failure, or the session
+  exiting or being lost, logs `[vr] running flat: <reason>` and tears OpenXR down. Any other exception from the
+  presenter is caught by the game, logged as `[vr] frame sink threw, running flat: ...` and handled the same way.
+  Either way the game runs flat: the fixed time step and the inactive-window sleep come back, but vsync stays off
+  until restart, so the flat game can run uncapped. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
+  *(observed 2026-11)*.
+- **The copy** *(observed 2026-11, harness readback)*: `glBlitFramebuffer` from framebuffer 0 into a
+  `GL_SRGB8_ALPHA8` swapchain image, with `GL_FRAMEBUFFER_SRGB` and the scissor test off, keeps every byte (the clear
+  colour read back unchanged) and keeps the orientation with no flip (each corner colour where OpenGL's bottom-up
+  layout puts it, which is OpenXR's OpenGL convention). Whether the colours look right in the headset is for the
+  headset test.
+- **Live runtime** *(observed 2026-11, SteamVR/OpenXR 2.18.4, a Lighthouse headset, not worn)*: the runtime offers
+  `XR_KHR_opengl_enable` and asks for OpenGL 4.3 or newer. A bare MonoGame DesktopGL window with the presenter went
+  Idle, Ready, Synchronized, Visible; it submitted every frame for 12 s without a failure and recreated the swapchain
+  when the back buffer was resized. The display period was 13.33 ms, and the loop ran at 74.7 frames per second once
+  started.
+- **Full game** *(observed 2026-11, the same runtime and headset, not worn; FreeAllegiance Artwork at `4a60aa6` and the
+  AllegianceCore sky pack at `5272ded`; `--training --vr`, 45 s)*: the session went Idle, Ready, Synchronized,
+  Visible with a 1280x720 swapchain and no fall to flat. The training mission ran (weapons fire, a warp transit). In
+  flight the loop ran at about 75 frames per second against the 13.33 ms period, with 90 % of frames under 13.8 ms.
+  The same build without `--vr` ran at 60 frames per second on a 60 Hz monitor with vsync. The warning
+  `ASR sound unavailable` appears with and without `--vr`, so VR does not cause it.
+- **In the headset** *(observed 2026-11-25 by ragesaq)*: the game shows as a floating screen, not a VR view. That is
+  milestone 1's design: one flat image on a quad layer, with no stereo and no head tracking. The image was upright
+  and not mirrored, its colours matched the flat game, and motion looked smooth *(observed 2026-11-25 by ragesaq)*.
+  After closing SteamVR, ragesaq saw the desktop window unchanged and the game still running. The run's log shows
+  the session Focused to the end and the headset's pacing in every window up to the game's own shutdown, with no
+  Stopping state and no `[vr] running flat` line *(observed)*. So the fall to flat did not happen in that run; SteamVR
+  likely stayed running while the game held its session *(inferred, not checked)*. The live fall to flat is still
+  unobserved.
+- **Frame cost with vsync off** *(observed 2026-11-25, flat, `ALLEGIANCE_NOVSYNC=1`, 1280x720 scene, 35 s)*: about
+  3.6 ms per real frame in steady windows (the `[frameprof]` means halved, see Traps). It was noisy: two windows had a
+  p95 of 23 ms. A stereo frame at headset resolution has several times as many pixels, so this does not yet show
+  whether the post-processing fits at the headset rate *(derived)*.
+
+## Milestone 2 (approved 2026-11-25)
+
+Per-eye rendering of the scene with the head pose *(decided 2026-11 by ragesaq: "yes, start milestone 2", in
+Port's working session; approving the plan below as proposed)*. Rejected: stopping at the floating screen. Tracked
+as `DAG.json` node `ragesaq-007`.
+
+- Each frame, `xrLocateViews` gives the two eye poses and fields of view. The scene is drawn once per eye into a
+  per-eye swapchain and submitted as a projection layer instead of the quad.
+- `Draw` advances state each time it runs: the HUD frame stamp, camera smoothing, the sound listener and telemetry
+  (`Game1.Rendering.cs:262-440`) *(read)*. So the camera is resolved once per frame as now, and only the scene pass
+  repeats per eye *(derived)*. That needs the inline scene pass (`Game1.Rendering.cs`, from the camera to the
+  composite) moved into a method that takes view, projection, eye and target, with the flat path unchanged.
+- The head pose adds to the ship's camera in the cockpit view; the eye offset needs the size of a game unit in metres
+  (an open question below).
+- The HUD goes on its own quad layer in front of the player.
+- Checks: the flat frame must stay the same before and after the move, compared frame by frame with the deterministic
+  headless replay and capture mode; the per-eye frame time measured in the headset before the post-processing is
+  kept or cut.
+
+## Traps
+
+- **MonoGame sleeps 20 ms per frame while its window is not active** (`Game.InactiveSleepTime`). In VR that halves the
+  headset frame rate whenever another window has focus *(observed 2026-11: 45 frames per second against a 75 Hz
+  period, 74.7 with the sleep off)*. VR mode sets it to zero.
+- **Saved benchmark settings turn vsync back on at startup** (`InitializeBenchmark`, then `ApplyBenchmarkSettings`).
+  Vsync and the headset's frame wait would then both pace the loop. `ApplyBenchmarkSettings` calls `KeepVrPacing()`,
+  which keeps the flat choice for a fallback and leaves the headset in charge *(derived from the code)*.
+- **Creating an OpenXR instance starts SteamVR** when it is not running *(observed 2026-11)*. A probe run is not free
+  of side effects on the desktop.
+- **The `[frameprof]` line counts each flight frame twice.** `UpdateSessionPerformance` runs from `UpdateBenchmark`
+  (`Game1.Benchmark.cs:285` on `master`) and again from `UpdateFrame` (`Game1.FlightInput.cs:221`) *(read)*. Once
+  the player is in flight, the line reports twice the real frame count and half the real mean frame time. The
+  second interval is near zero, so its p95 is about the 90th percentile of real frames *(derived, and matched by
+  a flat run: 600 counted frames per 5 s with vsync at 60 Hz)*. Halve the count before comparing it with the headset
+  rate. The fix belongs in its own PR, not in VR work.
+
 ## Open questions
 
-- Which C# OpenXR binding to use. Not yet compared.
 - What one game unit is in metres. It sets the eye separation and the cockpit scale.
 - Whether bloom, HDR output and FSR can run per eye at headset frame rates, or must be cut in VR mode.
 - Whether upstream would accept a VR head if it stays behind a clear seam.
@@ -73,3 +160,9 @@ own quad.
 
 - 2026-11-24: read the client at upstream `b76d6c0`. ragesaq decided to build the VR client here and enroll the
   fork. No code changed.
+- 2026-11-24: ragesaq approved milestone 1 as proposed. Built on `port/vr-m1` from `master` at `47e720b`; probed
+  against SteamVR with a harness. The headset test by ragesaq is still to come.
+- 2026-11-24: ragesaq approved cloning the FreeAllegiance Artwork and the AllegianceCore sky pack. The full game ran
+  in the SteamVR session at the headset rate (above); the headset is still to be worn.
+- 2026-11-25: ragesaq wore the headset and saw a floating screen rather than a VR view. Port proposed milestone 2
+  (above), and ragesaq approved it as proposed.
