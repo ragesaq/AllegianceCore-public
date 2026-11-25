@@ -60,7 +60,7 @@
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Moved here from ragesaq/AllegianceVR (its node ragesaq-002) on 2026-11-24. Read knowledge/vr-client-survey.md, then agree milestone 1 with the operator: the existing flat frame shown in the headset on an OpenXR quad layer, with a flat fallback when no runtime is present.",
+      "next": "Milestone 1 is built on branch port/vr-m1 (knowledge/vr-client-survey.md, section \"Milestone 1 as built\"): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure. Next: the cross-family review on its pull request, then ragesaq's headset test with ALLEGIANCE_OPENXR_LOADER set to SteamVR's openxr_loader.dll. After that, agree milestone 2 (per-eye rendering with the head pose, the HUD on its own quad).",
       "links": [
         "knowledge/vr-client-survey.md"
       ],

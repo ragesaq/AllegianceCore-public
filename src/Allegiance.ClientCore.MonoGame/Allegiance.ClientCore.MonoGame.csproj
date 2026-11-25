@@ -31,6 +31,7 @@
          session; the head adds the desktop entry point + content build. -->
     <ProjectReference Include="../Allegiance.ClientCore.Game/Allegiance.ClientCore.Game.csproj" />
     <ProjectReference Include="../Allegiance.Update/Allegiance.Update.csproj" />
+    <ProjectReference Include="../Allegiance.ClientCore.Vr/Allegiance.ClientCore.Vr.csproj" />
   </ItemGroup>
 
   <ItemGroup>

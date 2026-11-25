@@ -10,6 +10,8 @@ CrashLog.Install();
 // P944: isolate the untrusted OS argument BEFORE any parser or updater runs.
 var joinLaunch = Allegiance.ClientCore.Session.JoinLinkLaunch.Take(ref args);
 bool startTraining = Game1.LaunchOptions.TakeTrainingSwitch(ref args);
+// VR milestone 1: --vr or ALLEGIANCE_VR=1 shows the flat frame in an OpenXR headset.
+var vrOptions = Allegiance.ClientCore.Vr.VrOptions.Take(ref args, Environment.GetEnvironmentVariable);
 
 // P889 — bounded per-machine sizing calibration. Parsed (and stripped) before
 // the benchmark parser so `--calibrate small` never looks like a benchmark.
@@ -737,6 +739,11 @@ CrashLog.SetMode(opts.DirectHost is { Length: > 0 } ? $"connect:{opts.DirectHost
 var pendingMacLinks = new System.Collections.Concurrent.ConcurrentQueue<string>();
 using var macJoinLinks = MacJoinLinkEvents.Install(pendingMacLinks.Enqueue);
 using var game = new Game1(opts);
+if (vrOptions.Enabled)
+{
+    Console.WriteLine("[vr] VR requested; OpenXR starts on the first frame and falls back to flat if it cannot");
+    game.VrFrameSink = new Allegiance.ClientCore.Vr.OpenXrQuadPresenter(vrOptions);
+}
 game.Activated += (_, _) => { while (pendingMacLinks.TryDequeue(out var url)) game.ReceiveJoinLink(url); };
 game.Exiting += (_, _) => macJoinLinks?.Dispose();
 // SDL may deliver the Apple Event after Activated; drain it every frame as well.

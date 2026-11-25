@@ -13,6 +13,7 @@
     <Project Path="src/Allegiance.ClientCore.Game/Allegiance.ClientCore.Game.csproj" />
     <Project Path="src/Allegiance.ClientCore.Game.Browser/Allegiance.ClientCore.Game.Browser.csproj" />
     <Project Path="src/Allegiance.ClientCore.MonoGame/Allegiance.ClientCore.MonoGame.csproj" />
+    <Project Path="src/Allegiance.ClientCore.Vr/Allegiance.ClientCore.Vr.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Allegiance.ClientCore.Browser.Tests/Allegiance.ClientCore.Browser.Tests.csproj" />

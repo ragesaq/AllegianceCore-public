@@ -2,7 +2,7 @@
 
 **Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-24 · **Review by:** 2027-02-24
 
-**Status:** in progress
+**Status:** in progress (milestone 1 built, awaiting review and the headset test)
 
 ## What this answers
 
@@ -62,9 +62,49 @@ runtime is present, the game runs flat. This proves the binding, the texture acc
 fallback before any stereo work. Milestone 2 is per-eye rendering of the scene with the head pose, and the HUD on its
 own quad.
 
+## Milestone 1 as built (branch `port/vr-m1`)
+
+- **Binding: Silk.NET.OpenXR 2.23.0 with Silk.NET.OpenXR.Extensions.KHR 2.23.0.** *(decided 2026-11 by ragesaq,
+  approving milestone 1 as proposed in the working session of 2026-11-24: "restore the NuGet packages, including
+  Silk.NET.OpenXR")* Rejected: hand-written P/Invoke over the loader (more code to review for the same calls), and
+  Khronos' `OpenXR.Loader` NuGet package as the native loader *(observed 2026-11: unlisted, last version 1.0.10)*.
+- **No native loader ships with the game.** Silk.NET carries managed bindings only *(observed 2026-11)*. The loader is
+  found through `ALLEGIANCE_OPENXR_LOADER` (a path to `openxr_loader.dll`, for example the one SteamVR installs in its
+  `bin\win64` folder), then the default library search (`src/Allegiance.ClientCore.Vr/VrOptions.cs`).
+- **Where it attaches** *(derived from the code)*: the OpenXR code is a library, `src/Allegiance.ClientCore.Vr`,
+  referenced only by the desktop head. The shared game library holds just the `IVrFrameSink` seam
+  (`src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`) and `Game1.Vr.cs`. `EndDraw` hands the finished back buffer to
+  the sink just before the window present (`Game1.GpuBudget.cs`). This differs from the proposal above: it copies
+  framebuffer 0 rather than redirecting `Draw` into an offscreen target, so `Draw` is unchanged.
+- **Opt-in and fallback** *(derived from the code)*: `--vr` or `ALLEGIANCE_VR=1`. OpenXR starts on the first frame, on
+  the render thread with MonoGame's context current. Any failure (no loader, no runtime, no headset, an OpenXR or GL
+  error, the session exiting or being lost) logs `[vr] running flat: <reason>`, tears OpenXR down and the game runs
+  flat. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
+  *(observed 2026-11)*.
+- **The copy** *(observed 2026-11, harness readback)*: `glBlitFramebuffer` from framebuffer 0 into a
+  `GL_SRGB8_ALPHA8` swapchain image, with `GL_FRAMEBUFFER_SRGB` and the scissor test off, keeps every byte (the clear
+  colour read back unchanged) and keeps the orientation with no flip (each corner colour where OpenGL's bottom-up
+  layout puts it, which is OpenXR's OpenGL convention). Whether the colours look right in the headset is for the
+  headset test.
+- **Live runtime** *(observed 2026-11, SteamVR/OpenXR 2.18.4, a Lighthouse headset, not worn)*: the runtime offers
+  `XR_KHR_opengl_enable` and asks for OpenGL 4.3 or newer. A bare MonoGame DesktopGL window with the presenter went
+  Idle, Ready, Synchronized, Visible; it submitted every frame for 12 s without a failure and recreated the swapchain
+  when the back buffer was resized. The display period was 13.33 ms, and the loop ran at 74.7 frames per second once
+  started. The full game was not launched: this host has no artwork corpus.
+
+## Traps
+
+- **MonoGame sleeps 20 ms per frame while its window is not active** (`Game.InactiveSleepTime`). In VR that halves the
+  headset frame rate whenever another window has focus *(observed 2026-11: 45 frames per second against a 75 Hz
+  period, 74.7 with the sleep off)*. VR mode sets it to zero.
+- **Saved benchmark settings turn vsync back on at startup** (`InitializeBenchmark`, then `ApplyBenchmarkSettings`).
+  Vsync and the headset's frame wait would then both pace the loop. `ApplyBenchmarkSettings` calls `KeepVrPacing()`,
+  which keeps the flat choice for a fallback and leaves the headset in charge *(derived from the code)*.
+- **Creating an OpenXR instance starts SteamVR** when it is not running *(observed 2026-11)*. A probe run is not free
+  of side effects on the desktop.
+
 ## Open questions
 
-- Which C# OpenXR binding to use. Not yet compared.
 - What one game unit is in metres. It sets the eye separation and the cockpit scale.
 - Whether bloom, HDR output and FSR can run per eye at headset frame rates, or must be cut in VR mode.
 - Whether upstream would accept a VR head if it stays behind a clear seam.
@@ -73,3 +113,5 @@ own quad.
 
 - 2026-11-24: read the client at upstream `b76d6c0`. ragesaq decided to build the VR client here and enroll the
   fork. No code changed.
+- 2026-11-24: ragesaq approved milestone 1 as proposed. Built on `port/vr-m1` from `master` at `47e720b`; probed
+  against SteamVR with a harness. The headset test by ragesaq is still to come.
