@@ -2,7 +2,7 @@
 
 **Owner:** ragesaq · **Started:** 2026-11-25 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
-**Status:** in progress (design spec, not built; node `ragesaq-010`)
+**Status:** in progress (design spec accepted by ragesaq 2026-11-25, not built; node `ragesaq-010`)
 
 ## What this answers
 
@@ -17,8 +17,10 @@ large and hard to use (`knowledge/vr-client-survey.md`, "Milestone 2 in the head
   *(read: `OpenXrPresenter.cs`, `VirtualScreen.cs` on `master` `e73b573`)*.
 - The HUD moves into the eye images, not onto its own layer *(decided 2026-11 by ragesaq, recorded in
   `knowledge/vr-client-survey.md`)*.
-- This spec is a proposal. Its rows marked *(decided … by ragesaq)* are ragesaq's; every other choice is Port's
-  proposal for ragesaq to accept or change, and the numbers are starting values for the headset.
+- ragesaq accepted this spec as it stands on 2026-11-25, including layer 3 and building on the Jet skin
+  *(Port's working session: "Accept, merge #12", in answer to whether the rest of the spec was ready to accept)*. Choices first
+  proposed by Port say so where they appear. The numbers (distances, sizes, the fade) remain starting values for
+  the headset.
 - The game has three HUD skins, cycled with Shift+F12: Classic, Modern and Jet. Jet is a fighter-style vector HUD
   that the upstream author is still building. A visual flag gates it and is off by default; turn it on with
   `--visuals hud.jetSkin=on` or the "Jet HUD" toggle in the visual options *(read: `Rendering/VisualFlags.cs`,
@@ -51,7 +53,7 @@ large and hard to use (`knowledge/vr-client-survey.md`, "Milestone 2 in the head
 
 Layer 3 is Port's addition, not in ragesaq's description. Without it the flight readouts that are now near the
 crosshair (speed, gauges, roll) would move to close panels, and every glance at them would need the eyes to
-refocus from the fight. ragesaq to accept or fold it into layer 4.
+refocus from the fight. ragesaq accepted it on 2026-11-25.
 
 ### Layer 1: aim symbols at infinity
 
@@ -154,7 +156,7 @@ Layer 3 is the part a fighter HUD is built around. In Jet, the pitch ladder is d
 not against the screen. A ladder like that only lines up with the world when it is drawn at infinity, which supports
 layer 3 *(derived)*.
 
-**Proposal: build the VR HUD by placing Jet's elements, not by laying out Classic again.** The work becomes a VR
+**Build the VR HUD by placing Jet's elements, not by laying out Classic again** *(proposed by Port, accepted by ragesaq 2026-11-25)*. The work becomes a VR
 placement for each Jet element group, chosen by layer. Classic and Modern keep their flat layouts in VR, on one
 panel, as a fallback. The flat Jet skin keeps its bytes. One cost: Jet is behind a default-off flag and still in
 development upstream, so the VR placement follows its changes. That argues for doing this work with the upstream
@@ -180,7 +182,8 @@ service with upstream, not two.
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
-| Flight reference block at infinity (layer 3) | proposed | all non-marker elements on close panels | proposed by Port 2026-11-25, not decided | 2026-11-25 |
+| Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
+| What the VR HUD is built from | the Jet skin's elements, placed by layer; Classic and Modern on one fallback panel | laying out the Classic HUD again for VR | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
 
 ## Disagreements between sources
 
@@ -208,9 +211,8 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 
 ## Open questions
 
-- Whether layer 3 is wanted, or its readouts join the cockpit panels.
-- Whether the VR HUD is built on the Jet skin's elements (proposed above), and whether Jet must leave its flag
-  first.
+- Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
+  the upstream author (node `ragesaq-012`).
 - What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
   headset look with Classic, then Modern, would tell.
 - What the desktop window shows in VR mode: today it shows the HUD over black; a mirror of the left eye may be more
@@ -228,6 +230,7 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
   (P1044): Jet's elements fall into the four layers, and P1044 splits the flat game the same way.
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
+- 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
 
 ## Sources
 
