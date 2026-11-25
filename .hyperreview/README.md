@@ -4,6 +4,25 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-24: PR #3 publish guard accepts GitHub's merge committer, round 1
+
+- Record: [summary](patch-review-2026-11-24T19-40-00Z-allegiancecore-guard-r1/summary.md), [receipt](patch-review-2026-11-24T19-40-00Z-allegiancecore-guard-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `2ca409f`, tree `ccc2380`, the delta `b15f666..2ca409f`: the one-line identity rule in
+  `scripts/publish-guard.sh`, `memory/mem-005` and work map node `ragesaq-003`. Reviewer `deepseek-v4.1-flash` via
+  OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. The reviewer ran the author's harness (27 of 27) and 14 cases of its own over CRLF and LF copies.
+  Dispositions:
+  - Low finding, `mem-005` heading in the present tense contradicted its body: fixed in the next commit (prose only,
+    so no re-review).
+  - Note 1, the exception also passes a single-parent commit with GitHub as committer (a web edit): accepted, the
+    address is GitHub's service identity.
+  - Note 2, both `-x` and `-F` are needed: no action, both are present.
+  - Note 3, pre-existing: an unresolvable base makes the guard print "no new commits" and pass (`publish-guard.sh:12`).
+    Not in this change; reported to the operator as a separate fix.
+  - Note 4, pin a head SHA in `ragesaq-003`'s `next`: declined. The head moves with every commit to the PR, so a SHA
+    in its own record would be stale at once; the node links PR #3, which shows the current head.
+
 ## 2026-11-24: PR #1 HyperBench enrollment, round 3
 
 - Record: [summary](patch-review-2026-11-24T09-17-24Z-allegiancecore-enrollment-r3/summary.md), [receipt](patch-review-2026-11-24T09-17-24Z-allegiancecore-enrollment-r3/receipt.md)

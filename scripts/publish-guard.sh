@@ -10,7 +10,7 @@ MEDIA_RE='\.(png|jpe?g|gif|webp|bmp|tga|mp4|webm|mov|fbx|fbm|obj|glb|gltf|blend|
 SECRET_RE='sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[bap]-[A-Za-z0-9-]{10,}|[0-9]{8,10}:[A-Za-z0-9_-]{35}|msy_[A-Za-z0-9]{10,}|hf_[A-Za-z0-9]{20,}'
 fail=0; say(){ echo "[publish-guard] $*"; }
 [ -z "$(git rev-list "$RANGE")" ] && { say "no new commits"; exit 0; }
-BAD_ID=$(git log --format='%ae%n%ce' "$RANGE" | sort -u | grep -v 'users.noreply.github.com$' || true)
+BAD_ID=$( { git log --format='%ae' "$RANGE"; git log --format='%ce' "$RANGE" | grep -vxF 'noreply@github.com' || true; } | sort -u | grep -v 'users.noreply.github.com$' || true)
 [ -z "$BAD_ID" ] || { say "non-noreply author/committer: $BAD_ID"; fail=1; }
 SEC=$(git log -p "$RANGE" -- . ":(exclude)scripts/publish-guard.sh" | grep -cE "$SECRET_RE" || true)
 [ "$SEC" = 0 ] || { say "$SEC secret-pattern hit(s)"; fail=1; }
