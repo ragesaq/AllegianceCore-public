@@ -19,8 +19,8 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
   - Low 3, closeout after a merge: fixed, the rule points at `DAG.json`'s closeout rule.
   - Low 4, live nodes waited on "ragesaq's merge": fixed for `ragesaq-003`; `ragesaq-004` already said "the operator's
     approval to merge" after PR #4's round 1 record, merged into this branch.
-  - Low 5, `mem-008` class: fixed, now `witnessed` with `seen-in:`. `mem-004` and `mem-006` carry the same looseness;
-    they belong to PR #2 and are left for a later change.
+  - Low 5, `mem-008` class: fixed, now `witnessed` with `seen-in:`. `mem-006` (PR #2) and `mem-004` (merged with
+    PR #1) carry the same looseness; they are left for a later change.
   - Low 6, `mem-008` scope sentence: reworded as suggested. The entry also records the operator's confirmation that
     approval covers only the one merge or settings change.
 
