@@ -4,6 +4,20 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #7 VR milestone 1, round 4
+
+- Record: [summary](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/summary.md), [receipt](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `969988d..e71e079` (the round 3 record and fix), head `e71e079`, tree `283fb41`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS, no findings. Round 3 findings 1 and 2 closed, and the reason for not sending an empty `xrEndFrame`
+  judged sound. The reviewer found that a context failure inside `SkipFrame` leaves no frame open and reaches the
+  flat fallback, and that nothing in the delta blocks the in-headset test. Residual risks it names: the skip paths
+  are unexercised, and the accepted call-order fallback to flat. The summary calls the presenter's `SubmitFrame`
+  method `Present`; the line numbers it cites are `SubmitFrame`'s.
+
 ## 2026-11-25: PR #7 VR milestone 1, round 3
 
 - Record: [summary](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/summary.md), [receipt](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/receipt.md)
