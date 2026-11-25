@@ -162,8 +162,9 @@
       "owner": "ragesaq",
       "status": "review",
       "needs": [],
-      "next": "Build step 1 of knowledge/vr-hud-design.md is on branch port/vr-hud-in-eyes, in a PR to master (knowledge/vr-hud-design.md, \"Step 1 as built\"): the HUD is drawn into each eye image and the quad layer is gone; contact, selection, lock and lead markers sit at their objects' depth with a 2 degree bracket and 0.6 degree text floor; the aim reticle is at infinity and the flat centre crosshair left the panel (ragesaq asked 2026-11-25, after a first headset look, that targeting reticles be farther than 1 m); the rest of the flat HUD is on one interim panel 1 m away, 25 degrees below the nose (ALLEGIANCE_VR_HUD_PANEL tunes it). Flat replay frames unchanged. Waits on: the cross-family review posted on the PR, then ragesaq's headset test of that build and approval to merge. Then build step 2 (layers 1 and 3). Owner of the work: Port.",
+      "next": "Build step 1 of knowledge/vr-hud-design.md is on branch port/vr-hud-in-eyes, in PR #15 (knowledge/vr-hud-design.md, \"Step 1 as built\"): the HUD is drawn into each eye image and the quad layer is gone; contact, selection, lock and lead markers sit at their objects' depth with a 2 degree bracket and 0.6 degree text floor; the aim reticle is at infinity and the flat centre crosshair left the panel (ragesaq asked 2026-11-25, after a first headset look, that targeting reticles be farther than 1 m); the rest of the flat HUD is on one interim panel 1 m away, 25 degrees below the nose (ALLEGIANCE_VR_HUD_PANEL tunes it). Flat replay frames unchanged. Waits on: the cross-family review posted on the PR, then ragesaq's headset test of that build and approval to merge. Then build step 2 (layers 1 and 3). Owner of the work: Port.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/15",
         "knowledge/vr-client-survey.md",
         "knowledge/vr-hud-design.md"
       ],
@@ -177,8 +178,9 @@
       "needs": [
         "ragesaq-010"
       ],
-      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submitted as its own quad layer. Decided by ragesaq 2026-11-25: the HUD moves into the eye images (ragesaq-010), so capture records it with no change to the capture tool. Built in ragesaq-010's step 1 (a PR to master): a stereo frame now submits only the projection layer. Waits on: that PR, then a capture check by ragesaq.",
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submitted as its own quad layer. Decided by ragesaq 2026-11-25: the HUD moves into the eye images (ragesaq-010), so capture records it with no change to the capture tool. Built in ragesaq-010's step 1 (PR #15): a stereo frame now submits only the projection layer. Waits on: that PR, then a capture check by ragesaq.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/15",
         "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-25"
