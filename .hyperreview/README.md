@@ -4,6 +4,28 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #7 VR milestone 1, round 3
+
+- Record: [summary](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/summary.md), [receipt](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `b3a8ea3..969988d` (the round 2 record and fixes), head `969988d`, tree `e693147`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS-WITH-CONDITIONS. Round 2 findings 1 to 3 closed. The reviewer agreed with keeping the session flag
+  for round 2's finding 2 and withdrew its suggestion to clear it. Two low findings. Dispositions (the fix in the
+  commit after this record, re-reviewed in round 4):
+  - Low 1, the two skip returns after `xrWaitFrame` and `xrBeginFrame` did not restore the game's GL context before
+    the game presents: fixed. `SkipFrame` restores the context, then sleeps, so every skip path restores it.
+  - Low 2, the round 2 entry said the runtime discards a frame left begun when `xrEndFrame` reports the session not
+    running, which is not established: fixed in the record. The round 2 entry now states the consequence the
+    reviewer names: if a runtime enforces the frame-call order, the next `xrWaitFrame` fails and VR falls back to
+    flat for the rest of that run, with the reason logged. That is a safe failure, it needs the STOPPING event to
+    be late or absent, and it is kept as residual risk. The reviewer's other fix, a best-effort empty `xrEndFrame`
+    before the next wait, is not taken: the session is not running, so that call would return the same error.
+  - Note, `SkipFrame` and the idle path both sleep the idle interval: kept as two call sites of one constant, since
+    `SkipFrame` now also restores the context.
+
 ## 2026-11-25: PR #7 VR milestone 1, round 2
 
 - Record: [summary](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/summary.md), [receipt](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/receipt.md)
@@ -21,7 +43,9 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
     left alone on purpose: the application ends a session itself, on the runtime's STOPPING event, so clearing the
     flag without that event could leave VR idle for the rest of the run, while a sleep keeps retrying at the idle
     rate. The reviewer's related residual risk (a frame begun and not ended when `xrEndFrame` returns that error) is
-    kept: the session is not running, so the runtime discards the frame.
+    kept. Round 3 corrected this line, which first said the runtime discards the frame: that is not established. If
+    a runtime enforces the frame-call order instead, the next `xrWaitFrame` fails and VR falls back to flat for the
+    rest of that run, with the reason logged.
   - Low 3, round 1's line numbers for finding 5 were off by one: fixed in the round 1 entry (`Game1.Benchmark.cs:199`,
     `:452`, `:467`).
   - Note, nothing asserted the inactive-window sleep after `KeepPacing` and a fallback: the test

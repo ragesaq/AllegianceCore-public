@@ -60,7 +60,7 @@
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Cross-family round 1 reviewed head 30c2ae6 and round 2 head b3a8ea3: both PASS-WITH-CONDITIONS, findings answered in .hyperreview/README.md. Next: the round 3 delta review of the round 2 fixes, the closeout review, then ragesaq's headset test with ALLEGIANCE_OPENXR_LOADER set to SteamVR's openxr_loader.dll, then ragesaq's approval to merge. After that, agree milestone 2 (per-eye rendering with the head pose, the HUD on its own quad).",
+      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Cross-family rounds 1 to 3 reviewed heads 30c2ae6, b3a8ea3 and 969988d: each PASS-WITH-CONDITIONS, findings answered in .hyperreview/README.md. Next: the round 4 delta review of the round 3 fix, the closeout review, then ragesaq's headset test with ALLEGIANCE_OPENXR_LOADER set to SteamVR's openxr_loader.dll, then ragesaq's approval to merge. After that, agree milestone 2 (per-eye rendering with the head pose, the HUD on its own quad).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/7",
         "knowledge/vr-client-survey.md"
