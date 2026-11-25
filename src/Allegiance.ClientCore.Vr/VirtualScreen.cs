@@ -14,3 +14,17 @@ public static class VirtualScreen
         return (WidthMetres, WidthMetres * pixelHeight / pixelWidth);
     }
 }
+
+/// <summary>Where the HUD hangs in a stereo frame: on the same plane as the
+/// virtual screen, sized so it covers the game camera's vertical field of view,
+/// so the HUD's markers sit over the objects they mark in the eyes' view.</summary>
+public static class HudQuad
+{
+    public static (float Width, float Height) SizeMetres(int pixelWidth, int pixelHeight, float verticalFovRadians)
+    {
+        if (!(verticalFovRadians > 0 && verticalFovRadians < MathF.PI)) return VirtualScreen.SizeMetres(pixelWidth, pixelHeight);
+        if (pixelWidth <= 0 || pixelHeight <= 0) throw new ArgumentOutOfRangeException(nameof(pixelWidth), "The back buffer has no area.");
+        float height = 2f * VirtualScreen.DistanceMetres * MathF.Tan(verticalFovRadians / 2f);
+        return (height * pixelWidth / pixelHeight, height);
+    }
+}

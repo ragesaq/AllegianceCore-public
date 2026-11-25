@@ -28,11 +28,13 @@ public static class NativeScene
 
     public static void GatherDust(VisualOptions visuals, SubtleDust subtleDust, DebrisGeo debrisGeo,
         SpaceVisualFrame spaceFrame, Vector3 cameraEye, Matrix view, Matrix proj, double gameSeconds,
-        List<AmbientDustView> output, BoundingFrustum? frustum = null)
+        List<AmbientDustView> output, BoundingFrustum? frustum = null, bool advance = true)
     {
+        // advance: false re-projects the field for another view of the same frame
+        // (the VR client's second eye) without stepping it a second time.
         if (visuals.IsOn(VisualFlags.SubtleDustKey))
         {
-            subtleDust.Step(cameraEye, debrisGeo.Density, spaceFrame.Cut);
+            if (advance) subtleDust.Step(cameraEye, debrisGeo.Density, spaceFrame.Cut);
             output.Clear();
             for (int i = 0; i < subtleDust.Grains.Count; i++)
             {
@@ -48,7 +50,7 @@ public static class NativeScene
         else
         {
             subtleDust.Reset();
-            debrisGeo.Step(
+            if (advance) debrisGeo.Step(
                 new SimVec(cameraEye.X, cameraEye.Y, cameraEye.Z),
                 new SimVec(-view.M31, -view.M32, -view.M33),   // camera forward
                 new SimVec(view.M11, view.M12, view.M13),      // camera right

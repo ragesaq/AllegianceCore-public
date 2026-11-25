@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace Allegiance.ClientCore.Vr;
 
 /// <summary>Copies the window's back buffer (framebuffer 0, where MonoGame
-/// DesktopGL finishes each frame) into an OpenXR swapchain texture with
-/// glBlitFramebuffer. GL entry points come from SDL_GL_GetProcAddress, as in
+/// DesktopGL finishes each frame) or a game render target into an OpenXR
+/// swapchain texture with glBlitFramebuffer. GL entry points come from SDL_GL_GetProcAddress, as in
 /// HdCompressedUpload. Every piece of GL state it touches is put back.</summary>
 internal sealed unsafe class GlBlitter : IDisposable
 {
@@ -19,6 +19,8 @@ internal sealed unsafe class GlBlitter : IDisposable
     private const uint ScissorTest = 0x0C11;
     private const uint ColorBufferBit = 0x4000;
     private const uint Nearest = 0x2600;
+    private const uint BackLeft = 0x0402;
+    private const uint AttachmentAlphaSize = 0x8215;
 
     private readonly delegate* unmanaged<uint, int*, void> _getIntegerv;
     private readonly delegate* unmanaged<int, uint*, void> _genFramebuffers;
@@ -31,10 +33,12 @@ internal sealed unsafe class GlBlitter : IDisposable
     private readonly delegate* unmanaged<uint, void> _enable;
     private readonly delegate* unmanaged<uint, void> _disable;
     private readonly delegate* unmanaged<uint> _getError;
+    private readonly delegate* unmanaged<uint, uint, uint, int*, void> _getFramebufferAttachmentParameteriv;
     private const int LoggedErrorBatches = 5;
 
     private readonly Action<string> _log;
     private uint _framebuffer;
+    private uint _readFramebuffer;
     private int _errorBatches;
 
     private GlBlitter(delegate* unmanaged[Cdecl]<byte*, nint> proc, Action<string> log)
@@ -60,9 +64,12 @@ internal sealed unsafe class GlBlitter : IDisposable
         _enable = (delegate* unmanaged<uint, void>)Load("glEnable");
         _disable = (delegate* unmanaged<uint, void>)Load("glDisable");
         _getError = (delegate* unmanaged<uint>)Load("glGetError");
+        _getFramebufferAttachmentParameteriv = (delegate* unmanaged<uint, uint, uint, int*, void>)Load("glGetFramebufferAttachmentParameteriv");
         uint framebuffer;
         _genFramebuffers(1, &framebuffer);
         _framebuffer = framebuffer;
+        _genFramebuffers(1, &framebuffer);
+        _readFramebuffer = framebuffer;
     }
 
     /// <summary>Must be called on the render thread with MonoGame's context current.</summary>
@@ -84,7 +91,19 @@ internal sealed unsafe class GlBlitter : IDisposable
     /// <summary>Copies the bottom-left <paramref name="width"/> by
     /// <paramref name="height"/> pixels of the back buffer into
     /// <paramref name="texture"/> unchanged: no sRGB conversion, no flip.</summary>
-    public void CopyBackBuffer(uint texture, int width, int height)
+    public void CopyBackBuffer(uint texture, int width, int height) =>
+        Copy(0, width, height, texture, 0, flipRows: false);
+
+    /// <summary>Copies all of <paramref name="source"/> (a texture of
+    /// <paramref name="width"/> by <paramref name="height"/>) into
+    /// <paramref name="texture"/> with its left edge at <paramref name="x"/>,
+    /// bytes unchanged. MonoGame stores a render target's rows top first, the
+    /// reverse of OpenGL's order, so its images are copied with
+    /// <paramref name="flipRows"/>.</summary>
+    public void CopyTexture(uint source, int width, int height, uint texture, int x, bool flipRows) =>
+        Copy(source, width, height, texture, x, flipRows);
+
+    private void Copy(uint source, int width, int height, uint texture, int x, bool flipRows)
     {
         int readBinding, drawBinding;
         _getIntegerv(ReadFramebufferBinding, &readBinding);
@@ -94,17 +113,30 @@ internal sealed unsafe class GlBlitter : IDisposable
         DrainEarlierErrors();
         try
         {
-            _bindFramebuffer(ReadFramebuffer, 0);
+            if (source == 0)
+            {
+                _bindFramebuffer(ReadFramebuffer, 0);
+            }
+            else
+            {
+                _bindFramebuffer(ReadFramebuffer, _readFramebuffer);
+                _framebufferTexture2D(ReadFramebuffer, ColorAttachment0, Texture2D, source, 0);
+                uint readStatus = _checkFramebufferStatus(ReadFramebuffer);
+                if (readStatus != FramebufferComplete) throw new VrUnavailableException($"eye image framebuffer incomplete (0x{readStatus:X4})");
+            }
             _bindFramebuffer(DrawFramebuffer, _framebuffer);
             _framebufferTexture2D(DrawFramebuffer, ColorAttachment0, Texture2D, texture, 0);
             uint status = _checkFramebufferStatus(DrawFramebuffer);
             if (status != FramebufferComplete) throw new VrUnavailableException($"swapchain framebuffer incomplete (0x{status:X4})");
             if (srgb) _disable(FramebufferSrgb);
             if (scissor) _disable(ScissorTest);
-            _blitFramebuffer(0, 0, width, height, 0, 0, width, height, ColorBufferBit, Nearest);
+            int top = flipRows ? 0 : height;
+            int bottom = flipRows ? height : 0;
+            _blitFramebuffer(0, 0, width, height, x, bottom, x + width, top, ColorBufferBit, Nearest);
             uint error = _getError();
             if (error != 0) throw new VrUnavailableException($"glBlitFramebuffer into the swapchain failed (GL error 0x{error:X4})");
             _framebufferTexture2D(DrawFramebuffer, ColorAttachment0, Texture2D, 0, 0);
+            if (source != 0) _framebufferTexture2D(ReadFramebuffer, ColorAttachment0, Texture2D, 0, 0);
         }
         finally
         {
@@ -113,6 +145,22 @@ internal sealed unsafe class GlBlitter : IDisposable
             _bindFramebuffer(ReadFramebuffer, (uint)readBinding);
             _bindFramebuffer(DrawFramebuffer, (uint)drawBinding);
         }
+    }
+
+    /// <summary>The alpha bits of the window's back buffer. The HUD layer is
+    /// blended by its alpha, so with none it would cover the eyes; logged once
+    /// so a headset report can be checked against it. -1 if GL raised an error.</summary>
+    public int BackBufferAlphaBits()
+    {
+        int drawBinding;
+        _getIntegerv(DrawFramebufferBinding, &drawBinding);
+        DrainEarlierErrors();
+        int bits = 0;
+        _bindFramebuffer(DrawFramebuffer, 0);
+        _getFramebufferAttachmentParameteriv(DrawFramebuffer, BackLeft, AttachmentAlphaSize, &bits);
+        uint error = _getError();
+        _bindFramebuffer(DrawFramebuffer, (uint)drawBinding);
+        return error == 0 ? bits : -1;
     }
 
     /// <summary>Errors left by the frame's own drawing are not this copy's; clear
@@ -138,8 +186,9 @@ internal sealed unsafe class GlBlitter : IDisposable
     public void Dispose()
     {
         if (_framebuffer == 0) return;
-        uint framebuffer = _framebuffer;
+        uint* framebuffers = stackalloc uint[] { _framebuffer, _readFramebuffer };
         _framebuffer = 0;
-        _deleteFramebuffers(1, &framebuffer);
+        _readFramebuffer = 0;
+        _deleteFramebuffers(2, framebuffers);
     }
 }

@@ -742,7 +742,7 @@ using var game = new Game1(opts);
 if (vrOptions.Enabled)
 {
     Console.WriteLine("[vr] VR requested; OpenXR starts on the first frame and falls back to flat if it cannot");
-    game.AttachVrFrameSink(new Allegiance.ClientCore.Vr.OpenXrQuadPresenter(vrOptions));
+    game.AttachVrFrameSink(new Allegiance.ClientCore.Vr.OpenXrPresenter(vrOptions));
 }
 game.Activated += (_, _) => { while (pendingMacLinks.TryDequeue(out var url)) game.ReceiveJoinLink(url); };
 game.Exiting += (_, _) => macJoinLinks?.Dispose();
