@@ -70,11 +70,11 @@
       "id": "ragesaq-003",
       "title": "Let merges made through GitHub pass the publish guard",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "PR #3 (stacked on PR #2): guard change and memory/mem-005 update. Cross-family review round 1 at 2ca409f gave PASS (.hyperreview/README.md); its one low finding is fixed. Waits on the operator's approval to merge, after PR #2. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
+      "next": "Done: PR #3 merged on 2026-11-24 as merge commit 10976d0 (reviewed head ff20f84, cross-family review round 1 PASS). The first merges after email privacy came on (PR #2 to #5) were stamped with psiclawops-port's noreply address as author and GitHub <noreply@github.com> as committer, and the guard passes over them (memory/mem-005).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/3",
         "memory/mem-005-github-merge-identity.md",
@@ -86,11 +86,11 @@
       "id": "ragesaq-004",
       "title": "Make the publish guard fail closed when it cannot list the new commits",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-003"
       ],
-      "next": "PR #4 (stacked on PR #3): the guard fails when it cannot list its range, and guard.yml scans new and force-pushed branches from their merge base with the default branch (memory/mem-007). Cross-family review round 1 at 6528bdb gave PASS; round 2 at 0b032b7 gave PASS-WITH-CONDITIONS, both rounds' findings answered (.hyperreview/README.md). The root commit of a push that creates the default branch stays unscanned, as before; no push here takes that path. Waits on the operator's approval to merge after PR #2 and PR #3.",
+      "next": "Done: PR #4 merged on 2026-11-24 as merge commit 6da7254 (reviewed head 610ef8c, cross-family review rounds 1 PASS and 2 PASS-WITH-CONDITIONS, findings answered). The root commit of a push that creates the default branch stays unscanned, as recorded in memory/mem-007.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/4",
         "memory/mem-007-guard-range.md",
@@ -103,11 +103,11 @@
       "id": "ragesaq-005",
       "title": "Agents merge and change settings only with the operator's approval",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-004"
       ],
-      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 to 4 (1f6039c, e4e159a, 309921b, 326f945) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); round 4's two findings were record fixes. Waits on the operator's approval to merge after PR #2, #3 and #4.",
+      "next": "Done: PR #5 merged on 2026-11-24 as merge commit 47e720b (reviewed head dfb00ac, cross-family review rounds 1 to 4, all findings answered).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/5",
         "AGENTS.md",
