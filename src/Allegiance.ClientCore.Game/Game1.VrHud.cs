@@ -89,7 +89,9 @@ public sealed partial class Game1
             if (!_directorActive && !_nativeHangarScreen)
             {
                 var (radarView, radarProj) = VrRadarCamera(view, proj, cameraEye, frame);
+                string? proofLine = _radarProofLine;   // the radar proof reports the game camera's frame
                 DrawRadar(radarView, radarProj, cameraEye, timeSeconds);
+                _radarProofLine = proofLine;
                 AddVrContactMarkers(radarView, radarProj, cameraEye);
             }
             AddVrSelectionMarker();
@@ -179,7 +181,7 @@ public sealed partial class Game1
         bool ownKnown = TryOwnPose(out var ownPos, out _, out _);
         float distance = ownKnown ? (simPos - ownPos).Length() : 0f;
         string? range = ownKnown ? RadarLabelModel.RangeLineText((int)MathF.Round(distance)) : null;
-        _vrMarkers.Add(new VrMarker(position, VrHudGeometry.BracketAngle(radius, distance) * 1.15f,
+        _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.15f, VrHudGeometry.BracketCapRadians),
             sideColour is { } c ? ToColour(c) : VrSelectionColour, VrMarkerShape.Selection, name, range));
     }
 
@@ -216,7 +218,7 @@ public sealed partial class Game1
                     ? HullLength(ship.HullId) * 0.5f : null;
         }
         float distance = TryOwnPose(out var own, out _, out _) ? (position - PoseConverter.ToXna(own)).Length() : 0f;
-        _vrMarkers.Add(new VrMarker(position, VrHudGeometry.BracketAngle(radius, distance) * 1.3f,
+        _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.3f, VrHudGeometry.BracketCapRadians),
             state == MissileLockFeedback.LockState.Full ? VrLockFullColour : VrLockPartialColour, VrMarkerShape.Lock, null, null));
     }
 
@@ -275,7 +277,7 @@ public sealed partial class Game1
                 foreach (var marker in _vrMarkers)
                 {
                     if (!VrHudGeometry.TryProject(marker.World - eyeWorld, view, proj, target.Width, target.Height, out var at)) continue;
-                    DrawVrMarker(marker, at, proj, target.Height);
+                    DrawVrMarker(marker, at, proj, target.Width, target.Height);
                 }
             }
             finally { _spriteBatch.End(); }
@@ -352,11 +354,13 @@ public sealed partial class Game1
     private static float VrLineWidth(Matrix proj, int height) =>
         MathF.Max(2f, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(0.08f), proj, height));
 
-    private void DrawVrMarker(in VrMarker marker, Vector2 at, Matrix proj, int height)
+    private void DrawVrMarker(in VrMarker marker, Vector2 at, Matrix proj, int width, int height)
     {
-        float size = VrHudGeometry.PixelsForAngle(marker.AngleRadians, proj, height);
+        float size = VrHudGeometry.PixelsForAngleAt(marker.AngleRadians, at, proj, width, height);
         float half = size / 2f;
-        float line = VrLineWidth(proj, height);
+        // Line and text keep their angle off the image's centre too.
+        float stretch = size / MathF.Max(1e-3f, VrHudGeometry.PixelsForAngle(marker.AngleRadians, proj, height));
+        float line = VrLineWidth(proj, height) * stretch;
         switch (marker.Shape)
         {
             case VrMarkerShape.Contact:
@@ -381,13 +385,13 @@ public sealed partial class Game1
                 VrLine(at - new Vector2(line, 0), at + new Vector2(line, 0), line, marker.Colour);
                 break;
         }
-        DrawVrLabel(marker, at + new Vector2(0, half + line * 2f), proj, height);
+        DrawVrLabel(marker, at + new Vector2(0, half + line * 2f), proj, height, stretch);
     }
 
-    private void DrawVrLabel(in VrMarker marker, Vector2 topCentre, Matrix proj, int height)
+    private void DrawVrLabel(in VrMarker marker, Vector2 topCentre, Matrix proj, int height, float stretch)
     {
         if (marker.Name is null && marker.Range is null) return;
-        float glyphPixels = VrHudGeometry.PixelsForAngle(VrHudGeometry.TextFloorRadians, proj, height);
+        float glyphPixels = VrHudGeometry.PixelsForAngle(VrHudGeometry.TextFloorRadians, proj, height) * stretch;
         // A SpriteFont's capital letters fill about three quarters of its line.
         float scale = glyphPixels / (_hudSmall.LineSpacing * 0.75f);
         float y = topCentre.Y;
@@ -437,5 +441,9 @@ public sealed partial class Game1
     {
         _vrHudImage?.Dispose();
         _vrHudImage = null;
+        _vrPanelEffect?.Dispose();
+        _vrPanelEffect = null;
+        _vrPixel?.Dispose();
+        _vrPixel = null;
     }
 }

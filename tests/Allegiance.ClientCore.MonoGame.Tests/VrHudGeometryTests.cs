@@ -273,4 +273,39 @@ public sealed class VrHudGeometryTests
         // The rest of the cockpit indicators stay on the panel.
         Assert.True(vr.IndicatorsVisible);
     }
+
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(40f, 0f)]
+    [InlineData(-30f, 35f)]
+    public void A_marker_covers_its_angle_at_its_own_pixel_off_the_images_centre(float yawDegrees, float pitchDegrees)
+    {
+        const int w = 2000, h = 2000;
+        var projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(100f), 1f, 0.5f, 1000f);
+        var direction = Vector3.Transform(Vector3.Forward,
+            Matrix.CreateRotationX(MathHelper.ToRadians(pitchDegrees)) * Matrix.CreateRotationY(MathHelper.ToRadians(-yawDegrees)));
+        Assert.True(VrHudGeometry.TryProject(direction * 100f, Matrix.Identity, projection, w, h, out var at));
+        float angle = MathHelper.ToRadians(2f);
+        float size = VrHudGeometry.PixelsForAngleAt(angle, at, projection, w, h);
+        // Cast back the two ends of that span, measured along the pixel's own up-down
+        // direction on screen: they are the requested angle apart.
+        var ray = VrHudGeometry.RayThroughPixel(at, w, h, Matrix.Identity, projection);
+        var up = Vector3.Normalize(Vector3.Cross(Vector3.Cross(ray, Vector3.UnitY), ray));
+        Assert.True(VrHudGeometry.TryProject(ray + up * 1e-3f, Matrix.Identity, projection, w, h, out var towardUp));
+        var along = Vector2.Normalize(towardUp - at);
+        var a = VrHudGeometry.RayThroughPixel(at + along * size / 2f, w, h, Matrix.Identity, projection);
+        var b = VrHudGeometry.RayThroughPixel(at - along * size / 2f, w, h, Matrix.Identity, projection);
+        float covered = MathF.Acos(Math.Clamp(Vector3.Dot(a, b), -1f, 1f));
+        Assert.True(MathF.Abs(covered - angle) < angle * 0.02f, $"covers {MathHelper.ToDegrees(covered)} deg");
+        float atCentre = VrHudGeometry.PixelsForAngle(angle, projection, h);
+        if (yawDegrees == 0f && pitchDegrees == 0f) Assert.InRange(size / atCentre, 0.99f, 1.01f);
+        else Assert.True(size > atCentre * 1.1f, $"{size} px off-centre, {atCentre} px at the centre");
+    }
+
+    [Fact]
+    public void A_point_behind_the_eye_gets_no_pixel()
+    {
+        Assert.False(VrHudGeometry.TryProject(Vector3.Backward * 50f, Matrix.Identity, GameProjection, Width, Height, out _));
+        Assert.False(VrHudGeometry.TryProjectDirection(Vector3.Backward, Matrix.Identity, GameProjection, Width, Height, out _));
+    }
 }

@@ -4,6 +4,27 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #15 VR HUD step 1, round 1
+
+- Record: [summary](patch-review-2026-11-26T00-30-00Z-allegiancecore-vr-hud-in-eyes-r1/summary.md), [receipt](patch-review-2026-11-26T00-30-00Z-allegiancecore-vr-hud-in-eyes-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `3a3b6e1..1cf7172`, head `1cf7172`, tree `1531112`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. The reviewer confirmed the marker geometry against the game's projection convention,
+  the per-eye disparity, that no flat path reaches the new code, that the cleared marker fields are read only by the
+  HUD draw, the OpenXR layer handling, and that no upstream file was reformatted. Findings:
+  1. High (F1): in VR the panel's radar draws no contacts, and the note said the Jet scope kept the in-frame ones.
+     Partly accepted: the note was wrong and is corrected. The panel stays clear, because the Classic and Modern
+     radars draw contacts as screen-space brackets that would double the world markers (the doubled elements of the
+     milestone 2 headset test). The empty Jet scope is a step-1 limit for the cockpit panels (layer 4).
+  2. Low (F2): the selection and lock brackets could exceed the 20 degree cap. Fixed: clamped after scaling.
+  3. Low (F3): marker size used the image centre's scale everywhere. Fixed: `VrHudGeometry.PixelsForAngleAt` takes
+     the size at the marker's own pixel; lines and labels follow. New test checks the covered angle at the centre and
+     off it, and fails when the size falls back to the centre's.
+  4. Low (F4): `ReleaseVrHud` kept the panel effect and the pixel texture. Fixed: both are disposed.
+  5. Low (F5): the wide-frame radar run overwrote the radar proof line. Fixed: saved and restored around it.
+  - Test gap named by the reviewer, a point behind the eye: added.
+
 ## 2026-11-25: PR #11 sky at infinity in each eye, round 1
 
 - Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)

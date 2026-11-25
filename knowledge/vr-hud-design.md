@@ -221,7 +221,9 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
   through the view at the contact's known distance; in a stereo frame the radar is re-run through a wide,
   head-turned frame (±75° by ±70°) so contacts beside the game camera's frame are kept. Sizes are angles: brackets
   never under 2° across (capped at 20°), text never under 0.6° tall, line width at least 0.08° *(read:
-  `VrHudGeometry.cs`; tested in `VrHudGeometryTests`)*. Labels are name and range from the radar's own label rules.
+  `VrHudGeometry.cs`; tested in `VrHudGeometryTests`)*. The selection and lock brackets are drawn 1.15 and 1.3 times
+  the contact bracket so they nest outside it, within the same cap. A flat eye image stretches off its centre, so
+  each marker's pixel size is taken at its own pixel. Labels are name and range from the radar's own label rules.
 - **The aim reticle is a direction** (the ship's nose), the same pixel in both eyes, so it is seen at infinity. The
   flat game's centre crosshair is left off the panel in VR (`HudContext.CentreReticleInWorld`). ragesaq looked in the
   headset on 2026-11-25 and asked that the targeting reticles be drawn farther than 1 m, to tell them apart from the
@@ -236,8 +238,10 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 - **The desktop window mirrors the left eye**, letterboxed.
 - **Limits of step 1**, for the next steps: no edge arrows for off-view targets yet; the last-base objective
   brackets, the velocity marker, the chase aim point and the order arrows are not drawn in VR yet (they were
-  screen-space and are dropped from the panel); the Jet skin's radar scope is not re-run in the wide frame, so in
-  VR it shows only contacts inside the game camera's frame; the FIRING tag left the panel with the flat crosshair.
+  screen-space and are dropped from the panel); the panel shows no radar contacts, because the Classic and Modern
+  radars draw them as screen-space brackets that would double the world markers, so the Jet skin's radar scope is
+  empty in VR until the cockpit panels (layer 4) give it its own contact list (found by the cross-family review of
+  PR #15, round 1, F1); the FIRING tag left the panel with the flat crosshair.
 - The flat game is unchanged: replay frames 300, 1500, 3600, 6000 and 9000 of `battle.alr` hash the same as
   before *(observed 2026-11-25)*.
 

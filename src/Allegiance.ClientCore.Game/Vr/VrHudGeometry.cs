@@ -130,6 +130,27 @@ public static class VrHudGeometry
     public static float PixelsForAngle(float radians, Matrix projection, int height) =>
         MathF.Tan(radians) * projection.M22 * height / 2f;
 
+    /// <summary>How many pixels an angle covers at <paramref name="pixel"/> of a
+    /// view-space image of <paramref name="width"/> by <paramref name="height"/>
+    /// pixels: the distance between the two rays half the angle either side of
+    /// the ray through that pixel. A flat image stretches off its centre, so a
+    /// marker at 45° needs about 1.4 times the pixels it needs at the centre to
+    /// cover the same angle.</summary>
+    public static float PixelsForAngleAt(float radians, Vector2 pixel, Matrix projection, int width, int height)
+    {
+        float ndcX = pixel.X / width * 2f - 1f;
+        float ndcY = 1f - pixel.Y / height * 2f;
+        var ray = Vector3.Normalize(new Vector3((ndcX + projection.M31) / projection.M11,
+            (ndcY + projection.M32) / projection.M22, -1f));
+        var axis = Vector3.Cross(ray, Vector3.UnitY);
+        axis = axis.LengthSquared() < 1e-8f ? Vector3.UnitX : Vector3.Normalize(axis);
+        var turn = Quaternion.CreateFromAxisAngle(axis, radians / 2f);
+        if (!TryProject(Vector3.Transform(ray, turn), Matrix.Identity, projection, width, height, out var a)
+            || !TryProject(Vector3.Transform(ray, Quaternion.Conjugate(turn)), Matrix.Identity, projection, width, height, out var b))
+            return PixelsForAngle(radians, projection, height);
+        return Vector2.Distance(a, b);
+    }
+
     /// <summary>The angle a bracket covers, across: wide enough to frame the
     /// object (1.05 times its radius, as Jet's designator), never under the
     /// floor, and capped so a near object does not fill the view.</summary>
