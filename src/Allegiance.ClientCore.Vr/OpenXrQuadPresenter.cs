@@ -363,7 +363,13 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         KeepContextCurrent();
     }
 
-    private static void SkipFrame() => Thread.Sleep(IdleSleepMilliseconds);
+    // The frame call that reported the skip may have switched the GL context too;
+    // the game presents right after this returns.
+    private void SkipFrame()
+    {
+        KeepContextCurrent();
+        Thread.Sleep(IdleSleepMilliseconds);
+    }
 
     private void CopyFrameIntoSwapchain(XR xr, int width, int height)
     {
