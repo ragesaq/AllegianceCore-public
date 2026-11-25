@@ -169,6 +169,9 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   quad is fixed in the local space, so it stays ahead of the seat rather than following the head.
 - **Not in stereo yet:** the opt-in aleph destination glimpse (`--aleph-glimpse`) is drawn after the eye passes, so
   it is skipped in stereo frames rather than landing on the HUD layer.
+- **Known gap:** the eye render targets are created inside `Draw` without a catch, so a failure to create them (about
+  210 MB at 3708x3564) would end the game rather than run it flat *(found by the PR #9 closeout review; not
+  observed)*. Node `ragesaq-008` holds the fix.
 - **Flat output unchanged** *(observed 2026-11-25: replay frames 300, 1500, 3600, 6000 and 9000 of
   `data/benchmarks/battle.alr` captured before the change, after it, and after the round 1 review fixes are
   byte-identical; see the PR)*.
@@ -240,3 +243,5 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   (`.hyperreview/README.md`). A delta review of the fixes is next.
 - 2026-11-25: the delta review, round 2, passed. It accepted the HUD blend dispute on the specification text and
   found one stale comment, fixed. The headset test by ragesaq is next.
+- 2026-11-25: the closeout review passed; its one low item is node `ragesaq-008`. ragesaq approved merging PR #7 and
+  then PR #9 once each is ready. PR #7 merged as `1c521ad`, and PR #9 was retargeted to `master`.

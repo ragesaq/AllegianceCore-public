@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #9 VR milestone 2, closeout
+
+- Record: [summary](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md), [receipt](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Closeout-verification of the whole pull request, `f945af7..36989f0`, head `36989f0`, tree `81e8dd2`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS for the headset test. The ledger of rounds 1 and 2 is closed, deferred with an owner, or answered. The
+  reviewer re-checked that the upstream seam keeps its bytes (`--ignore-all-space` numstat agrees) and that no
+  upstream file was renormalized. New:
+  1. Low (N1): creating the eye render targets inside `Draw` (`Game1.Vr.cs`) has no catch, so a throw there ends the
+     game instead of running flat. Deferred: node `ragesaq-008` in `DAG.json` (Issues are turned off on this fork).
+     Opt-in `--vr` only, never observed.
+  - Its merge gates: PR #7 first (merged as `1c521ad`), then a green Linux `build-and-test` on the final head, which
+    did not run while this PR was based on `port/vr-m1`.
+
 ## 2026-11-25: PR #9 VR milestone 2, round 2
 
 - Record: [summary](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/summary.md), [receipt](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/receipt.md)
