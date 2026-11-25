@@ -3,7 +3,7 @@
 **Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
 **Status:** in progress (milestone 1 built, reviewed and seen in the headset as a floating screen, as designed;
-milestone 2 proposed, not decided)
+milestone 2 approved by ragesaq, in progress)
 
 ## What this answers
 
@@ -102,17 +102,23 @@ own quad.
   The same build without `--vr` ran at 60 frames per second on a 60 Hz monitor with vsync. The warning
   `ASR sound unavailable` appears with and without `--vr`, so VR does not cause it.
 - **In the headset** *(observed 2026-11-25 by ragesaq)*: the game shows as a floating screen, not a VR view. That is
-  milestone 1's design: one flat image on a quad layer, with no stereo and no head tracking. ragesaq has not yet
-  reported the rest of the checklist (upright and not mirrored, colours, smoothness, the fall to flat when SteamVR
-  closes).
+  milestone 1's design: one flat image on a quad layer, with no stereo and no head tracking. The image was upright
+  and not mirrored, its colours matched the flat game, and motion looked smooth *(observed 2026-11-25 by ragesaq)*.
+  After closing SteamVR, ragesaq saw the desktop window unchanged and the game still running. The run's log shows
+  the session Focused to the end and the headset's pacing in every window up to the game's own shutdown, with no
+  Stopping state and no `[vr] running flat` line *(observed)*. So the fall to flat did not happen in that run; SteamVR
+  likely stayed running while the game held its session *(inferred, not checked)*. The live fall to flat is still
+  unobserved.
 - **Frame cost with vsync off** *(observed 2026-11-25, flat, `ALLEGIANCE_NOVSYNC=1`, 1280x720 scene, 35 s)*: about
   3.6 ms per real frame in steady windows (the `[frameprof]` means halved, see Traps). It was noisy: two windows had a
   p95 of 23 ms. A stereo frame at headset resolution has several times as many pixels, so this does not yet show
   whether the post-processing fits at the headset rate *(derived)*.
 
-## Milestone 2, proposed (2026-11-25, not decided)
+## Milestone 2 (approved 2026-11-25)
 
-Per-eye rendering of the scene with the head pose. ragesaq decides the scope before work starts.
+Per-eye rendering of the scene with the head pose *(decided 2026-11 by ragesaq: "yes, start milestone 2", in
+Port's working session; approving the plan below as proposed)*. Rejected: stopping at the floating screen. Tracked
+as `DAG.json` node `ragesaq-007`.
 
 - Each frame, `xrLocateViews` gives the two eye poses and fields of view. The scene is drawn once per eye into a
   per-eye swapchain and submitted as a projection layer instead of the quad.
@@ -159,4 +165,4 @@ Per-eye rendering of the scene with the head pose. ragesaq decides the scope bef
 - 2026-11-24: ragesaq approved cloning the FreeAllegiance Artwork and the AllegianceCore sky pack. The full game ran
   in the SteamVR session at the headset rate (above); the headset is still to be worn.
 - 2026-11-25: ragesaq wore the headset and saw a floating screen rather than a VR view. Port proposed milestone 2
-  (above). Undecided.
+  (above), and ragesaq approved it as proposed.
