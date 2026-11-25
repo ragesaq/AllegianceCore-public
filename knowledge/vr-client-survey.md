@@ -205,6 +205,11 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   Node `ragesaq-010`.
 - **Capture:** ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which is on its own quad
   layer *(observed by ragesaq)*. Node `ragesaq-011`.
+- **The HUD moves into the eye images** *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "the
+  game should send the hud into the main view, other games have done HUDs on separately layers and it causes
+  problems"; rejected: keeping the HUD on its own composition layer, as milestone 2 built it, and fixing capture in
+  the capture tool)*. Each eye pass draws the HUD into its own image, so the projection layer is the whole picture
+  and any tool that records it gets the HUD. Node `ragesaq-010` carries the work; it also closes `ragesaq-011`.
 
 ## Traps
 
