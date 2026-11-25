@@ -199,8 +199,9 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   is off-centre (`M31` and `M32` are not zero), so each eye's sky is shifted sideways, the two in opposite
   directions. All three sky tiers call it. Node `ragesaq-009`. Fixed on `port/vr-sky-stereo`: for an off-centre
   projection the sky keeps the eye's frustum and takes only its own depth range; a unit test shows a sky direction
-  landing on the same screen point as under the eye's projection, and fails on the old code. Not yet seen in the
-  headset.
+  landing on the same screen point as under the eye's projection, and fails on the old code. In the headset the
+  starfield, planets and galaxies now converge *(observed 2026-11-25 by ragesaq, build of `port/vr-sky-stereo` at
+  code head `9db16a4`)*.
 - **HUD:** shown, and fixed ahead of the seat as designed, but close and large. At 2 m and sized to the game
   camera's default 50° vertical field of view it is about 3.3 m by 1.9 m, about 80° by 50° of view. Some elements
   appear twice, overlapping, at different slants. The flat HUD at 1280x720 does not overlap *(observed in a flat
@@ -289,3 +290,5 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   `ragesaq-009` to `ragesaq-011`.
 - 2026-11-25: the sky fix (`ragesaq-009`) built on `port/vr-sky-stereo`: off-centre projections keep their frustum
   for the sky. Flat replay frames unchanged; a 60 s stereo run clean. The headset check by ragesaq is next.
+- 2026-11-25: the sky fix passed its cross-family review (PR #11), and in the headset the sky now converges
+  (ragesaq).
