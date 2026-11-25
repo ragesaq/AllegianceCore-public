@@ -13,11 +13,11 @@ namespace Allegiance.ClientCore.Vr;
 /// turns it into <see cref="OpenXrPresenter.Failed"/>; the game runs flat.</summary>
 public sealed class VrUnavailableException(string message) : Exception(message);
 
-/// <summary>The VR client's OpenXR side. Milestone 2: the game draws the 3-D
-/// scene once per eye with the headset's pose, shown on a projection layer (one
-/// swapchain per eye), and
-/// the HUD and 2-D screens on a quad in front of it. A frame the game draws flat
-/// (no head pose, or the eyes were not drawn) is shown on the quad alone, as in
+/// <summary>The VR client's OpenXR side. The game draws the 3-D scene and the
+/// HUD once per eye with the headset's pose, shown on one projection layer (one
+/// swapchain per eye); the HUD has no layer of its own, so any tool that records
+/// the projection layer records the HUD too. A frame the game draws flat (no
+/// head pose, or the eyes were not drawn) is shown on a quad alone, as in
 /// milestone 1. OpenXR starts lazily on the first frame, on the render thread,
 /// with MonoGame's OpenGL context current. Windows only (XR_KHR_opengl_enable
 /// with a WGL binding).</summary>
@@ -56,7 +56,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     private bool _viewsGiven;
     private readonly View[] _views = new View[2];
 
-    private SwapchainSet _hud;
+    private SwapchainSet _screen;
     private SwapchainSet _leftEye;
     private SwapchainSet _rightEye;
 
@@ -357,9 +357,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
         view.Fov.AngleLeft, view.Fov.AngleRight, view.Fov.AngleUp, view.Fov.AngleDown);
 
     /// <summary>Ends the open frame with the eye images on a projection layer
-    /// (when the game drew the views it was given) and the back buffer on a quad:
-    /// the HUD alone over transparent in a stereo frame, the whole flat frame
-    /// otherwise.</summary>
+    /// when the game drew the views it was given, HUD included. Otherwise the
+    /// whole flat frame goes on an opaque quad, as in milestone 1.</summary>
     private void SubmitLayers(int width, int height, VrEyeImages eyes)
     {
         var xr = _xr!;
@@ -401,36 +400,36 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
                 if (!_firstStereoLogged)
                 {
                     _firstStereoLogged = true;
-                    _log($"[vr] first stereo frame: eyes {eyes.Width}x{eyes.Height}, HUD {width}x{height}, back buffer alpha bits {_blitter!.BackBufferAlphaBits()}");
+                    _log($"[vr] first stereo frame: eyes {eyes.Width}x{eyes.Height}, HUD drawn in the eye images");
                 }
+                var stereoLayers = stackalloc CompositionLayerBaseHeader*[1];
+                stereoLayers[0] = (CompositionLayerBaseHeader*)&projection;
+                EndFrame(stereoLayers, 1);
+                return;
             }
 
-            EnsureSwapchain(ref _hud, "HUD", width, height);
+            EnsureSwapchain(ref _screen, "screen", width, height);
             CopyBackBuffer(xr, width, height);
-            var (quadWidth, quadHeight) = stereo
-                ? HudQuad.SizeMetres(width, height, eyes.HudVerticalFovRadians)
-                : VirtualScreen.SizeMetres(width, height);
+            var (quadWidth, quadHeight) = VirtualScreen.SizeMetres(width, height);
             var quad = new CompositionLayerQuad
             {
                 Type = StructureType.CompositionLayerQuad,
-                // The HUD is drawn over a transparent clear; the flat frame is opaque.
-                LayerFlags = stereo ? CompositionLayerFlags.BlendTextureSourceAlphaBit : 0,
+                // The flat frame is opaque.
+                LayerFlags = 0,
                 Space = _space,
                 EyeVisibility = EyeVisibility.Both,
                 SubImage = new SwapchainSubImage
                 {
-                    Swapchain = _hud.Handle,
+                    Swapchain = _screen.Handle,
                     ImageRect = new Rect2Di(new Offset2Di(0, 0), new Extent2Di(width, height)),
                     ImageArrayIndex = 0,
                 },
                 Pose = new Posef { Orientation = new Quaternionf(0, 0, 0, 1), Position = new Vector3f(0, 0, -VirtualScreen.DistanceMetres) },
                 Size = new Extent2Df(quadWidth, quadHeight),
             };
-            var layers = stackalloc CompositionLayerBaseHeader*[2];
-            uint layerCount = 0;
-            if (stereo) layers[layerCount++] = (CompositionLayerBaseHeader*)&projection;
-            layers[layerCount++] = (CompositionLayerBaseHeader*)&quad;
-            EndFrame(layers, layerCount);
+            var layers = stackalloc CompositionLayerBaseHeader*[1];
+            layers[0] = (CompositionLayerBaseHeader*)&quad;
+            EndFrame(layers, 1);
         }
         catch (VrUnavailableException)
         {
@@ -517,7 +516,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     }
 
     private void CopyBackBuffer(XR xr, int width, int height) =>
-        WithImage(xr, _hud, texture => _blitter!.CopyBackBuffer(texture, width, height));
+        WithImage(xr, _screen, texture => _blitter!.CopyBackBuffer(texture, width, height));
 
     private void CopyEye(XR xr, SwapchainSet set, uint source, int width, int height) =>
         WithImage(xr, set, texture => _blitter!.CopyTexture(source, width, height, texture, 0, flipRows: true));
@@ -575,7 +574,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
         _blitter?.Dispose();
         _blitter = null;
         if (xr is null) return;
-        DestroySwapchain(ref _hud);
+        DestroySwapchain(ref _screen);
         DestroySwapchain(ref _leftEye);
         DestroySwapchain(ref _rightEye);
         if (_space.Handle != 0) xr.DestroySpace(_space);

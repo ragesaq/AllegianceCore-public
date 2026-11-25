@@ -97,7 +97,7 @@ public sealed class VrPresenterTests
 
         int logged = log.Count;
         Assert.Null(presenter.BeginFrame());
-        presenter.SubmitFrame(1280, 720, new VrEyeImages(1, 2, 64, 64, 1f));
+        presenter.SubmitFrame(1280, 720, new VrEyeImages(1, 2, 64, 64));
         Assert.Equal(logged, log.Count);
     }
 
@@ -112,26 +112,5 @@ public sealed class VrPresenterTests
 
         Assert.False(presenter.Failed);
         Assert.Empty(log);
-    }
-
-    [Fact]
-    public void Hud_quad_covers_the_game_cameras_vertical_field_of_view()
-    {
-        float fov = 1.2f;
-        var (width, height) = HudQuad.SizeMetres(1920, 1080, fov);
-        Assert.Equal(2f * VirtualScreen.DistanceMetres * MathF.Tan(fov / 2f), height, 5);
-        Assert.Equal(height * 1920f / 1080f, width, 5);
-        // Seen from the origin the quad's top edge is half the field of view up.
-        Assert.Equal(fov / 2f, MathF.Atan2(height / 2f, VirtualScreen.DistanceMetres), 5);
-    }
-
-    [Theory]
-    [InlineData(0f)]
-    [InlineData(-1f)]
-    [InlineData(float.NaN)]
-    [InlineData(3.5f)]
-    public void Hud_quad_without_a_usable_field_of_view_is_the_virtual_screen(float fov)
-    {
-        Assert.Equal(VirtualScreen.SizeMetres(1920, 1080), HudQuad.SizeMetres(1920, 1080, fov));
     }
 }

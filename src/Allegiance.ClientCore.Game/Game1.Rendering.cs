@@ -1765,6 +1765,7 @@ public sealed partial class Game1
                 // raises ofInHangar (:6836), so the flight HUD yields to it.
                 if (!_directorActive && !_nativeHangarScreen)
                     DrawRadar(view, proj, cameraEye, gameTime.TotalGameTime.TotalSeconds);
+                GatherVrHudMarkers(view, proj, cameraEye, gameTime.TotalGameTime.TotalSeconds);   // VR (Game1.VrHud.cs)
 
                 // P576-B — the aleph destination-glimpse composites AFTER the
                 // opaque scene (the warp funnels) so it shows inside each funnel
@@ -3336,6 +3337,7 @@ public sealed partial class Game1
             chatHistoryVisible: _chatHistoryVisible,
             targetPaneSlide: _paneSlides.Progress(SlidingPane.TargetPane, _nowSeconds),
             selectionBracket: _hudSettings.SelectionBracketOn,
+            centreReticleInWorld: _vrEyesDrawn,   // VR (Game1.VrHud.cs)
             diagnostics: Environment.GetEnvironmentVariable("ALLEGIANCE_LOD_OVERLAY") == "1"
                 ? $"LOD full:{_lodFullCount} far:{_lodFarCount}" : null,
             hidden: _hideHud || _directorActive || _hudHidden,

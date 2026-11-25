@@ -2,7 +2,7 @@
 
 **Owner:** ragesaq · **Started:** 2026-11-25 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
-**Status:** in progress (design spec accepted by ragesaq 2026-11-25, not built; node `ragesaq-010`)
+**Status:** in progress (design spec accepted by ragesaq 2026-11-25; build step 1 built on `port/vr-hud-in-eyes`, waiting for review and the headset; node `ragesaq-010`)
 
 ## What this answers
 
@@ -209,14 +209,45 @@ near object behind a far reticle) is handled by the fade in layer 1. The text-si
 
 Each step keeps the flat HUD's bytes (replay frames) and goes through the review gates.
 
+## Step 1 as built (branch `port/vr-hud-in-eyes`)
+
+- **The HUD is drawn into each eye image.** The OpenXR quad layer is gone from stereo frames: a stereo frame
+  submits only the projection layer, so a capture of the eyes holds the HUD (`ragesaq-011`). A frame that falls
+  back to flat still shows the back buffer on an opaque screen quad *(read: `OpenXrPresenter.cs`, `Game1.VrHud.cs`
+  on the branch)*.
+- **Targeting markers at their objects' depth.** Each frame the flat game's contact brackets, the selection
+  bracket, the missile-lock bracket and the lead marker are turned into world positions, and each eye projects
+  them itself, so each marker carries its object's disparity. Contacts come from the radar's pixels, cast back
+  through the view at the contact's known distance; in a stereo frame the radar is re-run through a wide,
+  head-turned frame (±75° by ±70°) so contacts beside the game camera's frame are kept. Sizes are angles: brackets
+  never under 2° across (capped at 20°), text never under 0.6° tall, line width at least 0.08° *(read:
+  `VrHudGeometry.cs`; tested in `VrHudGeometryTests`)*. Labels are name and range from the radar's own label rules.
+- **The aim reticle is a direction** (the ship's nose), the same pixel in both eyes, so it is seen at infinity. The
+  flat game's centre crosshair is left off the panel in VR (`HudContext.CentreReticleInWorld`). ragesaq looked in the
+  headset on 2026-11-25 and asked that the targeting reticles be drawn farther than 1 m, to tell them apart from the
+  near HUD *(ragesaq, Port's working session 2026-11-25)*; the flat crosshair on the 1 m panel was the one that was
+  not.
+- **The rest of the flat HUD is on one interim panel fixed to the seat**: 1 m from the head's rest position, its
+  centre 25° below the nose, 1.1 m wide, facing the head. For headset tuning, set `ALLEGIANCE_VR_HUD_PANEL` to
+  "distance m,pitch down degrees,width m" (for example `1,25,1.1`); values outside 0.3 to 10 m, -60 to 80° or 0.1 to
+  5 m fall back to the default. It is drawn with its own projection whose near plane is 5 cm: the eye projection keeps
+  the game's near plane (1 m in the cockpit, 10 m outside), which clipped the panel's lower part away *(observed
+  2026-11-25 in a full-resolution dump of the left eye; test `The_whole_panel_lies_between_the_seat_projections_depth_planes`)*.
+- **The desktop window mirrors the left eye**, letterboxed.
+- **Limits of step 1**, for the next steps: no edge arrows for off-view targets yet; the last-base objective
+  brackets, the velocity marker, the chase aim point and the order arrows are not drawn in VR yet (they were
+  screen-space and are dropped from the panel); the Jet skin's radar scope is not re-run in the wide frame, so in
+  VR it shows only contacts inside the game camera's frame; the FIRING tag left the panel with the flat crosshair.
+- The flat game is unchanged: replay frames 300, 1500, 3600, 6000 and 9000 of `battle.alr` hash the same as
+  before *(observed 2026-11-25)*.
+
 ## Open questions
 
 - Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
   the upstream author (node `ragesaq-012`).
 - What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
   headset look with Classic, then Modern, would tell.
-- What the desktop window shows in VR mode: today it shows the HUD over black; a mirror of the left eye may be more
-  useful.
+- What the desktop window shows in VR mode. *(Answered in step 1: a mirror of the left eye.)*
 - How HUD pixels should be written to depth, if depth is ever submitted for reprojection *(read: SteamVR names
   `XR_KHR_composition_layer_depth`, [Steam partner docs](https://partner.steamgames.com/doc/steamframe/compat/perf_criteria);
   no source found on HUD pixels)*.
@@ -231,6 +262,8 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
 - 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
+- 2026-11-25: Port built step 1 on `port/vr-hud-in-eyes` (above). From a first look in the headset, ragesaq asked
+  that targeting reticles be farther than 1 m; the flat crosshair left the near panel.
 
 ## Sources
 
