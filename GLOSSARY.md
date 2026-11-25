@@ -3495,8 +3495,8 @@ No native analogue: native Allegiance has no VR, so there is no parity matrix.
   over a transparent clear. Key: `src/Allegiance.ClientCore.Game/Vr/VrEyeCamera.cs`,
   `src/Allegiance.ClientCore.Game/Vr/VrStereoFrame.cs`.
 - **OpenXR presenter** — an OpenXR session over `XR_KHR_opengl_enable` (WGL,
-  Windows only). A stereo frame goes out as a projection layer (both eyes side
-  by side in one swapchain) plus the HUD on a quad 2 m ahead, sized to the game
+  Windows only). A stereo frame goes out as a projection layer (one swapchain
+  per eye) plus the HUD on a quad 2 m ahead, sized to the game
   camera's vertical field of view and blended by its alpha. A flat frame (no
   tracked pose) goes out as milestone 1's opaque quad, 2.4 m wide. `GlBlitter`
   copies framebuffer 0 and the eye textures (rows flipped) into the swapchains
@@ -3507,5 +3507,6 @@ No native analogue: native Allegiance has no VR, so there is no parity matrix.
   `src/Allegiance.ClientCore.Vr/VirtualScreen.cs`.
 - Tests: `tests/Allegiance.ClientCore.MonoGame.Tests/VrPresenterTests.cs`,
   `tests/Allegiance.ClientCore.MonoGame.Tests/VrFrameSinkHostTests.cs`,
-  `tests/Allegiance.ClientCore.MonoGame.Tests/VrEyeCameraTests.cs`. Survey,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrEyeCameraTests.cs`,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrScenePassTests.cs`. Survey,
   decisions and traps: `knowledge/vr-client-survey.md`.

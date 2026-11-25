@@ -4,6 +4,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #9 VR milestone 2, round 1
+
+- Record: [summary](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/summary.md), [receipt](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `f945af7..3677ec6`, head `3677ec6`, tree `52add9f`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Findings and dispositions:
+  1. Medium: the HUD quad's `BLEND_TEXTURE_SOURCE_ALPHA_BIT` would premultiply an already-premultiplied buffer.
+     Disputed: the OpenXR specification says the bit only enables the layer's alpha (unset, the alpha is one), and
+     colour is taken as premultiplied unless `XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT` is set. No change; the
+     HUD's edges are on the headset checklist.
+  2. Low: the native debris field stepped twice per frame in stereo. Fixed: `NativeScene.GatherDust` takes
+     `advance`, false on the second eye; `VrScenePassTests` covers it and was seen to fail without the fix.
+  3. Low: the eye render targets outlived a dropped VR sink. Fixed: released when the host is no longer attached.
+  4. Low: the opt-in aleph glimpse would land on the HUD layer. Fixed by skipping it in stereo frames, documented.
+  - Observation: the HUD quad is fixed in the local space, so it does not follow the head. Kept for milestone 2 and on
+    the headset checklist.
+  - Limit acted on: the side-by-side eye swapchain was twice the recommended width. Each eye now has its own
+    swapchain at the recommended size.
+
 ## 2026-11-25: PR #7 VR milestone 1, closeout
 
 - Record: [summary](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/summary.md), [receipt](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/receipt.md)

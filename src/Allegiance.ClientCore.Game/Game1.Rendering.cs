@@ -677,7 +677,7 @@ public sealed partial class Game1
                 // >100 m camera jump (warp/teleport/sector change) clears it (the
                 // native rule), so the field never smears across a transit.
                 NativeScene.GatherDust(_visuals, _subtleDust, _debrisGeo, _spaceVisualFrame,
-                    cameraEye, view, proj, _gameSeconds, _drawDustViews);
+                    cameraEye, view, proj, _gameSeconds, _drawDustViews, advance: !VrRepeatPass);
                 _debrisRenderer.Draw(_drawDustViews, cameraEye, view, proj);
 
                 // P628 — per-frame LOD bookkeeping reset (counts + far sprite list).
@@ -1771,7 +1771,7 @@ public sealed partial class Game1
                 // centre rather than being hidden behind the funnel geometry.
                 // Drawn here, inside the camera block, so view/proj/cameraEye are
                 // live; default OFF (--aleph-glimpse on).
-                if (_alephGlimpse && TrySceneSector(world, me, out short glimpseSector)
+                if (_alephGlimpse && !_vrEyesDrawn && TrySceneSector(world, me, out short glimpseSector)
                     && world.Clusters.TryGetValue(glimpseSector, out var gdc))
                 {
                     DrawAlephGlimpses(view, proj, cameraEye, world, gdc);

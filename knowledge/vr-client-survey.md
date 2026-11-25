@@ -146,7 +146,10 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 - **The second eye repeats only the drawing.** `dt` is 0 for it, and it skips particle emission (each `Emit` adds at
   least one particle), the trail update, the effect-lights gather, flare occlusion, the target-model preview and the
   GPU timer and telemetry *(read: each call site in `Game1.Rendering.cs`)*. Hull hits are drained by
-  `TakeNewHullHits`, and the asteroid spin takes an absolute clock, so both are safe to repeat *(read)*.
+  `TakeNewHullHits`, and the asteroid spin takes an absolute clock, so both are safe to repeat *(read)*. The dust
+  field is re-projected for the second eye without being stepped (`NativeScene.GatherDust(..., advance: false)`):
+  the native debris field, used when "Subtle dust" is off, accumulates distance and draws from its spawn RNG on each
+  step *(found by the PR #9 round 1 review; tested: `VrScenePassTests`)*.
 - **One game unit is one metre** *(derived: the radar labels plain world distance in metres, native
   `radarimage.cpp:1209`, `docs/reports/HUD1_HUD_PARITY.md:107`)*. So the headset's eye offsets apply unscaled
   (`VrEyeCamera.GameUnitsPerMetre`). This answers the first open question below; how the cockpit scale feels is for
@@ -160,18 +163,32 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 - **The HUD.** After the eye passes the back buffer is cleared to transparent and the HUD and radar are drawn into it
   with the game's own camera. The presenter shows it on a quad 2 m ahead, sized so it covers the game camera's
   vertical field of view, with `XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT`. The desktop window then shows
-  the HUD over black in stereo frames, a known limitation.
+  the HUD over black in stereo frames, a known limitation. The HUD buffer holds premultiplied colour, which is what
+  OpenXR assumes when `XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT` is unset; without the blend bit the layer's
+  alpha would be one and the HUD an opaque sheet *(read: OpenXR specification, "Composition Layer Blending")*. The
+  quad is fixed in the local space, so it stays ahead of the seat rather than following the head.
+- **Not in stereo yet:** the opt-in aleph destination glimpse (`--aleph-glimpse`) is drawn after the eye passes, so
+  it is skipped in stereo frames rather than landing on the HUD layer.
 - **Flat output unchanged** *(observed 2026-11-25: replay frames 300, 1500, 3600, 6000 and 9000 of
-  `data/benchmarks/battle.alr` captured before and after the change are byte-identical; see the PR)*.
+  `data/benchmarks/battle.alr` captured before the change, after it, and after the round 1 review fixes are
+  byte-identical; see the PR)*.
 - A frame with no tracked orientation, or one the game did not draw in stereo, is shown as milestone 1's opaque quad.
+- Each eye has its own swapchain at the runtime's recommended size, so no runtime can refuse an image wider than its
+  `maxSwapchainImageWidth`. The eye render targets are released when the VR sink is dropped.
 - **Stereo runs at the headset rate in the harness** *(observed 2026-11-25: SteamVR/OpenXR 2.18.4, lighthouse
-  headset not worn, `--training --vr` for 90 s)*. The runtime recommended 3708x3564 per eye, so the eye swapchain is
-  7416x3564; the HUD swapchain is 1280x720 and the back buffer has 8 alpha bits. `[frameprof]` counted 750 frames per
-  5 s, 75 per second after halving (the trap below), against a 13.33 ms display period. No `[vr]` error. Whether the
-  picture is upright, the eyes converge and the HUD sits right is for the headset.
+  headset not worn, `--training --vr` for 90 s, run twice)*. The runtime recommended 3708x3564 per eye. The first
+  run used one side-by-side swapchain of 7416x3564; the second, after the round 1 fixes, one 3708x3564 swapchain per
+  eye. The HUD swapchain is 1280x720 and the back buffer has 8 alpha bits. In both runs `[frameprof]` counted 750
+  frames per 5 s, 75 per second after halving (the trap below), against a 13.33 ms display period, with no `[vr]`
+  error. Whether the picture is upright, the eyes converge and the HUD sits right is for the headset.
 
 ## Traps
 
+- **Replay frames are byte-identical only when the capture has the GPU to itself.** A recapture run beside a stereo
+  smoke run drew each frame in about 23 ms instead of about 2 ms, and frames 1500 and 3600 differed: ship textures
+  stream in on a background loader, so a slow run reaches a frame with a different set loaded. Run alone, the same
+  build matched all five *(observed 2026-11-25)*. Capture with no other game client running before reading a
+  mismatch as a change.
 - **MonoGame sleeps 20 ms per frame while its window is not active** (`Game.InactiveSleepTime`). In VR that halves the
   headset frame rate whenever another window has focus *(observed 2026-11: 45 frames per second against a 75 Hz
   period, 74.7 with the sleep off)*. VR mode sets it to zero.
@@ -186,6 +203,10 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 - **MonoGame stores a render target's rows top first** (its OpenGL backend flips clip space when a target is bound),
   the reverse of the back buffer, so eye images are copied into the swapchain with rows flipped *(derived from
   MonoGame's OpenGL backend; to be confirmed in the headset)*.
+- **`XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT` does not premultiply.** It enables the layer's alpha;
+  unset, the alpha is one. Colour is taken as premultiplied unless `XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT`
+  is set *(read: OpenXR specification source, `rendering.adoc`)*. A review that read the blend bit as a second
+  premultiply was answered with this.
 - **MonoGame clears a `DiscardContents` render target each time it is bound**, so the eye targets use
   `PreserveContents`: the target-model preview binds another target and comes back to the scene's *(read)*.
 - **The `[frameprof]` line counts each flight frame twice.** `UpdateSessionPerformance` runs from `UpdateBenchmark`
@@ -214,3 +235,6 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   (above), and ragesaq approved it as proposed.
 - 2026-11-25: built milestone 2 on `port/vr-m2`: eye passes, the projection layer and the HUD quad. The flat replay
   frames are unchanged. The headset test by ragesaq is still to come.
+- 2026-11-25: the cross-family review of PR #9, round 1, passed with conditions. Three low findings were fixed and
+  each eye got its own swapchain; the HUD blend finding was answered from the OpenXR specification
+  (`.hyperreview/README.md`). A delta review of the fixes is next.

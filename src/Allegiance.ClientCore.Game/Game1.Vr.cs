@@ -52,6 +52,9 @@ public sealed partial class Game1
         _vrPass = -1;
         _vrEyesDrawn = false;
         _vrFrame = _vrHost is { Attached: true } ? _vrHost.BeginFrame() : null;
+        // A dropped sink leaves the game flat for the rest of the run; the eye
+        // targets (hundreds of MB at headset sizes) go with it.
+        if (_vrHost is not { Attached: true }) ReleaseVrEyeTargets();
     }
 
     /// <summary>Start of one pass of the 3-D scene. On a flat frame it changes
@@ -131,6 +134,11 @@ public sealed partial class Game1
     private void DisposeVrSink()
     {
         _vrHost?.Dispose();
+        ReleaseVrEyeTargets();
+    }
+
+    private void ReleaseVrEyeTargets()
+    {
         _vrLeftEye?.Dispose();
         _vrRightEye?.Dispose();
         _vrLeftEye = null;

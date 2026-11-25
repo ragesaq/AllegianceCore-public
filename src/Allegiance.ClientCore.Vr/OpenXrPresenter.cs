@@ -14,7 +14,8 @@ namespace Allegiance.ClientCore.Vr;
 public sealed class VrUnavailableException(string message) : Exception(message);
 
 /// <summary>The VR client's OpenXR side. Milestone 2: the game draws the 3-D
-/// scene once per eye with the headset's pose, shown on a projection layer, and
+/// scene once per eye with the headset's pose, shown on a projection layer (one
+/// swapchain per eye), and
 /// the HUD and 2-D screens on a quad in front of it. A frame the game draws flat
 /// (no head pose, or the eyes were not drawn) is shown on the quad alone, as in
 /// milestone 1. OpenXR starts lazily on the first frame, on the render thread,
@@ -56,7 +57,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     private readonly View[] _views = new View[2];
 
     private SwapchainSet _hud;
-    private SwapchainSet _eyes;
+    private SwapchainSet _leftEye;
+    private SwapchainSet _rightEye;
 
     public OpenXrPresenter(VrOptions options) : this(options.LoaderCandidates(), Console.WriteLine) { }
 
@@ -374,8 +376,10 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
             var projection = new CompositionLayerProjection { Type = StructureType.CompositionLayerProjection };
             if (stereo)
             {
-                EnsureSwapchain(ref _eyes, "eye", 2 * eyes.Width, eyes.Height);
-                CopyEyes(xr, eyes);
+                EnsureSwapchain(ref _leftEye, "left eye", eyes.Width, eyes.Height);
+                EnsureSwapchain(ref _rightEye, "right eye", eyes.Width, eyes.Height);
+                CopyEye(xr, _leftEye, eyes.Left, eyes.Width, eyes.Height);
+                CopyEye(xr, _rightEye, eyes.Right, eyes.Width, eyes.Height);
                 for (int i = 0; i < 2; i++)
                 {
                     projectionViews[i] = new CompositionLayerProjectionView
@@ -385,8 +389,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
                         Fov = _views[i].Fov,
                         SubImage = new SwapchainSubImage
                         {
-                            Swapchain = _eyes.Handle,
-                            ImageRect = new Rect2Di(new Offset2Di(i * eyes.Width, 0), new Extent2Di(eyes.Width, eyes.Height)),
+                            Swapchain = (i == 0 ? _leftEye : _rightEye).Handle,
+                            ImageRect = new Rect2Di(new Offset2Di(0, 0), new Extent2Di(eyes.Width, eyes.Height)),
                             ImageArrayIndex = 0,
                         },
                     };
@@ -515,12 +519,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     private void CopyBackBuffer(XR xr, int width, int height) =>
         WithImage(xr, _hud, texture => _blitter!.CopyBackBuffer(texture, width, height));
 
-    private void CopyEyes(XR xr, VrEyeImages eyes) =>
-        WithImage(xr, _eyes, texture =>
-        {
-            _blitter!.CopyTexture(eyes.Left, eyes.Width, eyes.Height, texture, 0, flipRows: true);
-            _blitter.CopyTexture(eyes.Right, eyes.Width, eyes.Height, texture, eyes.Width, flipRows: true);
-        });
+    private void CopyEye(XR xr, SwapchainSet set, uint source, int width, int height) =>
+        WithImage(xr, set, texture => _blitter!.CopyTexture(source, width, height, texture, 0, flipRows: true));
 
     private void WithImage(XR xr, SwapchainSet set, Action<uint> copy)
     {
@@ -576,7 +576,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
         _blitter = null;
         if (xr is null) return;
         DestroySwapchain(ref _hud);
-        DestroySwapchain(ref _eyes);
+        DestroySwapchain(ref _leftEye);
+        DestroySwapchain(ref _rightEye);
         if (_space.Handle != 0) xr.DestroySpace(_space);
         if (_session.Handle != 0) xr.DestroySession(_session);
         if (_instance.Handle != 0) xr.DestroyInstance(_instance);
