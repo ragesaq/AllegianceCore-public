@@ -162,9 +162,10 @@
       "owner": "ragesaq",
       "status": "waiting",
       "needs": [],
-      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): the HUD quad is close and large (about 80 by 50 degrees of view at 2 m) and some elements appear twice, overlapping, at different slants. Decided by ragesaq 2026-11-25: the HUD is drawn into the eye images, not on its own layer (same section). Work: draw the HUD in each eye pass at a comfortable distance and size, keep its markers over what they mark, drop the HUD quad layer, and keep the flat path's bytes. First step: check in the flat game's cockpit view whether the doubled elements are 3-D cockpit screens. Owner of the work: Port. Waits on: ragesaq-009 (the sky fix, in progress first); then a branch port/vr-hud-in-eyes.",
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"). Decided by ragesaq 2026-11-25: the HUD is drawn into the eye images; the aiming reticle at infinity; targeting markers at the target's depth; information panels close and angled like cockpit displays; no motion controllers. Design spec: knowledge/vr-hud-design.md (four layers and a build order; layer 3, a flight reference block at infinity, is Port's proposal). Next: ragesaq accepts or changes the spec (in its PR); then build step 1 (HUD in the eye passes, targeting markers at depth, quad layer dropped) on a branch port/vr-hud-in-eyes from master, after ragesaq-009. Owner of the work: Port.",
       "links": [
-        "knowledge/vr-client-survey.md"
+        "knowledge/vr-client-survey.md",
+        "knowledge/vr-hud-design.md"
       ],
       "updated": "2026-11-25"
     },
