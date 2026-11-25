@@ -175,6 +175,24 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   2, finding N1)*.
 - A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
   now include the four side thrusters, ripcord and chaff.
+- Targeting goes on the throttle grip *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i want
+  targeting to be on the left throttle")*. ragesaq picked five grip controls by their numbers in Virpil's diagram
+  of the MT-50CM2: push buttons 15, 16 and 21 and the 5-way castle switches 19 and 20 *(Port's working session
+  2026-11-25: "i think button 15, 16, hat 19, hat 20, and button 21 are the ones to target for now")*. Those are
+  Virpil's labels, not the button numbers the game reads; the throttle reports 79 buttons and no hats (device
+  readout), so each castle switch is five buttons, four directions and a centre press *(derived)*. A capture maps
+  them.
+- The joystick targeting commands are named exactly like the key actions they press: `Target`, `TargetCenter`,
+  `TargetNothing`, `TargetHostile`, `ToggleAutopilot`, next, nearest and previous for `TargetEnemy` and
+  `TargetFriendly`, and nearest for `TargetEnemyBase`, `TargetFriendlyBase` and `TargetWarp`. Each acts once per
+  press through the same press detection as its key, so a joystick press and the key behave the same
+  (`Game1.TargetCommands.cs` `RemainderTargetEdgeDown`, `Game1.Targeting.cs` `TargetEdgeDown`, and the
+  TargetNothing, TargetCenter and autopilot checks in `Game1.FlightInput.cs`) *(observed in the code)*. A test
+  checks every such command is a catalog action the game dispatches.
+- A desktop app that shows which physical control is which button on both devices, and rebinds them, is a later
+  goal *(ragesaq, Port's working session 2026-11-25: "an app is a future goal, for now we should just map out
+  some bindings")*. ragesaq's HOTAS is on a sim rig with no monitor, viewed through VR, which is why the app
+  would help. Adapting an existing tool is an option to look at.
 - If the device that feeds the throttle goes away while another stays, the throttle latch is reset so the keyboard
   throttle works again *(review round 1, finding 1)*. After a profile has matched once, the fallback is not used, so
   leftover pedals never fly the ship *(finding 4)*.

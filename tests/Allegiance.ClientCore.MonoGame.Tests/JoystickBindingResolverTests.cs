@@ -458,4 +458,50 @@ public class JoystickBindingResolverTests
         Assert.Null(error);
         Assert.Empty(profiles);
     }
+
+    // ---- targeting: commands named like the key actions they press ----
+
+    [Fact]
+    public void Commands_FitTheHeldMask()
+        => Assert.True(Enum.GetValues<JoystickCommand>().Length <= 31);
+
+    [Fact]
+    public void KeyActionCommands_AreCatalogActionsTheGameDispatches()
+    {
+        var catalog = Rendering.InputActionCatalog.Definitions.Select(d => d.Name).ToHashSet();
+        var dispatched = Game1.RemainderTargetActions.Select(a => a.Id)
+            .Concat(["TargetCenter", "TargetNothing", "TargetHostile", "ToggleAutopilot"]).ToHashSet();
+        Assert.NotEmpty(JoystickKeyActions.Names);
+        foreach (var name in JoystickKeyActions.Names)
+        {
+            Assert.Contains(name, catalog);
+            Assert.Contains(name, dispatched);
+        }
+    }
+
+    [Fact]
+    public void FlightCommands_AreNotKeyActions()
+    {
+        Assert.False(JoystickKeyActions.TryGet("Fire", out _));
+        Assert.False(JoystickKeyActions.TryGet("Ripcord", out _));
+        Assert.True(JoystickKeyActions.TryGet("TargetCenter", out var c));
+        Assert.Equal(JoystickCommand.TargetCenter, c);
+    }
+
+    [Fact]
+    public void UserProfile_BindsATargetingButton_HeldByActionName()
+    {
+        var (profiles, error) = JoystickBindingFile.Parse("""
+            { "devices": [ { "match": "VPC Throttle", "axes": [],
+                "buttons": [ { "command": "TargetCenter", "button": 21 }, { "command": "TargetEnemyNearest", "button": 22 } ] } ] }
+            """);
+        Assert.Null(error);
+        var r = new JoystickBindingResolver(profiles);
+        r.Resolve([ThrottleAt(1)]);
+        var f = r.Resolve([ThrottleAt(1, pressed: [21])]);
+        Assert.True(f.HoldsAction("TargetCenter"));
+        Assert.False(f.HoldsAction("TargetEnemyNearest"));
+        Assert.False(f.HoldsAction("NotAnAction"));
+        Assert.False(r.Resolve([ThrottleAt(1)]).HoldsAction("TargetCenter"));
+    }
 }

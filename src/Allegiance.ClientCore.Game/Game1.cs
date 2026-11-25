@@ -1196,6 +1196,7 @@ public sealed partial class Game1 : Game
     private readonly Dictionary<int, bool[]> _joystickButtonBuffers = new();
     private long _joystickFrameTicks = -1;
     private JoystickBindingFrame _joystickFrame;
+    private JoystickBindingFrame _targetJoystickFrame;
     private string _joystickDevicesLogged = "";
     private bool _joystickThrottleWasBound;
 

@@ -41,6 +41,10 @@ public sealed partial class Game1
     /// the keyboard-only flight path is then untouched. Hot-plug is picked up on the
     /// next update because the device list is re-read each time.
     /// </summary>
+    /// <summary>A joystick button bound to the key action <paramref name="action"/> is held in
+    /// this flight frame (<see cref="_targetJoystickFrame"/>, set before the targeting keys run).</summary>
+    private bool JoystickHoldsAction(string action) => _targetJoystickFrame.HoldsAction(action);
+
     private JoystickBindingFrame CurrentJoystickFrame(GameTime gameTime)
     {
         long ticks = gameTime.TotalGameTime.Ticks;
@@ -1421,6 +1425,7 @@ public sealed partial class Game1
         // accept). Runs after the (modal) investment pane so the two verb sets
         // can never double-fire.
         HandleTeamPaneControls(ks, composing);
+        _targetJoystickFrame = CurrentJoystickFrame(gameTime);
         HandleRemainderTargetKeys(ks, composing);
         HandleCommandActionKeys(ks, composing);
         HandleP623TargetingKeys(ks, composing);
@@ -2190,7 +2195,8 @@ public sealed partial class Game1
         if (!composing)
         {
             bool gPress = AutopilotKeyDown(Rendering.KeyBindingStore.Instance.Map, ks,
-                Allegiance.ClientCore.Training.TrainingController.IsTraining);
+                Allegiance.ClientCore.Training.TrainingController.IsTraining)
+                || JoystickHoldsAction("ToggleAutopilot");
             if (gPress && !_gKeyWasDown)
             {
                 // P403 — with the starmap EXPANDED (Tab) and a sector selected (,/.),
@@ -2229,12 +2235,12 @@ public sealed partial class Game1
             // Keys: ; and ' are punctuation unclaimed by every binding
             // (grep-verified; the sole OemSemicolon/OemQuotes-adjacent
             // keys in use are , / . starmap nav and the [+/-] music volume).
-            bool semiNothing = ActionDown(ks, "TargetNothing");
+            bool semiNothing = ActionDown(ks, "TargetNothing") || JoystickHoldsAction("TargetNothing");
             if (semiNothing && !_semicolonNothingKeyWasDown)
                 ClearTarget();
             _semicolonNothingKeyWasDown = semiNothing;
 
-            bool apostropheCenter = ActionDown(ks, "TargetCenter");
+            bool apostropheCenter = ActionDown(ks, "TargetCenter") || JoystickHoldsAction("TargetCenter");
             if (apostropheCenter && !_apostropheCenterKeyWasDown)
                 SelectCentermostTarget();
             _apostropheCenterKeyWasDown = apostropheCenter;

@@ -14,8 +14,37 @@ public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 /// (<c>trekinput.cpp:675-730</c>): TK_FireWeapon (55), TK_FireMissile (56),
 /// TK_FireBooster, the four side thrusters TK_ThrustLeft/Right/Up/Down, TK_Ripcord
 /// and TK_DropChaff. <see cref="Ripcord"/> and <see cref="DropChaff"/> act once per
-/// press, like their keys; the others are held.</summary>
-public enum JoystickCommand { Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff }
+/// press, like their keys; the others are held.
+/// <para>The commands from <see cref="Target"/> on are named exactly like the key
+/// actions they press (<c>InputActionCatalog</c>), act once per press like those keys,
+/// and are read through <see cref="JoystickKeyActions"/>.</para></summary>
+public enum JoystickCommand
+{
+    Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff,
+    Target, TargetCenter, TargetNothing, TargetHostile, ToggleAutopilot,
+    TargetEnemy, TargetEnemyNearest, TargetEnemyPrev,
+    TargetFriendly, TargetFriendlyNearest, TargetFriendlyPrev,
+    TargetEnemyBaseNearest, TargetFriendlyBaseNearest, TargetWarpNearest,
+}
+
+/// <summary>The joystick commands that stand for a key action of the same name.</summary>
+public static class JoystickKeyActions
+{
+    private static readonly Dictionary<string, JoystickCommand> ByAction = Build();
+
+    /// <summary>The key action names a joystick command can press.</summary>
+    public static IReadOnlyCollection<string> Names => ByAction.Keys;
+
+    public static bool TryGet(string action, out JoystickCommand command) => ByAction.TryGetValue(action, out command);
+
+    private static Dictionary<string, JoystickCommand> Build()
+    {
+        var map = new Dictionary<string, JoystickCommand>(StringComparer.Ordinal);
+        foreach (var command in Enum.GetValues<JoystickCommand>())
+            if (command >= JoystickCommand.Target) map[command.ToString()] = command;
+        return map;
+    }
+}
 
 /// <summary>One axis binding inside a <see cref="JoystickDeviceProfile"/>.</summary>
 public sealed record JoystickAxisBinding(JoystickRole Role, int Axis, bool Invert = false);
@@ -68,6 +97,9 @@ public readonly record struct JoystickBindingFrame(bool AnyBound, JoystickAxes A
     public bool StrafeDown => Holds(JoystickCommand.StrafeDown);
     public bool Ripcord => Holds(JoystickCommand.Ripcord);
     public bool DropChaff => Holds(JoystickCommand.DropChaff);
+
+    /// <summary>True while a joystick command named <paramref name="action"/> is held.</summary>
+    public bool HoldsAction(string action) => JoystickKeyActions.TryGet(action, out var command) && Holds(command);
 }
 
 /// <summary>
