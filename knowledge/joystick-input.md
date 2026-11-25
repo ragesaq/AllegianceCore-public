@@ -58,19 +58,37 @@ roles below are read from that order and are *(derived)* where noted:
 | stick | buttons 0 and 1 | | the trigger's two stages: pressed at the same instant *(derived)* |
 | stick | hat 0 | up, right, down, left | the main hat |
 | stick | buttons 2 to 9, 11, 13, 15, 20, 21, 23 | | other stick buttons ragesaq pressed |
-| throttle | axes 3 and 4 | full, rest at the maximum | the two throttle levers, moved together *(derived)* |
-| throttle | axes 0 and 1 | about 97% of full | a thumb stick on the throttle *(derived from the short range)* |
-| throttle | axes 2 and 5 | full | two further axes (rotaries or sliders); which is which is not known |
+| throttle | axis 3 | full | left throttle lever (second capture) |
+| throttle | axis 4 | full | right throttle lever (second capture) |
+| throttle | axis 5 | full | flaps lever (second capture) |
+| throttle | axis 2 | full | middle-finger slider (second capture) |
+| throttle | axes 0 and 1 | full | index-finger joystick (second capture) |
+| throttle | button pairs 1 and 2, 13 and 14, 50 and 51, 53 and 54 | | the left lever's rotary encoder and the right lever's thumb rotary encoder, which send button pulses; which pair is which encoder is not known |
 | throttle | buttons 0 to 8, 10, 12 to 28, 31 to 33, 43 to 46, 48 to 54, 73 to 78 | | throttle buttons ragesaq pressed |
 | pedals | axis 0 | full | pedal axis, rest at the minimum (pressed once to check) |
 
-Open from the capture:
-- The throttle's axes 0 to 4 all first moved at 14.0 s, while the levers moved. Whether axes 0 and 1 (thumb stick)
-  and axis 2 moved by contact or by design needs a capture of one throttle control at a time.
-- Throttle buttons 34, 35 and 36 read pressed at rest, likely latched switches or a mode selector *(derived, not
-  checked)*. A binding must not fire a command on a button held from the start.
-- Stick hat 1 reads "up" at rest, and stick axis 0 read about -6,300 at rest. Either a hand was on the stick at the
-  rest sample, or the device reports this when idle. To check with the hands off.
+A second capture, 60 s, started with the hands off and moved one throttle control at a time. ragesaq gave the
+order afterwards *(Port's working session 2026-11-25: "left throttle, right throttle, flaps, middle finger slider, index finger joystick, left throttle rotary encoder, right throttle thumb rotary encoder")*. The probe logged axis 0 at 22.1 s, then axes 3,
+4, 5, 2 and 1 at 24.2, 26.5, 29.4, 35.0 and 36.5 s, then the button pairs between 41 and 46.5 s *(observed)*. The
+throttle rows above are read from that order *(derived)*. Axis 0 moving first, before the left lever, is most likely
+the hand catching the index-finger joystick on the grip *(derived, not checked)*.
+
+Settled with the hands off *(observed, second capture)*:
+- Stick axis 0 rests at about 1,000, so the -6,300 of the first capture was a hand on the stick.
+- Stick hat 1 reads "up" with the hands off: the stick reports it when idle. A binding must treat a hat or button
+  already held when the game starts as its rest state, not as a press.
+- Throttle buttons 35 and 36 read pressed at rest in both captures; button 34 was held in the first and not in the
+  second, when the levers rested at the other end. 34 is likely a switch tied to the lever position, 35 and 36
+  latched switches *(derived, not checked)*.
+- The throttle levers' rest value is wherever they were left, so the throttle role reads the lever's position, with
+  no centre.
+
+The rotary encoders are buttons that fire in sequence as the encoder turns *(ragesaq, Port's working session
+2026-11-25: "the rotary encoders are probably buttons that just fire in sequence"; consistent with the pairs
+pressed in quick succession above)*. A binding treats each pulse as one step, acting on the press edge, never as a
+held button.
+
+Still open: which button pair is which rotary encoder, and which button of a pair is which turning direction.
 - Both throttle levers move from the maximum (+32,767) towards the minimum, so the throttle role is inverted, as
   native's `NativeHotas` layout already marks *(derived)*.
 
@@ -119,8 +137,7 @@ The in-game binding screen is a later step, scoped with ragesaq.
 
 ## Open questions
 
-- Which throttle control is each of axes 0, 1, 2 and 5, and what throttle buttons 34 to 36 and stick hat 1 report
-  at rest. Answered by a short capture of one control at a time, hands off at the start.
+- Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
 
 ## Timeline
@@ -133,6 +150,8 @@ The in-game binding screen is a later step, scoped with ragesaq.
   will not bind their own racing pedals, but pedals stay bindable for other players (decided).
 - 2026-11-25 — a 90 s control capture mapped the stick's axes, trigger and hat and the throttle's levers and buttons
   (table above); a few throttle axes and rest states remain open.
+- 2026-11-25 — a second capture, one throttle control at a time with ragesaq naming the order, mapped every throttle
+  axis and settled the rest states; only the encoders' button pairs remain open.
 
 ## Boundary
 
