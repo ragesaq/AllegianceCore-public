@@ -4,6 +4,56 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #9 VR milestone 2, closeout
+
+- Record: [summary](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md), [receipt](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Closeout-verification of the whole pull request, `f945af7..36989f0`, head `36989f0`, tree `81e8dd2`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS for the headset test. The ledger of rounds 1 and 2 is closed, deferred with an owner, or answered. The
+  reviewer re-checked that the upstream seam keeps its bytes (`--ignore-all-space` numstat agrees) and that no
+  upstream file was renormalized. New:
+  1. Low (N1): creating the eye render targets inside `Draw` (`Game1.Vr.cs`) has no catch, so a throw there ends the
+     game instead of running flat. Deferred: node `ragesaq-008` in `DAG.json` (Issues are turned off on this fork).
+     Opt-in `--vr` only, never observed.
+  - Its merge gates: PR #7 first (merged as `1c521ad`), then a green Linux `build-and-test` on the final head, which
+    did not run while this PR was based on `port/vr-m1`.
+
+## 2026-11-25: PR #9 VR milestone 2, round 2
+
+- Record: [summary](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/summary.md), [receipt](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch,
+  including a first attempt that failed on the provider connection before the review began.
+- Delta review of `3677ec6..917f29b`, head `917f29b`, tree `a928ba9`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Round 1's F2 to F4 and the swapchain limit are closed; the F1 dispute is accepted on the OpenXR
+  specification. New:
+  1. Low: the `ReadEyeSize` comment in `OpenXrPresenter.cs` still described one side-by-side swapchain. Fixed
+     (comment only).
+  - Notes, no action: the new test covers `GatherDust`'s `advance` flag but not the `advance: !VrRepeatPass` call
+    site; `EnsureSwapchain` would leak a swapchain handle if image enumeration failed after a successful create
+    (milestone 1 code, never observed).
+
+## 2026-11-25: PR #9 VR milestone 2, round 1
+
+- Record: [summary](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/summary.md), [receipt](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `f945af7..3677ec6`, head `3677ec6`, tree `52add9f`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Findings and dispositions:
+  1. Medium: the HUD quad's `BLEND_TEXTURE_SOURCE_ALPHA_BIT` would premultiply an already-premultiplied buffer.
+     Disputed: the OpenXR specification says the bit only enables the layer's alpha (unset, the alpha is one), and
+     colour is taken as premultiplied unless `XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT` is set. No change; the
+     HUD's edges are on the headset checklist.
+  2. Low: the native debris field stepped twice per frame in stereo. Fixed: `NativeScene.GatherDust` takes
+     `advance`, false on the second eye; `VrScenePassTests` covers it and was seen to fail without the fix.
+  3. Low: the eye render targets outlived a dropped VR sink. Fixed: released when the host is no longer attached.
+  4. Low: the opt-in aleph glimpse would land on the HUD layer. Fixed by skipping it in stereo frames, documented.
+  - Observation: the HUD quad is fixed in the local space, so it does not follow the head. Kept for milestone 2 and on
+    the headset checklist.
+  - Limit acted on: the side-by-side eye swapchain was twice the recommended width. Each eye now has its own
+    swapchain at the recommended size.
+
 ## 2026-11-25: PR #7 VR milestone 1, closeout
 
 - Record: [summary](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/summary.md), [receipt](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/receipt.md)

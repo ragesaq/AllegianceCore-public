@@ -44,12 +44,33 @@ internal sealed class VrFrameSinkHost(IVrPacingTarget pacing, Action<string> log
         TakeOverPacing();
     }
 
-    public void Submit(int backBufferWidth, int backBufferHeight)
+    /// <summary>The eye views to draw this frame, or null to draw flat only. A
+    /// sink that fails or throws here is dropped and the frame is drawn flat.</summary>
+    public VrStereoFrame? BeginFrame()
+    {
+        if (_sink is null) return null;
+        VrStereoFrame? frame;
+        try
+        {
+            frame = _sink.BeginFrame();
+        }
+        catch (Exception ex)
+        {
+            log($"[vr] frame sink threw, running flat: {ex.GetType().Name}: {ex.Message}");
+            Drop();
+            return null;
+        }
+        if (!_sink.Failed) return frame;
+        Drop();
+        return null;
+    }
+
+    public void Submit(int backBufferWidth, int backBufferHeight, VrEyeImages eyes)
     {
         if (_sink is null) return;
         try
         {
-            _sink.SubmitFrame(backBufferWidth, backBufferHeight);
+            _sink.SubmitFrame(backBufferWidth, backBufferHeight, eyes);
         }
         catch (Exception ex)
         {
@@ -58,6 +79,14 @@ internal sealed class VrFrameSinkHost(IVrPacingTarget pacing, Action<string> log
             return;
         }
         if (_sink.Failed) Drop();
+    }
+
+    /// <summary>The game cannot hand the sink its frame; run flat from now on.</summary>
+    public void Abandon(string reason)
+    {
+        if (_sink is null) return;
+        log($"[vr] running flat: {reason}");
+        Drop();
     }
 
     public void Dispose()
