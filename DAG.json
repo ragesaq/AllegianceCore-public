@@ -120,12 +120,13 @@
       "id": "ragesaq-007",
       "title": "VR milestone 2: per-eye rendering with the head pose",
       "owner": "ragesaq",
-      "status": "active",
+      "status": "review",
       "needs": [
         "ragesaq-002"
       ],
-      "next": "ragesaq approved milestone 2 as proposed on 2026-11-25 (knowledge/vr-client-survey.md, \"Milestone 2\"). Port builds it on branch port/vr-m2, stacked on port/vr-m1 (PR #7). Steps: capture flat reference frames; move the scene pass into a per-view method with the flat frames unchanged; render each eye with the head pose on a projection layer; the HUD on its own quad; then build, tests, cross-family review and a PR, and ragesaq's headset test.",
+      "next": "In review as PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9, branch port/vr-m2, stacked on port/vr-m1 and PR #7): the scene drawn once per eye with the head pose on an OpenXR projection layer, the HUD on an alpha-blended quad (knowledge/vr-client-survey.md, \"Milestone 2 as built\"). The flat replay frames are byte-identical before and after; a stereo run against SteamVR held 75 Hz with the headset not worn. Next: the cross-family review (AGENTS.md route), then ragesaq's headset test, then merge approval after PR #7.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/9",
         "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-25"
