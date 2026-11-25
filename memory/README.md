@@ -29,6 +29,8 @@ repo wins. Report the disagreement and supersede the entry.
 | mem-002 | vr-on-allegiancecore | verified | 2026-11-24 | Operator decision: the VR client is built here, not in the C++ fork; records moved here |
 | mem-003 | fork-workflow-hazards | verified | 2026-11-24 | Release builds run on v* tags; the mirror and release publish skip in this fork |
 | mem-004 | agent-noreply-identity | verified | 2026-11-24 | Operator decision: both agents commit here with their GitHub noreply addresses |
+| mem-005 | github-merge-identity | verified | 2026-11-24 | GitHub merges stamp addresses the publish guard rejects; operator accepts the red guard on merge pushes |
+| mem-006 | stays-a-fork | verified | 2026-11-24 | Operator decision: the repository stays in the fork network; leaving it was considered and declined |
 
 Add a row here in the same pull request that adds the entry file; `tools/check_memory.py` fails if the index and the store drift apart.
 

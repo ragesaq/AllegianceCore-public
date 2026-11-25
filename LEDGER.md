@@ -12,3 +12,4 @@ Format: `- YYYY-MM-DD — owner — what was finished [node-id] (PR #n)` — or
 ---
 
 - 2026-11-24 — ragesaq — Work before adoption is not itemized here; the repository's history through this commit is its record [ragesaq-000] (commit b76d6c0)
+- 2026-11-24 — ragesaq — Enrolled the fork in HyperBench (memory, work map, knowledge, recall with vectors) and moved the VR work here [ragesaq-001] (commit daaeaf9)
