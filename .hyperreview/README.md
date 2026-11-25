@@ -4,11 +4,27 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 4
+
+- Record: [summary](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/summary.md), [receipt](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `326f945`, tree `0c76fc1`, the delta `309921b..326f945`, in a standalone clone. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All three round 3 findings are closed. Rule 4 read cold: "including these" reads as
+  examples, and the new Issue sentence adds a place to record, not authority. Dispositions:
+  - Low 1, the PR body named only the `line-endings` warning: fixed in the body, which now names both warnings
+    `memory/mem-001` documents.
+  - Low 2, the round 3 summary calls its range three commits: it holds four, with PR #4's merged `610ef8c`. Fixed in
+    the round 3 entry above; the summary stays the reviewer's text.
+- Both fixes are records only, made in this record commit, so no round 5 runs: `AGENTS.md`'s gates let prose-only
+  changes skip review.
+
 ## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 3
 
 - Record: [summary](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/summary.md), [receipt](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/receipt.md)
 - The committed summary is the reviewer's text, unchanged.
-- Reviewed head `309921b`, tree `8cd1ba7`, the delta `e4e159a..309921b`, in a standalone clone. Reviewer
+- Reviewed head `309921b`, tree `8cd1ba7`, the delta `e4e159a..309921b`, in a standalone clone: three authored
+  commits plus PR #4's `610ef8c`, which the merge brought in (the summary says three; round 4 below). Reviewer
   `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
 - Verdict: PASS-WITH-CONDITIONS. All five round 2 findings are closed (New 5 in substance). Dispositions:
   - Low 1, the PR body said `check_map.py` passes without saying where: fixed in the body. The checks ran in the
