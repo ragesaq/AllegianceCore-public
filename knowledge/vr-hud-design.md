@@ -19,6 +19,11 @@ large and hard to use (`knowledge/vr-client-survey.md`, "Milestone 2 in the head
   `knowledge/vr-client-survey.md`)*.
 - This spec is a proposal. Its rows marked *(decided … by ragesaq)* are ragesaq's; every other choice is Port's
   proposal for ragesaq to accept or change, and the numbers are starting values for the headset.
+- The game has three HUD skins, cycled with Shift+F12: Classic, Modern and Jet. Jet is a fighter-style vector HUD
+  that the upstream author is still building. A visual flag gates it and is off by default; turn it on with
+  `--visuals hud.jetSkin=on` or the "Jet HUD" toggle in the visual options *(read: `Rendering/VisualFlags.cs`,
+  `Game1.GpuBudget.cs`, `Rendering/InputActionCatalog.cs` on `master`)*. The upstream author pointed ragesaq at it
+  for VR (ragesaq, Port's working session 2026-11-25). See "The Jet skin and the cockpit study" below.
 
 ## Constraints
 
@@ -95,8 +100,48 @@ refocus from the fight. ragesaq to accept or fold it into layer 4.
   rectangle in each eye pass *(derived: reuses `HudRenderer` layout and fonts; the panel images are drawn once per
   frame, not per eye)*.
 - Panels can be switched or cycled with keys, since there is no pointing.
-- Whether the doubled elements in the milestone 2 screenshot are 3-D cockpit screens drawn in the scene is not
-  checked. If the cockpit model already has screens, layer 4 could use them. First step of the build.
+- There are no cockpit-model screens to reuse. The game draws no cockpit interior, and the native artwork has no
+  cockpit or interior model *(read: `docs/reports/COCKPIT_3D_P1044.md`, "Native findings")*. So the doubled elements
+  in the milestone 2 screenshot are not 3-D cockpit screens; they are most likely overlapping parts of the flat HUD
+  *(derived, not checked)*.
+- Panels must not hide contacts. The upstream cockpit study requires that any cockpit geometry leave every visible
+  ship and its marker readable, and drop the cockpit for a frame when it cannot *(read: P1044, "Gameplay parity and
+  fairness")*. The same rule applies to layer 4 panels, and it is a reason to keep them below the nose.
+
+## The Jet skin and the cockpit study
+
+**The Jet skin is already split the way the four layers need.** It is a third `IHudSkinRenderer`, in about 9,400
+lines under `Rendering/Jet/`, with green and amber palettes. Every value it shows comes from the shared `HudModel`,
+the same data the Classic and Modern skins draw from. Its geometry is in pure functions with no graphics device
+(`JetTargetGeometry`, `JetFlightGeometry`), which tests can run headless *(read: `Rendering/Jet/JetHudRenderer.cs`
+and the two geometry files on `master`)*. Its elements map onto the layers like this:
+
+| Jet element | Layer |
+|---|---|
+| broken gun cross; round flight-path marker | 1, aim at infinity |
+| target designator (corner brackets at 1.05 times the target's radius), missile lock, lead marker, order arrows | 2, at the target's depth |
+| pitch ladder on the sector plane, heading tape, speed and throttle tapes | 3, flight reference at infinity |
+| stores block (hull, shield, energy, fuel, ammunition), master caution, console and chat, inventory pane, radar | 4, cockpit displays |
+
+Layer 3 is the part a fighter HUD is built around. In Jet, the pitch ladder is drawn against the sector plane,
+not against the screen. A ladder like that only lines up with the world when it is drawn at infinity, which supports
+layer 3 *(derived)*.
+
+**Proposal: build the VR HUD by placing Jet's elements, not by laying out Classic again.** The work becomes a VR
+placement for each Jet element group, chosen by layer. Classic and Modern keep their flat layouts in VR, on one
+panel, as a fallback. The flat Jet skin keeps its bytes. One cost: Jet is behind a default-off flag and still in
+development upstream, so the VR placement follows its changes. That argues for doing this work with the upstream
+author, not as a fork-only branch (node `ragesaq-012`).
+
+**The upstream cockpit study (P1044) proposes the same split for the flat game.** It is a report, not built code.
+It keeps aim, targeting and urgent symbols as a sharp overlay ("HUD glass", which matches layers 1 to 3). It moves
+systems and target summaries onto cockpit displays drawn into small off-screen images ("MFD", which matches layer 4).
+It parents the interior to the seat, not the head, and gives the interior its own depth range of 0.05 m to 5 m,
+because a 0.05 m world near plane would make depth steps at 10 km about 20 times coarser *(read:
+`docs/reports/COCKPIT_3D_P1044.md`, "Complete HUD destination map", "Rendering design")*. It also maps all 112 HUD
+rows in the parity matrix to a destination. Layer 4 can use that map instead of the element list in the table
+above, and its planned display service (P1044 slice 3) is the off-screen panel image layer 4 needs. Build one
+service with upstream, not two.
 
 ## What we decided
 
@@ -127,7 +172,8 @@ near object behind a far reticle) is handled by the fade in layer 1. The text-si
    targeting brackets and labels at their objects' depth. This alone fixes capture (`ragesaq-011`) and the
    misplaced markers.
 2. **Layers 1 and 3.** The aim symbols and the flight reference block at infinity.
-3. **Layer 4.** The cockpit panels, after checking whether the cockpit model's own screens can carry them.
+3. **Layer 4.** The cockpit panels, drawn with the display service from the upstream cockpit study if that has
+   landed, and placed by its 112-row map.
 4. **Headset tuning by ragesaq** of distances, sizes, the crosshair fade and panel placement, recorded here.
 
 Each step keeps the flat HUD's bytes (replay frames) and goes through the review gates.
@@ -135,7 +181,10 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 ## Open questions
 
 - Whether layer 3 is wanted, or its readouts join the cockpit panels.
-- What the doubled elements in the milestone 2 screenshot are.
+- Whether the VR HUD is built on the Jet skin's elements (proposed above), and whether Jet must leave its flag
+  first.
+- What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
+  headset look with Classic, then Modern, would tell.
 - What the desktop window shows in VR mode: today it shows the HUD over black; a mirror of the left eye may be more
   useful.
 - How HUD pixels should be written to depth, if depth is ever submitted for reprojection *(read: SteamVR names
@@ -147,6 +196,8 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 - 2026-11-25: ragesaq's headset test of milestone 2 found the HUD too close and large; ragesaq decided the HUD goes
   into the eye images, set the layer depths and the input constraint; Port gathered sources (fighter HMDs, VR
   platform guidance, VR games) and wrote this spec.
+- 2026-11-25: the upstream author pointed ragesaq at the Jet skin. Port read it and the upstream cockpit study
+  (P1044): Jet's elements fall into the four layers, and P1044 splits the flat game the same way.
 
 ## Sources
 
