@@ -133,9 +133,9 @@ public static class VrHudGeometry
     /// <summary>How many pixels an angle covers at <paramref name="pixel"/> of a
     /// view-space image of <paramref name="width"/> by <paramref name="height"/>
     /// pixels: the distance between the two rays half the angle either side of
-    /// the ray through that pixel. A flat image stretches off its centre, so a
-    /// marker at 45° needs about 1.4 times the pixels it needs at the centre to
-    /// cover the same angle.</summary>
+    /// the ray through that pixel, measured up and down. A flat image stretches
+    /// off its centre: a marker 45° to the side needs about 1.4 times the pixels
+    /// it needs at the centre, and one 45° up about twice.</summary>
     public static float PixelsForAngleAt(float radians, Vector2 pixel, Matrix projection, int width, int height)
     {
         float ndcX = pixel.X / width * 2f - 1f;

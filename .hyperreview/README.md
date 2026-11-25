@@ -4,6 +4,20 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #15 VR HUD step 1, round 2
+
+- Record: [summary](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/summary.md), [receipt](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `1cf7172..d1b87f9`, head `d1b87f9`, tree `f9b6dea`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. All five round 1 findings closed; F1 as a documented limit, the empty VR radar being
+  ragesaq's product call. The reviewer reproduced the off-centre geometry independently. Observations:
+  1. O1: a square bracket is sized up and down, so 45° to the side it is about 29% narrow. Accepted for step 1 and
+     named in the note.
+  2. O2: the doc comment's "1.4 times at 45°" holds sideways only (twice upward). Reworded.
+  3. O3: the contact brackets are shared by every skin, not only Classic and Modern. Note reworded.
+  4. O4: at the 20° cap the three brackets are the same size and do not nest. Note says so.
+
 ## 2026-11-25: PR #15 VR HUD step 1, round 1
 
 - Record: [summary](patch-review-2026-11-26T00-30-00Z-allegiancecore-vr-hud-in-eyes-r1/summary.md), [receipt](patch-review-2026-11-26T00-30-00Z-allegiancecore-vr-hud-in-eyes-r1/receipt.md)
