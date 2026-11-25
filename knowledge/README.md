@@ -90,5 +90,6 @@ removed.
 |---|---|---|---|
 
 | [VR client survey](vr-client-survey.md) | Why the VR client is built here, how the MonoGame client renders, where OpenXR attaches, and the proposed first milestone | ragesaq | 2026-11-24 |
+| [Joystick input and a split HOTAS](joystick-input.md) | Whether a HOTAS with the stick and throttle on separate devices works, what native Allegiance did for it, and the proposed port | ragesaq | 2026-11-24 |
 
 Copy [`TEMPLATE.md`](TEMPLATE.md) to `knowledge/<subject>.md` for a new subject, and add its row here in the same change.
