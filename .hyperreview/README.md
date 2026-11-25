@@ -4,6 +4,41 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #4 publish guard fails closed, round 2
+
+- Record: [summary](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/summary.md), [receipt](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `0b032b7`, tree `39dfa27`, the delta `6528bdb..0b032b7` that answers round 1, in a standalone clone.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 1's Low 3 is closed and its Low 2 decline is sound. Dispositions:
+  - Low 1, the root commit of a push that creates the default branch is not scanned: declined, recorded. The guard
+    scans `base..head`, which cannot include a root commit; the same was true before PR #4. No push in this fork takes
+    that path (`master` exists and GitHub does not let a default branch be deleted). Covering it needs a scan-all
+    mode in the upstream author's script, which is outside this change.
+  - Low 2, the round 1 records overstated the fixes: fixed. The round 1 entry, its receipt, `mem-007` and
+    `ragesaq-004` now say Low 1 was fixed in part and Low 2 declined.
+
+## 2026-11-24: PR #4 publish guard fails closed, round 1
+
+- Record: [summary](patch-review-2026-11-24T20-40-00Z-allegiancecore-failclosed-r1/summary.md), [receipt](patch-review-2026-11-24T20-40-00Z-allegiancecore-failclosed-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `6528bdb`, tree `3bb456d`, the delta `ff20f84..6528bdb`. Reviewer `deepseek-v4.1-flash` via OpenCode Go
+  at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Dispositions, each checked in the author's harness against `6528bdb` and against the fix:
+  - Low 1, a push that creates the default branch scanned nothing: fixed in part. The commits after the root commit
+    are scanned again, as before PR #4; the root commit itself is not (round 2 below).
+  - Low 2, a branch with no history in common with the default branch failed: kept failing closed, now with a clear
+    message. The suggested root-commit fallback was not taken: `root..HEAD` leaves out the root commit, so a one-commit
+    orphan with a bad commit would pass unscanned (the harness shows the old step doing exactly that).
+  - Low 3, the branch name and default branch name were pasted into the shell: fixed. Both now reach the script through
+    `env:`. A branch named `inj$(touch${IFS}INJECTED)` ran its command at `6528bdb` and does not after the fix.
+  - Notes 1, 2, 4 and 6: confirmations, no action. Note 3 (a pull request whose base commit is missing from the clone
+    over-scans from the default branch): no action. `base.sha` is the base branch's tip when the event fires, so the
+    clone holds it, and when it does not, scanning more commits is the safe direction. Note 5 (`.githooks/pre-push`
+    names `origin/master`): no action, it is the upstream author's hook and matches this fork's default branch.
+- The reviewer's probes broke the read-only rule once: they committed two throwaway commits onto the author clone's
+  local `master`, which the review worktree shares. Nothing reached GitHub; local `master` was reset from the reflog.
+
 ## 2026-11-24: PR #3 publish guard accepts GitHub's merge committer, round 1
 
 - Record: [summary](patch-review-2026-11-24T19-40-00Z-allegiancecore-guard-r1/summary.md), [receipt](patch-review-2026-11-24T19-40-00Z-allegiancecore-guard-r1/receipt.md)

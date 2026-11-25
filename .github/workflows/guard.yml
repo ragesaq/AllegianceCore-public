@@ -13,8 +13,19 @@ jobs:
       - name: Scan new commits (identity, secrets, personal email, home paths, Meshy)
         env:
           ALLOW_MEDIA: "1"   # CI lists new media; the local pre-push hook makes the reviewer confirm it
+          DEFAULT: ${{ github.event.repository.default_branch }}   # env, not pasted into the script: a branch name can hold $(...)
+          REF: ${{ github.ref }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then BASE=${{ github.event.pull_request.base.sha }}; HEAD=${{ github.event.pull_request.head.sha }};
           else BASE=${{ github.event.before }}; HEAD=${{ github.sha }}; fi
-          if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=$(git rev-list --max-parents=0 "$HEAD" | tail -1); fi
+          NOBASE="[publish-guard] $REF shares no history with $DEFAULT: cannot tell which commits are new"
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] && [ "$REF" = "refs/heads/$DEFAULT" ]; then
+            BASE=$(git rev-list --max-parents=0 "$HEAD" | tail -1)   # the default branch is being created
+          elif [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE=$(git merge-base "origin/$DEFAULT" "$HEAD") || { echo "$NOBASE"; exit 1; }   # a new branch: only commits not yet on the default branch
+          elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            # A force-push: the old tip was not fetched. A rewrite of the default branch itself fails closed.
+            [ "$REF" != "refs/heads/$DEFAULT" ] || { echo "[publish-guard] $BASE is not in the clone: $DEFAULT was rewritten"; exit 1; }
+            BASE=$(git merge-base "origin/$DEFAULT" "$HEAD") || { echo "$NOBASE"; exit 1; }
+          fi
           bash scripts/publish-guard.sh "$BASE" "$HEAD"

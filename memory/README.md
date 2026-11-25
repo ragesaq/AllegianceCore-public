@@ -31,6 +31,7 @@ repo wins. Report the disagreement and supersede the entry.
 | mem-004 | agent-noreply-identity | verified | 2026-11-24 | Operator decision: both agents commit here with their GitHub noreply addresses |
 | mem-005 | github-merge-identity | verified | 2026-11-24 | GitHub merges stamp addresses the publish guard rejected; email privacy plus a guard exception for GitHub's committer fix it |
 | mem-006 | stays-a-fork | verified | 2026-11-24 | Operator decision: the repository stays in the fork network; leaving it was considered and declined |
+| mem-007 | guard-range | verified | 2026-11-24 | The publish guard passed when a commit was missing; CI scanned new branches from the first commit |
 
 Add a row here in the same pull request that adds the entry file; `tools/check_memory.py` fails if the index and the store drift apart.
 
