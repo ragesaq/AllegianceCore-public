@@ -124,7 +124,7 @@
       "needs": [
         "ragesaq-002"
       ],
-      "next": "In review as PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9, branch port/vr-m2, stacked on port/vr-m1 and PR #7): the scene drawn once per eye with the head pose on an OpenXR projection layer, one swapchain per eye, the HUD on an alpha-blended quad (knowledge/vr-client-survey.md, \"Milestone 2 as built\"). Cross-family review round 1 passed with conditions; three low findings fixed, the HUD blend finding answered from the OpenXR specification (.hyperreview/README.md). The flat replay frames are byte-identical before and after; stereo runs against SteamVR held 75 Hz with the headset not worn. Next: a delta review of the round 1 fixes, then ragesaq's headset test, then merge approval after PR #7.",
+      "next": "In review as PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9, branch port/vr-m2, stacked on port/vr-m1 and PR #7): the scene drawn once per eye with the head pose on an OpenXR projection layer, one swapchain per eye, the HUD on an alpha-blended quad (knowledge/vr-client-survey.md, \"Milestone 2 as built\"). Cross-family review: round 1 passed with conditions (three low findings fixed, the HUD blend finding answered from the OpenXR specification); round 2, the delta, passed (.hyperreview/README.md). The flat replay frames are byte-identical before and after; stereo runs against SteamVR held 75 Hz with the headset not worn. Next: ragesaq's headset test, then merge approval after PR #7.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/9",
         "knowledge/vr-client-survey.md"

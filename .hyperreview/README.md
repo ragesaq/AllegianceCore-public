@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #9 VR milestone 2, round 2
+
+- Record: [summary](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/summary.md), [receipt](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch,
+  including a first attempt that failed on the provider connection before the review began.
+- Delta review of `3677ec6..917f29b`, head `917f29b`, tree `a928ba9`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Round 1's F2 to F4 and the swapchain limit are closed; the F1 dispute is accepted on the OpenXR
+  specification. New:
+  1. Low: the `ReadEyeSize` comment in `OpenXrPresenter.cs` still described one side-by-side swapchain. Fixed
+     (comment only).
+  - Notes, no action: the new test covers `GatherDust`'s `advance` flag but not the `advance: !VrRepeatPass` call
+    site; `EnsureSwapchain` would leak a swapchain handle if image enumeration failed after a successful create
+    (milestone 1 code, never observed).
+
 ## 2026-11-25: PR #9 VR milestone 2, round 1
 
 - Record: [summary](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/summary.md), [receipt](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/receipt.md)

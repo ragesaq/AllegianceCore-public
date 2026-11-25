@@ -241,8 +241,8 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
         _log($"[vr] headset: {Marshal.PtrToStringUTF8((nint)properties.SystemName)}");
     }
 
-    /// <summary>The runtime's recommended image size per eye; both eyes share one
-    /// size so one side-by-side swapchain holds them.</summary>
+    /// <summary>The runtime's recommended image size per eye, shared by both eye
+    /// render targets and by each eye's own swapchain.</summary>
     private void ReadEyeSize(XR xr)
     {
         uint count;

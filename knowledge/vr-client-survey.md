@@ -238,3 +238,5 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
 - 2026-11-25: the cross-family review of PR #9, round 1, passed with conditions. Three low findings were fixed and
   each eye got its own swapchain; the HUD blend finding was answered from the OpenXR specification
   (`.hyperreview/README.md`). A delta review of the fixes is next.
+- 2026-11-25: the delta review, round 2, passed. It accepted the HUD blend dispute on the specification text and
+  found one stale comment, fixed. The headset test by ragesaq is next.
