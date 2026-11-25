@@ -1,8 +1,9 @@
 # VR client survey: where OpenXR attaches to the AllegianceCore client
 
-**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-24 · **Review by:** 2027-02-24
+**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
-**Status:** in progress (milestone 1 built and through cross-family review and closeout; awaiting the headset test)
+**Status:** in progress (milestone 1 built, reviewed and seen in the headset as a floating screen, as designed;
+milestone 2 proposed, not decided)
 
 ## What this answers
 
@@ -100,6 +101,31 @@ own quad.
   flight the loop ran at about 75 frames per second against the 13.33 ms period, with 90 % of frames under 13.8 ms.
   The same build without `--vr` ran at 60 frames per second on a 60 Hz monitor with vsync. The warning
   `ASR sound unavailable` appears with and without `--vr`, so VR does not cause it.
+- **In the headset** *(observed 2026-11-25 by ragesaq)*: the game shows as a floating screen, not a VR view. That is
+  milestone 1's design: one flat image on a quad layer, with no stereo and no head tracking. ragesaq has not yet
+  reported the rest of the checklist (upright and not mirrored, colours, smoothness, the fall to flat when SteamVR
+  closes).
+- **Frame cost with vsync off** *(observed 2026-11-25, flat, `ALLEGIANCE_NOVSYNC=1`, 1280x720 scene, 35 s)*: about
+  3.6 ms per real frame in steady windows (the `[frameprof]` means halved, see Traps). It was noisy: two windows had a
+  p95 of 23 ms. A stereo frame at headset resolution has several times as many pixels, so this does not yet show
+  whether the post-processing fits at the headset rate *(derived)*.
+
+## Milestone 2, proposed (2026-11-25, not decided)
+
+Per-eye rendering of the scene with the head pose. ragesaq decides the scope before work starts.
+
+- Each frame, `xrLocateViews` gives the two eye poses and fields of view. The scene is drawn once per eye into a
+  per-eye swapchain and submitted as a projection layer instead of the quad.
+- `Draw` advances state each time it runs: the HUD frame stamp, camera smoothing, the sound listener and telemetry
+  (`Game1.Rendering.cs:262-440`) *(read)*. So the camera is resolved once per frame as now, and only the scene pass
+  repeats per eye *(derived)*. That needs the inline scene pass (`Game1.Rendering.cs`, from the camera to the
+  composite) moved into a method that takes view, projection, eye and target, with the flat path unchanged.
+- The head pose adds to the ship's camera in the cockpit view; the eye offset needs the size of a game unit in metres
+  (an open question below).
+- The HUD goes on its own quad layer in front of the player.
+- Checks: the flat frame must stay the same before and after the move, compared frame by frame with the deterministic
+  headless replay and capture mode; the per-eye frame time measured in the headset before the post-processing is
+  kept or cut.
 
 ## Traps
 
@@ -132,3 +158,5 @@ own quad.
   against SteamVR with a harness. The headset test by ragesaq is still to come.
 - 2026-11-24: ragesaq approved cloning the FreeAllegiance Artwork and the AllegianceCore sky pack. The full game ran
   in the SteamVR session at the headset rate (above); the headset is still to be worn.
+- 2026-11-25: ragesaq wore the headset and saw a floating screen rather than a VR view. Port proposed milestone 2
+  (above). Undecided.

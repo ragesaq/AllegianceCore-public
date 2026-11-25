@@ -60,12 +60,12 @@
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Cross-family rounds 1 to 4 ended in PASS at e71e079, and the closeout at f36ee31 found it ready for the headset test (records in .hyperreview/README.md). Next: ragesaq's headset test with ALLEGIANCE_OPENXR_LOADER set to SteamVR's openxr_loader.dll, the Linux build-and-test CI job green, then ragesaq's approval to merge at the reviewed head. After that, agree milestone 2 (per-eye rendering with the head pose, the HUD on its own quad).",
+      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Reviews are done (records in .hyperreview/README.md). On 2026-11-25 ragesaq saw it in the headset as a floating screen, which is milestone 1's design. Next: the rest of ragesaq's checklist (upright, colours, smoothness, the fall to flat); the cause of the build-and-test fast-tier failures on this branch, from the job log; then ragesaq's approval to merge at the reviewed head. Milestone 2 (per-eye rendering with the head pose, the HUD on its own quad) is proposed in the note and waits for ragesaq's decision on its scope.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/7",
         "knowledge/vr-client-survey.md"
       ],
-      "updated": "2026-11-24"
+      "updated": "2026-11-25"
     },
     {
       "id": "ragesaq-003",
