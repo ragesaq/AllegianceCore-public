@@ -97,6 +97,8 @@ public sealed class VrFrameSinkHostTests
 
         host.Submit(1280, 720);
         Assert.False(pacing.FixedTimeStep);
+        // The sleep saved at attach survives: KeepPacing runs while it is zeroed.
+        Assert.Equal(TimeSpan.FromMilliseconds(20), pacing.InactiveSleep);
     }
 
     [Fact]

@@ -297,9 +297,10 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         var waitInfo = new FrameWaitInfo { Type = StructureType.FrameWaitInfo };
         var state = new FrameState { Type = StructureType.FrameState };
         // The runtime can leave the running state between the event poll and the
-        // frame calls; its STOPPING event follows, so this frame is just skipped.
+        // frame calls; its STOPPING event follows, so this frame is just skipped,
+        // at the idle rate because nothing else paces the loop.
         Result waited = xr.WaitFrame(_session, &waitInfo, &state);
-        if (waited == Result.ErrorSessionNotRunning) return;
+        if (waited == Result.ErrorSessionNotRunning) { SkipFrame(); return; }
         Check(waited, "xrWaitFrame");
         if (!_firstFrameLogged)
         {
@@ -308,7 +309,7 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         }
         var beginInfo = new FrameBeginInfo { Type = StructureType.FrameBeginInfo };
         Result begun = xr.BeginFrame(_session, &beginInfo);
-        if (begun == Result.ErrorSessionNotRunning) return;
+        if (begun == Result.ErrorSessionNotRunning) { SkipFrame(); return; }
         Check(begun, "xrBeginFrame");
 
         var quad = new CompositionLayerQuad { Type = StructureType.CompositionLayerQuad };
@@ -318,9 +319,9 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         {
             // Runtime calls since the last check (swapchain creation included) may
             // have switched the GL context; the copy must run in the game's.
-            KeepContextCurrent();
             try
             {
+                KeepContextCurrent();
                 CopyFrameIntoSwapchain(xr, width, height);
             }
             catch (VrUnavailableException)
@@ -357,9 +358,12 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
             Layers = layerCount > 0 ? &layer : null,
         };
         Result ended = xr.EndFrame(_session, &endInfo);
-        if (ended != Result.ErrorSessionNotRunning) Check(ended, "xrEndFrame");
+        if (ended == Result.ErrorSessionNotRunning) SkipFrame();
+        else Check(ended, "xrEndFrame");
         KeepContextCurrent();
     }
+
+    private static void SkipFrame() => Thread.Sleep(IdleSleepMilliseconds);
 
     private void CopyFrameIntoSwapchain(XR xr, int width, int height)
     {
