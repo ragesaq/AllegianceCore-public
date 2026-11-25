@@ -93,7 +93,13 @@ own quad.
   `XR_KHR_opengl_enable` and asks for OpenGL 4.3 or newer. A bare MonoGame DesktopGL window with the presenter went
   Idle, Ready, Synchronized, Visible; it submitted every frame for 12 s without a failure and recreated the swapchain
   when the back buffer was resized. The display period was 13.33 ms, and the loop ran at 74.7 frames per second once
-  started. The full game was not launched: this host has no artwork corpus.
+  started.
+- **Full game** *(observed 2026-11, the same runtime and headset, not worn; FreeAllegiance Artwork at `4a60aa6` and the
+  AllegianceCore sky pack at `5272ded`; `--training --vr`, 45 s)*: the session went Idle, Ready, Synchronized,
+  Visible with a 1280x720 swapchain and no fall to flat. The training mission ran (weapons fire, a warp transit). In
+  flight the loop ran at about 75 frames per second against the 13.33 ms period, with 90 % of frames under 13.8 ms.
+  The same build without `--vr` ran at 60 frames per second on a 60 Hz monitor with vsync. The warning
+  `ASR sound unavailable` appears with and without `--vr`, so VR does not cause it.
 
 ## Traps
 
@@ -105,6 +111,12 @@ own quad.
   which keeps the flat choice for a fallback and leaves the headset in charge *(derived from the code)*.
 - **Creating an OpenXR instance starts SteamVR** when it is not running *(observed 2026-11)*. A probe run is not free
   of side effects on the desktop.
+- **The `[frameprof]` line counts each flight frame twice.** `UpdateSessionPerformance` runs from `UpdateBenchmark`
+  (`Game1.Benchmark.cs:285` on `master`) and again from `UpdateFrame` (`Game1.FlightInput.cs:221`) *(read)*. Once
+  the player is in flight, the line reports twice the real frame count and half the real mean frame time. The
+  second interval is near zero, so its p95 is about the 90th percentile of real frames *(derived, and matched by
+  a flat run: 600 counted frames per 5 s with vsync at 60 Hz)*. Halve the count before comparing it with the headset
+  rate. The fix belongs in its own PR, not in VR work.
 
 ## Open questions
 
@@ -118,3 +130,5 @@ own quad.
   fork. No code changed.
 - 2026-11-24: ragesaq approved milestone 1 as proposed. Built on `port/vr-m1` from `master` at `47e720b`; probed
   against SteamVR with a harness. The headset test by ragesaq is still to come.
+- 2026-11-24: ragesaq approved cloning the FreeAllegiance Artwork and the AllegianceCore sky pack. The full game ran
+  in the SteamVR session at the headset rate (above); the headset is still to be worn.
