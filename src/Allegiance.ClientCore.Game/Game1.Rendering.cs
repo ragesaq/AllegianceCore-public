@@ -262,6 +262,7 @@ public sealed partial class Game1
     protected override void Draw(GameTime gameTime)
     {
         unchecked { _hudFrame++; }   // P786B — frame stamp for the side-scanner cache
+        BeginVrFrame();   // VR — waits for the headset's frame (Game1.Vr.cs)
         if (_benchReplay is { } replay)
             gameTime = new(TimeSpan.FromSeconds(replay.Frame / 60d), TimeSpan.FromSeconds(1d / 60));
         _gpuTimer?.Poll(_receiveGpu!);
@@ -533,32 +534,40 @@ public sealed partial class Game1
                 GraphicsDevice.DepthStencilState = DepthStencilState.Default;
                 GraphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
 
+                // VR — the 3-D scene below runs once flat, or once per eye into the eye's
+                // image (Game1.Vr.cs). The loop body keeps its indentation so upstream
+                // changes to the scene still merge cleanly.
+                var vrCentre = (view, proj, cameraEye);
+                for (int vrPass = 0; vrPass < VrScenePassCount; vrPass++)
+                {
+                BeginVrScenePass(vrPass, vrCentre, ref view, ref proj, ref cameraEye);
                 // P547 — bloom redirect: when bloom is on the WHOLE 3D scene
                 // (opaque geometry + particles) renders into the scene target,
                 // so the HUD/SpriteBatch UI (drawn after the composite below)
                 // never blooms. Soft particles are active only in Enhanced with
                 // the depth shader + target ready.
                 var outputViewport = GraphicsDevice.Viewport;
-                bool fsr = PrepareUpscaling(outputViewport.Width, outputViewport.Height);
+                bool fsr = !VrEyePass && PrepareUpscaling(outputViewport.Width, outputViewport.Height);
                 // P984 — the HDR scene path is active only when the flag is on AND
                 // the float target + output transform really exist (VfxPostProcessor
                 // falls back to the native 8-bit path otherwise).
-                bool hdr = HdrScene;
+                bool hdr = !VrEyePass && HdrScene;
                 // P989 — resolve the grade (curve/exposure/saturation + the bloom
                 // threshold/contribution) BEFORE the passes below read it.
                 SyncHdrGrade();
-                bool bloom = _bloomEnabled && _post is { BloomReady: true };
+                bool bloom = !VrEyePass && _bloomEnabled && _post is { BloomReady: true };
                 bool sceneTarget = fsr || bloom || hdr;
                 var sceneRt = fsr ? _fsr!.Scene : _post?.SceneRT;
                 // P1057: MSAA follows the actual 3-D size/format (including FSR's
                 // low-resolution HDR scene). Off returns null without touching
                 // any of the legacy render targets or bindings.
-                var antialiasScene = _sceneAntialiasing!.Prepare(
+                System.Diagnostics.Debug.Assert(_sceneAntialiasing is not null);   // VR — the line below skips it in an eye pass
+                var antialiasScene = VrEyePass ? null : _sceneAntialiasing!.Prepare(
                     sceneTarget ? sceneRt!.Width : outputViewport.Width,
                     sceneTarget ? sceneRt!.Height : outputViewport.Height,
                     sceneTarget ? sceneRt!.Format : SurfaceFormat.Color, _upscaling.Antialiasing);
                 if (antialiasScene is not null) { sceneRt = antialiasScene; sceneTarget = true; }
-                bool soft = _softEnabled && _post is { SoftReady: true };
+                bool soft = !VrEyePass && _softEnabled && _post is { SoftReady: true };
                 // The ordered pass list is data (HdrOutput.Plan) so the required
                 // order — bloom, then FSR, then the one output transform, then the
                 // HUD — is pinned by tests instead of comments.
@@ -572,7 +581,7 @@ public sealed partial class Game1
                 // each frame re-collects exactly its own geometry.
                 // Gather real visible-sector events before opaque hulls are lit.
                 // Low does no world scan, allocations or additional GPU work.
-                if (_effectLights.Detail != EffectsDetail.Low)
+                if (!VrRepeatPass && _effectLights.Detail != EffectsDetail.Low)
                 {
                     _effectLights.Clear();
                     long lightNow = ClientNowMilliseconds;
@@ -592,7 +601,7 @@ public sealed partial class Game1
                 // P862b — one flare-occlusion frame stamp per rendered frame (the
                 // probe answers from the previous frame's depth and queues this
                 // frame's samples for the next readback).
-                _flareOcclusion.BeginFrame();
+                if (!VrRepeatPass) _flareOcclusion.BeginFrame();
                 // HUD-21 — render the selected target's 3-D model preview into
                 // its own render target HERE, before the colour target is bound,
                 // so the RT excursion is lossless (nothing has been drawn to the
@@ -601,13 +610,13 @@ public sealed partial class Game1
                 // caller keeps exactly one rebind (HUD-21b — HUD-21 rebound here
                 // a second time). Feed the RT to the HUD this frame when a model
                 // rendered, else null.
-                RenderTarget2D? colourTarget = sceneTarget ? sceneRt : (capThis ? _capTarget : null);
-                _hudTargetModelPreview = RenderTargetModelPreview(me, cameraEye, view, colourTarget)
+                RenderTarget2D? colourTarget = sceneTarget ? sceneRt : VrSceneDestination(capThis ? _capTarget : null);
+                if (!VrRepeatPass) _hudTargetModelPreview = RenderTargetModelPreview(me, cameraEye, view, colourTarget)
                     ? _targetModelPreviewRenderer.Target : null;
                 GraphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.Black, 1f, 0);
                 GraphicsDevice.BlendState = BlendState.Opaque;
                 GraphicsDevice.DepthStencilState = DepthStencilState.Default;
-                _gpuTimer?.Start(_frameTelemetry!.FrameId, post: false);
+                if (!VrRepeatPass) _gpuTimer?.Start(_frameTelemetry!.FrameId, post: false);
 
                 // P559 — run the linear-depth pass BEFORE the opaque color pass.
                 // P547 placed it mid-frame (after the treasure draw), switching
@@ -640,7 +649,7 @@ public sealed partial class Game1
                     GraphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer,
                         Rendering.VfxPostProcessor.DepthClearFar, 1f, 0);
                     DrawSceneDepth(view, proj, cameraEye, Rendering.LinearDepth.DefaultNear, _flightDepthFar);
-                    GraphicsDevice.SetRenderTarget(sceneTarget ? sceneRt : (capThis ? _capTarget : (RenderTarget2D?)null));
+                    GraphicsDevice.SetRenderTarget(sceneTarget ? sceneRt : VrSceneDestination(capThis ? _capTarget : (RenderTarget2D?)null));
                     GraphicsDevice.BlendState = BlendState.Opaque;
                     GraphicsDevice.DepthStencilState = DepthStencilState.Default;
                 }
@@ -901,7 +910,7 @@ public sealed partial class Game1
                         }
                     }
                 }
-                double dt = gameTime.ElapsedGameTime.TotalSeconds;
+                double dt = VrRepeatPass ? 0 : gameTime.ElapsedGameTime.TotalSeconds;
                 _flightEffects.Advance((float)dt);
                 foreach (var (wId, wPos, wOri, wRadius, wTex) in _drawWarps)
                 {
@@ -1453,7 +1462,7 @@ public sealed partial class Game1
                 // discipline (the gather above); the pool itself is mutated only
                 // on this render thread.
                 _trailNowSec += dt;
-                _trailParticles.Update(_trailNowSec, (float)dt, _drawTrailMissiles, _trailRandom);
+                if (!VrRepeatPass) _trailParticles.Update(_trailNowSec, (float)dt, _drawTrailMissiles, _trailRandom);
                 _drawTrailViews.Clear();
                 _drawTrailViews.AddRange(_trailParticles.Enumerate());
                 // P546 — pass the sector light + near-fade so the ENHANCED smoke
@@ -1480,7 +1489,7 @@ public sealed partial class Game1
                 // of the scene — the stream runs continuously while a ship is
                 // damaged and stops once it is repaired above native's 0.9
                 // threshold (DamageDebrisTracker.DamageFrameCount).
-                foreach (var kv in _damageEmitters)
+                if (!VrRepeatPass) foreach (var kv in _damageEmitters)
                 {
                     var em = kv.Value;
                     // P338 — vent offsets scale with the ship's REAL rendered
@@ -1506,7 +1515,7 @@ public sealed partial class Game1
                 // behind a boosting ship and thins/stops as its power decays
                 // after the afterburner button is released (the m_fThrustPower>0
                 // gate), for the local hull AND every visible remote ship.
-                foreach (var kv in _engineTrailEmitters)
+                if (!VrRepeatPass) foreach (var kv in _engineTrailEmitters)
                 {
                     // Native draws thrust trails at every distance (no LOD gate in
                     // thinggeo.cpp AddThrustParticles), so far-tier sprite ships keep
@@ -1718,11 +1727,11 @@ public sealed partial class Game1
                 // (the HdrCompositeRT, or FSR's bloomed target) and the single
                 // output transform below is what reaches the final target; the
                 // HUD still draws after that, so it is never graded.
-                _gpuTimer?.Stop();
-                _gpuTimer?.Start(_frameTelemetry!.FrameId, post: true);
-                _frameTelemetry?.BeginPost();
-                RenderTarget2D? finalTarget = capThis ? _capTarget : null;
-                _sceneAntialiasing.Resolve(finalTarget, fsr || bloom || hdr);
+                if (!VrRepeatPass) _gpuTimer?.Stop();
+                if (!VrRepeatPass) _gpuTimer?.Start(_frameTelemetry!.FrameId, post: true);
+                if (!VrRepeatPass) _frameTelemetry?.BeginPost();
+                RenderTarget2D? finalTarget = VrSceneDestination(capThis ? _capTarget : null);
+                if (!VrEyePass) _sceneAntialiasing.Resolve(finalTarget, fsr || bloom || hdr);
                 Texture2D? upscaleSource = sceneRt;
                 if (bloom && _post is { BloomReady: true })
                 {
@@ -1739,8 +1748,10 @@ public sealed partial class Game1
                     if (hdr) upscaleSource = _fsr!.HdrUpscaled;
                 }
                 if (outputTransform) _post!.Output!.Render(upscaleSource!, finalTarget, _grade);
-                _frameTelemetry?.EndPost();
-                _gpuTimer?.Stop();
+                if (!VrRepeatPass) _frameTelemetry?.EndPost();
+                if (!VrRepeatPass) _gpuTimer?.Stop();
+                }
+                EndVrScenePasses(vrCentre, ref view, ref proj, ref cameraEye);
 
                 // P250 — local current-sector tactical radar. Drawn here (inside
                 // the camera block, so view/proj/cameraEye are live) over the 3D

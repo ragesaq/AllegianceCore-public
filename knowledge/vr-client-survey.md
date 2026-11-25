@@ -133,6 +133,43 @@ as `DAG.json` node `ragesaq-007`.
   headless replay and capture mode; the per-eye frame time measured in the headset before the post-processing is
   kept or cut.
 
+## Milestone 2 as built (branch `port/vr-m2`)
+
+Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
+
+- **The scene runs in a loop, not a new method.** The plan above said to move the scene pass into a method. As built,
+  `Draw` resolves the camera once and wraps the scene, from the bloom redirect to the end of post-processing, in
+  `for (int vrPass = 0; vrPass < VrScenePassCount; vrPass++)` with the body not re-indented *(decided 2026-11 by Port,
+  for upstream mergeability: about 1,200 upstream lines keep their bytes, and upstream changes to the scene still
+  merge; rejected: extracting a method, which would move every line)*. A flat frame runs it once with every VR field
+  at its flat value.
+- **The second eye repeats only the drawing.** `dt` is 0 for it, and it skips particle emission (each `Emit` adds at
+  least one particle), the trail update, the effect-lights gather, flare occlusion, the target-model preview and the
+  GPU timer and telemetry *(read: each call site in `Game1.Rendering.cs`)*. Hull hits are drained by
+  `TakeNewHullHits`, and the asteroid spin takes an absolute clock, so both are safe to repeat *(read)*.
+- **One game unit is one metre** *(derived: the radar labels plain world distance in metres, native
+  `radarimage.cpp:1209`, `docs/reports/HUD1_HUD_PARITY.md:107`)*. So the headset's eye offsets apply unscaled
+  (`VrEyeCamera.GameUnitsPerMetre`). This answers the first open question below; how the cockpit scale feels is for
+  the headset test.
+- **Eye camera.** The head rotation applies in the camera's frame (`head * cameraRotation`), and the eye offset turned
+  into that frame moves `cameraEye`, which every draw subtracts from positions (P207) *(tested: `VrEyeCameraTests`)*.
+  The eye projection is XNA's off-centre projection for the headset's four angles, with the game projection's depth
+  terms copied unchanged.
+- **Post-processing is off in the eye passes** for now: upscaling, HDR, bloom, antialiasing and soft particles. Their
+  targets are sized for the window. Whether to bring them back per eye waits on the headset frame time.
+- **The HUD.** After the eye passes the back buffer is cleared to transparent and the HUD and radar are drawn into it
+  with the game's own camera. The presenter shows it on a quad 2 m ahead, sized so it covers the game camera's
+  vertical field of view, with `XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT`. The desktop window then shows
+  the HUD over black in stereo frames, a known limitation.
+- **Flat output unchanged** *(observed 2026-11-25: replay frames 300, 1500, 3600, 6000 and 9000 of
+  `data/benchmarks/battle.alr` captured before and after the change are byte-identical; see the PR)*.
+- A frame with no tracked orientation, or one the game did not draw in stereo, is shown as milestone 1's opaque quad.
+- **Stereo runs at the headset rate in the harness** *(observed 2026-11-25: SteamVR/OpenXR 2.18.4, lighthouse
+  headset not worn, `--training --vr` for 90 s)*. The runtime recommended 3708x3564 per eye, so the eye swapchain is
+  7416x3564; the HUD swapchain is 1280x720 and the back buffer has 8 alpha bits. `[frameprof]` counted 750 frames per
+  5 s, 75 per second after halving (the trap below), against a 13.33 ms display period. No `[vr]` error. Whether the
+  picture is upright, the eyes converge and the HUD sits right is for the headset.
+
 ## Traps
 
 - **MonoGame sleeps 20 ms per frame while its window is not active** (`Game.InactiveSleepTime`). In VR that halves the
@@ -143,6 +180,14 @@ as `DAG.json` node `ragesaq-007`.
   which keeps the flat choice for a fallback and leaves the headset in charge *(derived from the code)*.
 - **Creating an OpenXR instance starts SteamVR** when it is not running *(observed 2026-11)*. A probe run is not free
   of side effects on the desktop.
+- **A far plane recovered from a float projection is about 0.1% off.** `M43 / (M33 + 1)` at near 0.5 m and far
+  10 000 m gives 10 010.8 *(observed 2026-11 in a unit test)*: `M33 + 1` cancels to a few ulps. Copy `M33` and `M43`
+  instead of rebuilding a projection from recovered planes.
+- **MonoGame stores a render target's rows top first** (its OpenGL backend flips clip space when a target is bound),
+  the reverse of the back buffer, so eye images are copied into the swapchain with rows flipped *(derived from
+  MonoGame's OpenGL backend; to be confirmed in the headset)*.
+- **MonoGame clears a `DiscardContents` render target each time it is bound**, so the eye targets use
+  `PreserveContents`: the target-model preview binds another target and comes back to the scene's *(read)*.
 - **The `[frameprof]` line counts each flight frame twice.** `UpdateSessionPerformance` runs from `UpdateBenchmark`
   (`Game1.Benchmark.cs:285` on `master`) and again from `UpdateFrame` (`Game1.FlightInput.cs:221`) *(read)*. Once
   the player is in flight, the line reports twice the real frame count and half the real mean frame time. The
@@ -152,7 +197,8 @@ as `DAG.json` node `ragesaq-007`.
 
 ## Open questions
 
-- What one game unit is in metres. It sets the eye separation and the cockpit scale.
+- What one game unit is in metres. It sets the eye separation and the cockpit scale. *(Answered above: one metre,
+  derived; the headset test will show whether the cockpit scale feels right.)*
 - Whether bloom, HDR output and FSR can run per eye at headset frame rates, or must be cut in VR mode.
 - Whether upstream would accept a VR head if it stays behind a clear seam.
 
@@ -166,3 +212,5 @@ as `DAG.json` node `ragesaq-007`.
   in the SteamVR session at the headset rate (above); the headset is still to be worn.
 - 2026-11-25: ragesaq wore the headset and saw a floating screen rather than a VR view. Port proposed milestone 2
   (above), and ragesaq approved it as proposed.
+- 2026-11-25: built milestone 2 on `port/vr-m2`: eye passes, the projection layer and the HUD quad. The flat replay
+  frames are unchanged. The headset test by ragesaq is still to come.
