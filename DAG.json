@@ -56,11 +56,11 @@
       "id": "ragesaq-002",
       "title": "OpenXR VR client on AllegianceCore",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Reviews are done (records in .hyperreview/README.md). On 2026-11-25 ragesaq saw it in the headset as a floating screen, which is milestone 1's design. ragesaq's checklist passed for orientation, colours and smoothness; the live fall to flat when SteamVR closes is still unobserved. The build-and-test fast-tier failures on this branch are one failed test in Allegiance.Core.Tests, a project this PR does not touch. Next: ragesaq's approval to merge at the reviewed head. ragesaq approved milestone 2 as proposed on 2026-11-25 (per-eye rendering with the head pose, the HUD on its own quad); it is node ragesaq-007, built on port/vr-m2 stacked on this branch.",
+      "next": "Done: PR #7 merged on 2026-11-25 as merge commit 1c521ad (reviewed head f945af7, which adds only records after the closeout review at f36ee31; cross-family review rounds 1 to 4 and the closeout in .hyperreview/README.md; build-and-test green on f945af7). ragesaq approved it in Port's working session (\"PR #7, then PR #9\"). The headset checklist passed for orientation, colours and smoothness; the live fall to flat when SteamVR closes stays unobserved. Milestone 2 continues as ragesaq-007.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/7",
         "knowledge/vr-client-survey.md"

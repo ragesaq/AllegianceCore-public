@@ -11,6 +11,7 @@ Format: `- YYYY-MM-DD — owner — what was finished [node-id] (PR #n)` — or
 
 ---
 
+- 2026-11-25 — ragesaq — VR milestone 1: the flat frame in an OpenXR headset on one quad layer, opt-in with --vr, flat fallback on any failure [ragesaq-002] (commit 1c521ad)
 - 2026-11-24 — ragesaq — Work before adoption is not itemized here; the repository's history through this commit is its record [ragesaq-000] (commit b76d6c0)
 - 2026-11-24 — ragesaq — Enrolled the fork in HyperBench (memory, work map, knowledge, recall with vectors) and moved the VR work here [ragesaq-001] (commit daaeaf9)
 - 2026-11-24 — ragesaq — Let merges made through GitHub pass the publish guard [ragesaq-003] (commit 10976d0)
