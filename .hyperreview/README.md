@@ -4,6 +4,39 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #7 VR milestone 1, closeout
+
+- Record: [summary](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/summary.md), [receipt](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Closeout-verification of the whole pull request, `47e720b..f36ee31`, head `f36ee31`, tree `4f34e85`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows status complete and assurance `independent_cross_family`; its served-model field was empty
+  this time, and the session banner and the locked route name `deepseek-v4.1-flash`.
+- Verdict: PASS-WITH-CONDITIONS, ready for the in-headset test. The ledger shows every round 1 to 4 finding closed,
+  except round 1 finding 5, rejected with its narrower benchmark case kept as residual risk. Four low items.
+  Dispositions (in the commit with this record):
+  - Low 1, an acquired swapchain image is not released when `xrWaitSwapchainImage` fails: not taken, with evidence.
+    The OpenXR 1.0 page for `xrReleaseSwapchainImage` says the runtime must return `XR_ERROR_CALL_ORDER_INVALID` if
+    no image has been waited on, so a release after a failed wait would itself fail and would replace the original
+    error. The page for `xrDestroySwapchain` sets no rule about acquired images; its only requirement is that GPU
+    work referring to the swapchain has completed. The code therefore releases only after a successful wait, which
+    is what round 1's summary meant by the release in the `finally`.
+  - Low 2, `GLOSSARY.md` had no VR entry, which the fork's `AGENTS.md` asks for when a system is added: fixed. A
+    layout row and a section 16 name the options, the seam, the presenter and the tests;
+    `tools/check-glossary-links.py` passes.
+  - Low 3, the survey note did not say what the flat game keeps after a fallback: fixed. It now says the fixed step
+    and the sleep come back but vsync stays off until restart, so the flat game can run uncapped. Its status line
+    now names the review and closeout.
+  - Low 4, the gate's "new tests 3x alone" was not reported: done. The 24 VR tests ran three times alone at
+    `e71e079` (the code is unchanged since), passing 24 of 24 each time. The same gate's `tools/build-tools.sh`,
+    which the closeout did not name, was also run: all 155 tool projects built at e71e079 (the code is unchanged since), with no warnings or errors.
+  - The two other `AGENTS.md` rules for new systems do not apply here: `docker-compose.yml` lists services, and the
+    existing desktop-client variable `ALLEGIANCE_UPDATE_FEED` is not in it either; Dockerfiles belong to server apps,
+    and the VR project is a client library like `Allegiance.ClientCore.Game`.
+  - The closeout's merge conditions stand: the Linux `build-and-test` job green on the head, and ragesaq's approval
+    at the reviewed head. These fixes are prose only, so the record is re-recorded with them and no delta review
+    is needed.
+
 ## 2026-11-25: PR #7 VR milestone 1, round 4
 
 - Record: [summary](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/summary.md), [receipt](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/receipt.md)

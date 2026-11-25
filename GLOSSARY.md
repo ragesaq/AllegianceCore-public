@@ -400,6 +400,8 @@ list in **reverse**.
   `docs/reports/BROWSER_SEAMS_P1047.md`.
 - **`src/Allegiance.ClientCore.Game`** — the MonoGame presentation layer
   (rendering, HUD, input, screens).
+- **`src/Allegiance.ClientCore.Vr`** — the optional OpenXR presenter (VR
+  milestone 1), referenced only by the desktop head; see section 16.
 - **`src/Allegiance.Bot`** — the minimal BotClass client used by the MCP driver
   and multi-player bots.
 - **`src/Allegiance.SinglePlayer`** — offline skirmish/training host embedded
@@ -3463,3 +3465,31 @@ list in **reverse**.
   `tools/p999-civ-strategy/coverage_receipts.py` audits the separate stages.
   Reused native gates: `docs/parity/p1001-native-gates.csv`; report:
   `docs/reports/CIV_STRATEGY_COMMANDER_P1001.md`.
+
+## 16. VR client (`src/Allegiance.ClientCore.Vr`, `ClientCore.Game/Vr`)
+
+No native analogue: native Allegiance has no VR, so there is no parity matrix.
+
+- **Opt-in VR** — `--vr` or `ALLEGIANCE_VR=1`; `ALLEGIANCE_OPENXR_LOADER` names
+  the `openxr_loader.dll` (for example SteamVR's). Without either, nothing
+  changes. Key: `src/Allegiance.ClientCore.Vr/VrOptions.cs`; the head hook is in
+  `src/Allegiance.ClientCore.MonoGame/Program.cs`.
+- **Frame sink seam** — the game hands each finished frame to an
+  `IVrFrameSink` just before the window present. `VrFrameSinkHost` attaches the
+  sink, hands pacing to the headset (vsync, the fixed time step and the
+  inactive-window sleep off) and drops a sink that fails or throws: the fixed
+  step and the sleep come back, vsync stays off until restart. Key:
+  `src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`,
+  `src/Allegiance.ClientCore.Game/Vr/VrFrameSinkHost.cs`,
+  `src/Allegiance.ClientCore.Game/Game1.Vr.cs`.
+- **Quad presenter** — an OpenXR session over `XR_KHR_opengl_enable` (WGL,
+  Windows only) shows the flat frame on one quad layer, 2.4 m wide and 2 m
+  ahead. `GlBlitter` copies framebuffer 0 into the swapchain with
+  `glBlitFramebuffer`. Any failure logs `[vr] running flat: <reason>` and tears
+  OpenXR down. Key: `src/Allegiance.ClientCore.Vr/OpenXrQuadPresenter.cs`,
+  `src/Allegiance.ClientCore.Vr/GlBlitter.cs`,
+  `src/Allegiance.ClientCore.Vr/VrSessionLifecycle.cs`,
+  `src/Allegiance.ClientCore.Vr/VirtualScreen.cs`.
+- Tests: `tests/Allegiance.ClientCore.MonoGame.Tests/VrMilestone1Tests.cs`,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrFrameSinkHostTests.cs`. Survey,
+  decisions and traps: `knowledge/vr-client-survey.md`.

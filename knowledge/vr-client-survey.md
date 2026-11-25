@@ -2,7 +2,7 @@
 
 **Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-24 · **Review by:** 2027-02-24
 
-**Status:** in progress (milestone 1 built, awaiting review and the headset test)
+**Status:** in progress (milestone 1 built and through cross-family review and closeout; awaiting the headset test)
 
 ## What this answers
 
@@ -81,7 +81,8 @@ own quad.
   the render thread with MonoGame's context current. A loader, runtime, headset, OpenXR or GL failure, or the session
   exiting or being lost, logs `[vr] running flat: <reason>` and tears OpenXR down. Any other exception from the
   presenter is caught by the game, logged as `[vr] frame sink threw, running flat: ...` and handled the same way.
-  Either way the game runs flat. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
+  Either way the game runs flat: the fixed time step and the inactive-window sleep come back, but vsync stays off
+  until restart, so the flat game can run uncapped. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
   *(observed 2026-11)*.
 - **The copy** *(observed 2026-11, harness readback)*: `glBlitFramebuffer` from framebuffer 0 into a
   `GL_SRGB8_ALPHA8` swapchain image, with `GL_FRAMEBUFFER_SRGB` and the scissor test off, keeps every byte (the clear
