@@ -72,6 +72,32 @@ refocus from the fight. ragesaq to accept or fold it into layer 4.
 - Size from the eye and the angle, not from screen pixels: a screen-size billboard shrinks in VR
   *(read, forum report: [Unreal forums](https://forums.unrealengine.com/t/billboard-crosshair-changing-relative-size-in-vr/367992))*.
 - Labels (name, range) sit with their bracket at the same depth and the same angular text size.
+- **Depth and readability are separate settings.** How far away a marker looks depends on the disparity between
+  the eyes. How readable it is depends on the angle it covers. A marker placed at its target's depth and scaled with
+  distance covers the same angle at 50 m and at 5 km, so distance alone never makes it unreadable *(derived)*. What
+  does make it unreadable is a fixed-size marker, which shrinks with distance, or a long block of small text
+  *(read: Unreal forum report above;
+  [EVE Valkyrie design lessons](https://gamedeveloper.com/design/-text-looks-rubbish-and-other-vr-design-lessons-learned-on-i-eve-valkyrie-i-))*.
+  Beyond about 20 m the depth is hard to tell from infinity anyway (vergence 0.18° at 20 m, under 0.01° at 500 m),
+  so a far target's data gains no depth cue by sitting at the target *(derived)*.
+- **Proposal: split the target information by job** (raised by ragesaq 2026-11-25: part of the targeting
+  information should be closer, or it may be too far away to see):
+  - *At the target's depth:* what says where the target is and whether to shoot. That is the bracket, the lock, the
+    lead marker, and a short label (name and range). It has an angular floor: the bracket is never under about 2°
+    across, the text is never under about 0.6° tall, and when the target is off-view an edge arrow shows the
+    direction instead.
+  - *On a close target panel (layer 4, about 1 m):* what is read rather than aimed at. That is type, side, hull and
+    shield, speed, time to intercept, in weapon range, ore and kill bonus, and the target model preview.
+  - The same split appears twice upstream. Jet draws a designator on the target and the target's data as separate
+    readouts *(read: `CoverageIds` in `Rendering/Jet/JetHudRenderer.cs`: "Selected target bracket" against "Target
+    name", "Target hull" and others)*. The cockpit study puts the bracket, lock and lead on "HUD glass" and target
+    name, hull, shield, range, speed and preview on "MFD: target" *(read: P1044 map, rows 18 to 38)*.
+  - The 2° and 0.6° floors are starting values: 0.6° is the comfortable text height in
+    [Microsoft, typography](https://learn.microsoft.com/en-us/windows/mixed-reality/design/typography), with 0.35°
+    to 0.4° as its minimum. The headset decides them.
+  - No source found in this research gives a rule for which target data a VR game puts on the target and which in
+    the cockpit *(read: none found)*. The split rests on the two upstream designs and the readability argument
+    above.
 - Several contacts: each bracket at its own object's depth. No source covers this; it follows from the rule above
   *(derived)*.
 - No source gives a clamp distance or a smoothing time *(read: none found)*. Beyond a few tens of metres a marker at
@@ -152,6 +178,7 @@ service with upstream, not two.
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
+| Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | raised by ragesaq 2026-11-25; the split is Port's proposal, not decided | 2026-11-25 |
 | Flight reference block at infinity (layer 3) | proposed | all non-marker elements on close panels | proposed by Port 2026-11-25, not decided | 2026-11-25 |
 
 ## Disagreements between sources
