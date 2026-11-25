@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #11 sky at infinity in each eye, round 1
+
+- Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `8ccacfa..9db16a4`, head `9db16a4`, tree `72c2a09`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. The reviewer checked the projection algebra, the depth range of every sky element, that
+  no sky code assumes a symmetric projection, and that no flat path can reach the new branch. Observations:
+  1. A future flat projection jitter through `M31`/`M32` would reach the sky; desirable, worth a comment then. No
+     action now.
+  2. The off-centre test covers one eye; the copy is sign-symmetric, so the mirrored eye follows. Answered, no
+     change: the reviewer's own reading covers it, and a second eye's matrix adds no new path through the code.
+  3. The symmetric test checks values, not the early return; the two branches agree for symmetric input. No action.
+  4. Node `ragesaq-009` should name PR #11 and the reviewed head. Done in the commit that records this review.
+
 ## 2026-11-25: PR #9 VR milestone 2, closeout
 
 - Record: [summary](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md), [receipt](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/receipt.md)
