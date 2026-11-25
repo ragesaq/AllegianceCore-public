@@ -197,7 +197,10 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   *(derived from the code, not yet confirmed by a fix)*: `NativeSkyPlacement.SkyProjection` rebuilds the sky's
   projection from the scene projection's `M11` and `M22` only, which gives a symmetric frustum. An eye's projection
   is off-centre (`M31` and `M32` are not zero), so each eye's sky is shifted sideways, the two in opposite
-  directions. All three sky tiers call it. Node `ragesaq-009`.
+  directions. All three sky tiers call it. Node `ragesaq-009`. Fixed on `port/vr-sky-stereo`: for an off-centre
+  projection the sky keeps the eye's frustum and takes only its own depth range; a unit test shows a sky direction
+  landing on the same screen point as under the eye's projection, and fails on the old code. Not yet seen in the
+  headset.
 - **HUD:** shown, and fixed ahead of the seat as designed, but close and large. At 2 m and sized to the game
   camera's default 50° vertical field of view it is about 3.3 m by 1.9 m, about 80° by 50° of view. Some elements
   appear twice, overlapping, at different slants. The flat HUD at 1280x720 does not overlap *(observed in a flat
@@ -217,7 +220,9 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   smoke run drew each frame in about 23 ms instead of about 2 ms, and frames 1500 and 3600 differed: ship textures
   stream in on a background loader, so a slow run reaches a frame with a different set loaded. Run alone, the same
   build matched all five *(observed 2026-11-25)*. Capture with no other game client running before reading a
-  mismatch as a change.
+  mismatch as a change. The same two frames also differed on the first capture run after a fresh build with SteamVR
+  open, and matched on the next run of the same build *(observed 2026-11-25, sky fix)*: recapture once before
+  reading a mismatch as a change.
 - **MonoGame sleeps 20 ms per frame while its window is not active** (`Game.InactiveSleepTime`). In VR that halves the
   headset frame rate whenever another window has focus *(observed 2026-11: 45 frames per second against a 75 Hz
   period, 74.7 with the sleep off)*. VR mode sets it to zero.
@@ -229,7 +234,8 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
 - **A projection rebuilt from its field of view loses an eye's off-centre terms.** `NativeSkyPlacement.SkyProjection`
   keeps only `M11` and `M22` of the scene projection, so in an eye pass the sky is drawn with a symmetric frustum
   and does not converge *(observed in the headset 2026-11-25; cause derived from the code)*. In a pass that runs per
-  eye, keep `M31` and `M32` and replace only the depth terms.
+  eye, keep `M31` and `M32` and replace only the depth terms. `SkyProjection` now does this when either is not
+  zero; flat projections leave both at zero, so the flat path keeps its old rebuild.
 - **A far plane recovered from a float projection is about 0.1% off.** `M43 / (M33 + 1)` at near 0.5 m and far
   10 000 m gives 10 010.8 *(observed 2026-11 in a unit test)*: `M33 + 1` cancels to a few ulps. Copy `M33` and `M43`
   instead of rebuilding a projection from recovered planes.
@@ -281,3 +287,5 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
 - 2026-11-25: ragesaq's headset test of milestone 2: upright, and the 3-D scene converges at the right scale. The
   sky does not converge, the HUD is close and large with doubled elements, and capture misses the HUD: nodes
   `ragesaq-009` to `ragesaq-011`.
+- 2026-11-25: the sky fix (`ragesaq-009`) built on `port/vr-sky-stereo`: off-centre projections keep their frustum
+  for the sky. Flat replay frames unchanged; a 60 s stereo run clean. The headset check by ragesaq is next.

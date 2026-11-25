@@ -148,9 +148,9 @@
       "id": "ragesaq-009",
       "title": "VR: draw the sky at infinity in each eye",
       "owner": "ragesaq",
-      "status": "waiting",
+      "status": "review",
       "needs": [],
-      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): the starfield, planets and galaxies do not converge. NativeSkyPlacement.SkyProjection rebuilds a symmetric projection from M11 and M22 and drops an eye projection's off-centre terms M31 and M32. Fix: when M31 or M32 is not zero, copy the scene projection and replace only its depth terms with the sky's 1 to 80000 range, so the flat path keeps its bytes; a unit test with an off-centre projection; flat replay frames unchanged; a headset check. Owner of the work: Port. Waits on: ragesaq's go-ahead; then a branch port/vr-sky-stereo from master.",
+      "next": "In review as a PR from branch port/vr-sky-stereo, stacked on port/m2-headset-result (PR #10): NativeSkyPlacement.SkyProjection keeps an off-centre projection's frustum (M31, M32) and takes only the sky's depth range; flat projections keep the old rebuild. Evidence: a failing-first unit test, the MonoGame test project's fast filter failing the same 7 tests before and after on Windows, flat replay frames unchanged, a clean 60 s stereo run (knowledge/vr-client-survey.md). Next: cross-family review, then ragesaq's headset check that the starfield, planets and galaxies converge, then merge approval after PR #10.",
       "links": [
         "knowledge/vr-client-survey.md"
       ],

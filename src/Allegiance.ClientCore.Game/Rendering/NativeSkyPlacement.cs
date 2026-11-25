@@ -70,6 +70,17 @@ public static class NativeSkyPlacement
         float focus = sceneProjection.M22;                 // cot(vFOV/2)
         float vFov = 2f * MathF.Atan(1f / focus);
         float aspect = sceneProjection.M22 / sceneProjection.M11;
-        return Matrix.CreatePerspectiveFieldOfView(vFov, aspect, 1f, 80000f);
+        var sky = Matrix.CreatePerspectiveFieldOfView(vFov, aspect, 1f, 80000f);
+        // A VR eye's projection is off-centre (M31, M32); the rebuild above would
+        // centre it and the two eyes' skies would not converge. Keep the eye's
+        // frustum and take only the sky's depth range.
+        if (sceneProjection.M31 != 0f || sceneProjection.M32 != 0f)
+        {
+            var eye = sceneProjection;
+            eye.M33 = sky.M33;
+            eye.M43 = sky.M43;
+            return eye;
+        }
+        return sky;
     }
 }
