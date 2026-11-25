@@ -80,8 +80,9 @@ refocus from the fight. ragesaq to accept or fold it into layer 4.
   [EVE Valkyrie design lessons](https://gamedeveloper.com/design/-text-looks-rubbish-and-other-vr-design-lessons-learned-on-i-eve-valkyrie-i-))*.
   Beyond about 20 m the depth is hard to tell from infinity anyway (vergence 0.18° at 20 m, under 0.01° at 500 m),
   so a far target's data gains no depth cue by sitting at the target *(derived)*.
-- **Proposal: split the target information by job** (raised by ragesaq 2026-11-25: part of the targeting
-  information should be closer, or it may be too far away to see):
+- **Split the target information by job** *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25:
+  "Accept the split", after raising that part of the targeting information should be closer, or it may be too far
+  away to see; the split itself was Port's proposal)*. The 2° and 0.6° floors below are still starting values:
   - *At the target's depth:* what says where the target is and whether to shoot. That is the bracket, the lock, the
     lead marker, and a short label (name and range). It has an angular floor: the bracket is never under about 2°
     across, the text is never under about 0.6° tall, and when the target is off-view an edge arrow shows the
@@ -178,7 +179,7 @@ service with upstream, not two.
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
-| Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | raised by ragesaq 2026-11-25; the split is Port's proposal, not decided | 2026-11-25 |
+| Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
 | Flight reference block at infinity (layer 3) | proposed | all non-marker elements on close panels | proposed by Port 2026-11-25, not decided | 2026-11-25 |
 
 ## Disagreements between sources
@@ -225,6 +226,8 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
   platform guidance, VR games) and wrote this spec.
 - 2026-11-25: the upstream author pointed ragesaq at the Jet skin. Port read it and the upstream cockpit study
   (P1044): Jet's elements fall into the four layers, and P1044 splits the flat game the same way.
+- 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
+  depth, with an angular floor; the target's details on a close panel.
 
 ## Sources
 

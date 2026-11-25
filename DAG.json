@@ -162,7 +162,7 @@
       "owner": "ragesaq",
       "status": "waiting",
       "needs": [],
-      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"). Decided by ragesaq 2026-11-25: the HUD is drawn into the eye images; the aiming reticle at infinity; targeting markers at the target's depth; information panels close and angled like cockpit displays; no motion controllers. Design spec: knowledge/vr-hud-design.md (four layers and a build order; layer 3, a flight reference block at infinity, is Port's proposal). Next: ragesaq accepts or changes the spec (in its PR); then build step 1 (HUD in the eye passes, targeting markers at depth, quad layer dropped) on a branch port/vr-hud-in-eyes from master, after ragesaq-009. Owner of the work: Port.",
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"). Decided by ragesaq 2026-11-25: the HUD is drawn into the eye images; the aiming reticle at infinity; targeting markers at the target's depth, with the target's details on a close panel (accepted 2026-11-25); information panels close and angled like cockpit displays; no motion controllers. Design spec: knowledge/vr-hud-design.md (four layers and a build order; layer 3, a flight reference block at infinity, is Port's proposal). Next: ragesaq accepts or changes the spec (in its PR); then build step 1 (HUD in the eye passes, targeting markers at depth, quad layer dropped) on a branch port/vr-hud-in-eyes from master, after ragesaq-009. Owner of the work: Port.",
       "links": [
         "knowledge/vr-client-survey.md",
         "knowledge/vr-hud-design.md"
