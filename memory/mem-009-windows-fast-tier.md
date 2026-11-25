@@ -4,7 +4,7 @@ topic: windows-fast-tier
 class: witnessed
 observed: 2026-11-24
 recorded-by: port
-seen-in: Port's fast-tier runs on the operator's Windows host for ragesaq-002 (VR milestone 1), 2026-11-24, at master 47e720b and on port/vr-m1
+seen-in: Port's fast-tier runs on the operator's Windows host for ragesaq-002 (VR milestone 1), 2026-11-24, at master 47e720b and on port/vr-m1; Windows 11, .NET SDK 10.0.404, Python 3.14
 ---
 
 # The fast test tier does not run cleanly on Windows

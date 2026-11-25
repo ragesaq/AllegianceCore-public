@@ -8,8 +8,9 @@ public interface IVrFrameSink : IDisposable
 {
     /// <summary>Called once per frame on the render thread, after the frame is
     /// complete in the back buffer and before it is presented to the window.
-    /// The graphics context is current. Must not throw: a sink that cannot
-    /// continue sets <see cref="Failed"/> and the game drops it.</summary>
+    /// The graphics context is current. A sink that cannot continue sets
+    /// <see cref="Failed"/>; the game drops it, and drops one that throws the
+    /// same way.</summary>
     void SubmitFrame(int backBufferWidth, int backBufferHeight);
 
     /// <summary>True once the sink has given up; the game then runs flat.</summary>

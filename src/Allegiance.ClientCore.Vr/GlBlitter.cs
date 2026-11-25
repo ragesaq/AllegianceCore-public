@@ -31,10 +31,15 @@ internal sealed unsafe class GlBlitter : IDisposable
     private readonly delegate* unmanaged<uint, void> _enable;
     private readonly delegate* unmanaged<uint, void> _disable;
     private readonly delegate* unmanaged<uint> _getError;
-    private uint _framebuffer;
+    private const int LoggedErrorBatches = 5;
 
-    private GlBlitter(delegate* unmanaged[Cdecl]<byte*, nint> proc)
+    private readonly Action<string> _log;
+    private uint _framebuffer;
+    private int _errorBatches;
+
+    private GlBlitter(delegate* unmanaged[Cdecl]<byte*, nint> proc, Action<string> log)
     {
+        _log = log;
         nint Load(string name)
         {
             byte[] bytes = System.Text.Encoding.ASCII.GetBytes(name + "\0");
@@ -61,7 +66,7 @@ internal sealed unsafe class GlBlitter : IDisposable
     }
 
     /// <summary>Must be called on the render thread with MonoGame's context current.</summary>
-    public static GlBlitter Create()
+    public static GlBlitter Create(Action<string> log)
     {
         foreach (string lib in new[] { "SDL2.dll", "libSDL2-2.0.so.0", "libSDL2.dylib" })
         {
@@ -69,7 +74,7 @@ internal sealed unsafe class GlBlitter : IDisposable
             try
             {
                 if (NativeLibrary.TryGetExport(handle, "SDL_GL_GetProcAddress", out var address))
-                    return new GlBlitter((delegate* unmanaged[Cdecl]<byte*, nint>)address);
+                    return new GlBlitter((delegate* unmanaged[Cdecl]<byte*, nint>)address, log);
             }
             finally { NativeLibrary.Free(handle); }
         }
@@ -86,9 +91,7 @@ internal sealed unsafe class GlBlitter : IDisposable
         _getIntegerv(DrawFramebufferBinding, &drawBinding);
         bool srgb = _isEnabled(FramebufferSrgb) != 0;
         bool scissor = _isEnabled(ScissorTest) != 0;
-        // Errors left by earlier frame work are not this copy's; clear them so the
-        // check below sees only what the blit raised.
-        for (int i = 0; i < 16 && _getError() != 0; i++) { }
+        DrainEarlierErrors();
         try
         {
             _bindFramebuffer(ReadFramebuffer, 0);
@@ -110,6 +113,26 @@ internal sealed unsafe class GlBlitter : IDisposable
             _bindFramebuffer(ReadFramebuffer, (uint)readBinding);
             _bindFramebuffer(DrawFramebuffer, (uint)drawBinding);
         }
+    }
+
+    /// <summary>Errors left by the frame's own drawing are not this copy's; clear
+    /// them so the check after the blit sees only what it raised. Clearing them
+    /// hides them from the game's own checks (HdCompressedUpload's "GL error before
+    /// BC upload"), so they are logged here instead.</summary>
+    private void DrainEarlierErrors()
+    {
+        List<string>? codes = null;
+        for (int i = 0; i < 16; i++)
+        {
+            uint error = _getError();
+            if (error == 0) break;
+            (codes ??= []).Add($"0x{error:X4}");
+        }
+        if (codes is null || _errorBatches > LoggedErrorBatches) return;
+        _errorBatches++;
+        _log(_errorBatches <= LoggedErrorBatches
+            ? $"[vr] GL errors from the frame before the copy: {string.Join(", ", codes)}"
+            : "[vr] more GL errors from the frame before the copy; no longer logged");
     }
 
     public void Dispose()

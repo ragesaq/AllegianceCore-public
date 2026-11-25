@@ -4,74 +4,41 @@ namespace Allegiance.ClientCore.MonoGame;
 
 public sealed partial class Game1
 {
-    private IVrFrameSink? _vrSink;
-    private bool _vrSavedFixedTimeStep;
-    private TimeSpan _vrSavedInactiveSleep;
+    private VrFrameSinkHost? _vrHost;
 
-    /// <summary>Set by the head before <c>Run()</c> when VR was requested. While a
-    /// sink is attached the headset's frame wait paces the loop, so vsync, the
-    /// fixed time step and the inactive-window sleep are turned off (the headset
-    /// keeps its rate when another window has focus). If the sink fails the game
-    /// keeps running flat: those come back, except vsync, which stays off until
-    /// restart.</summary>
-    public IVrFrameSink? VrFrameSink
+    /// <summary>Called by the head before <c>Run()</c> when VR was requested.
+    /// <see cref="VrFrameSinkHost"/> says what changes while the sink is attached.</summary>
+    public void AttachVrFrameSink(IVrFrameSink sink)
     {
-        get => _vrSink;
-        set
-        {
-            if (_vrSink is not null) throw new InvalidOperationException("A VR frame sink is already attached.");
-            _vrSink = value;
-            if (value is null) return;
-            _vrSavedFixedTimeStep = IsFixedTimeStep;
-            _vrSavedInactiveSleep = InactiveSleepTime;
-            _graphics.SynchronizeWithVerticalRetrace = false;
-            IsFixedTimeStep = false;
-            InactiveSleepTime = TimeSpan.Zero;
-        }
+        _vrHost ??= new VrFrameSinkHost(new VrPacing(this), Console.WriteLine);
+        _vrHost.Attach(sink);
     }
 
-    /// <summary>Called where the game sets its own vsync or frame cap (saved
-    /// benchmark settings are applied at startup). The flat choice is kept for a
-    /// fallback; while a headset is attached it still paces the loop.</summary>
-    private void KeepVrPacing()
-    {
-        if (_vrSink is null) return;
-        _vrSavedFixedTimeStep = IsFixedTimeStep;
-        _graphics.SynchronizeWithVerticalRetrace = false;
-        IsFixedTimeStep = false;
-    }
+    private void KeepVrPacing() => _vrHost?.KeepPacing();
 
     private void SubmitVrFrame()
     {
-        if (_vrSink is null) return;
+        if (_vrHost is not { Attached: true }) return;
         var pp = GraphicsDevice.PresentationParameters;
-        try
-        {
-            _vrSink.SubmitFrame(pp.BackBufferWidth, pp.BackBufferHeight);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[vr] frame sink threw, running flat: {ex.GetType().Name}: {ex.Message}");
-            DropVrSink();
-            return;
-        }
-        if (_vrSink.Failed) DropVrSink();
+        _vrHost.Submit(pp.BackBufferWidth, pp.BackBufferHeight);
     }
 
-    private void DropVrSink()
-    {
-        var sink = _vrSink;
-        _vrSink = null;
-        IsFixedTimeStep = _vrSavedFixedTimeStep;
-        InactiveSleepTime = _vrSavedInactiveSleep;
-        try { sink?.Dispose(); }
-        catch (Exception ex) { Console.WriteLine($"[vr] frame sink dispose failed: {ex.GetType().Name}: {ex.Message}"); }
-    }
+    private void DisposeVrSink() => _vrHost?.Dispose();
 
-    private void DisposeVrSink()
+    private sealed class VrPacing(Game1 game) : IVrPacingTarget
     {
-        var sink = _vrSink;
-        _vrSink = null;
-        sink?.Dispose();
+        public bool FixedTimeStep
+        {
+            get => game.IsFixedTimeStep;
+            set => game.IsFixedTimeStep = value;
+        }
+
+        public TimeSpan InactiveSleep
+        {
+            get => game.InactiveSleepTime;
+            set => game.InactiveSleepTime = value;
+        }
+
+        public void DisableVsync() => game._graphics.SynchronizeWithVerticalRetrace = false;
     }
 }

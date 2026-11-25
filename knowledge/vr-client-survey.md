@@ -73,13 +73,15 @@ own quad.
   `bin\win64` folder), then the default library search (`src/Allegiance.ClientCore.Vr/VrOptions.cs`).
 - **Where it attaches** *(derived from the code)*: the OpenXR code is a library, `src/Allegiance.ClientCore.Vr`,
   referenced only by the desktop head. The shared game library holds just the `IVrFrameSink` seam
-  (`src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`) and `Game1.Vr.cs`. `EndDraw` hands the finished back buffer to
+  (`src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`), the host that attaches, feeds and drops a sink
+  (`Vr/VrFrameSinkHost.cs`) and `Game1.Vr.cs`. `EndDraw` hands the finished back buffer to
   the sink just before the window present (`Game1.GpuBudget.cs`). This differs from the proposal above: it copies
   framebuffer 0 rather than redirecting `Draw` into an offscreen target, so `Draw` is unchanged.
 - **Opt-in and fallback** *(derived from the code)*: `--vr` or `ALLEGIANCE_VR=1`. OpenXR starts on the first frame, on
-  the render thread with MonoGame's context current. Any failure (no loader, no runtime, no headset, an OpenXR or GL
-  error, the session exiting or being lost) logs `[vr] running flat: <reason>`, tears OpenXR down and the game runs
-  flat. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
+  the render thread with MonoGame's context current. A loader, runtime, headset, OpenXR or GL failure, or the session
+  exiting or being lost, logs `[vr] running flat: <reason>` and tears OpenXR down. Any other exception from the
+  presenter is caught by the game, logged as `[vr] frame sink threw, running flat: ...` and handled the same way.
+  Either way the game runs flat. A unit test proves a missing loader fails closed; it goes red when the presenter's catch is removed
   *(observed 2026-11)*.
 - **The copy** *(observed 2026-11, harness readback)*: `glBlitFramebuffer` from framebuffer 0 into a
   `GL_SRGB8_ALPHA8` swapchain image, with `GL_FRAMEBUFFER_SRGB` and the scissor test off, keeps every byte (the clear

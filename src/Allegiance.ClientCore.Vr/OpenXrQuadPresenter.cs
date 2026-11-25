@@ -132,7 +132,8 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         Space space;
         Check(xr.CreateReferenceSpace(_session, &spaceInfo, &space), "xrCreateReferenceSpace");
         _space = space;
-        _blitter = GlBlitter.Create();
+        KeepContextCurrent();
+        _blitter = GlBlitter.Create(_log);
         _log("[vr] OpenXR session created; waiting for the headset to be ready");
     }
 
@@ -295,21 +296,45 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
         var xr = _xr!;
         var waitInfo = new FrameWaitInfo { Type = StructureType.FrameWaitInfo };
         var state = new FrameState { Type = StructureType.FrameState };
-        Check(xr.WaitFrame(_session, &waitInfo, &state), "xrWaitFrame");
+        // The runtime can leave the running state between the event poll and the
+        // frame calls; its STOPPING event follows, so this frame is just skipped.
+        Result waited = xr.WaitFrame(_session, &waitInfo, &state);
+        if (waited == Result.ErrorSessionNotRunning) return;
+        Check(waited, "xrWaitFrame");
         if (!_firstFrameLogged)
         {
             _firstFrameLogged = true;
             _log($"[vr] first frame: display period {state.PredictedDisplayPeriod / 1e6:0.00} ms");
         }
         var beginInfo = new FrameBeginInfo { Type = StructureType.FrameBeginInfo };
-        Check(xr.BeginFrame(_session, &beginInfo), "xrBeginFrame");
+        Result begun = xr.BeginFrame(_session, &beginInfo);
+        if (begun == Result.ErrorSessionNotRunning) return;
+        Check(begun, "xrBeginFrame");
 
         var quad = new CompositionLayerQuad { Type = StructureType.CompositionLayerQuad };
         var layer = (CompositionLayerBaseHeader*)&quad;
         uint layerCount = 0;
         if (state.ShouldRender != 0)
         {
-            CopyFrameIntoSwapchain(xr, width, height);
+            // Runtime calls since the last check (swapchain creation included) may
+            // have switched the GL context; the copy must run in the game's.
+            KeepContextCurrent();
+            try
+            {
+                CopyFrameIntoSwapchain(xr, width, height);
+            }
+            catch (VrUnavailableException)
+            {
+                // Close the begun frame before the teardown that follows.
+                var empty = new FrameEndInfo
+                {
+                    Type = StructureType.FrameEndInfo,
+                    DisplayTime = state.PredictedDisplayTime,
+                    EnvironmentBlendMode = EnvironmentBlendMode.Opaque,
+                };
+                xr.EndFrame(_session, &empty);
+                throw;
+            }
             var (w, h) = VirtualScreen.SizeMetres(width, height);
             quad.Space = _space;
             quad.EyeVisibility = EyeVisibility.Both;
@@ -331,7 +356,8 @@ public sealed unsafe class OpenXrQuadPresenter : IVrFrameSink
             LayerCount = layerCount,
             Layers = layerCount > 0 ? &layer : null,
         };
-        Check(xr.EndFrame(_session, &endInfo), "xrEndFrame");
+        Result ended = xr.EndFrame(_session, &endInfo);
+        if (ended != Result.ErrorSessionNotRunning) Check(ended, "xrEndFrame");
         KeepContextCurrent();
     }
 
