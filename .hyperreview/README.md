@@ -4,6 +4,30 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 1
+
+- Record: [summary](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/summary.md), [receipt](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `ff8e8a6..b32f0e6`, head `b32f0e6`, tree `83727f8`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Findings and dispositions:
+  1. Medium: losing the throttle device while the stick stays froze the throttle at 0 and shut out the keyboard
+     throttle. Fixed: the frame reports `ThrottleBound`, and the flight path resets the throttle latch when it goes
+     false. Tests: `ThrottleBound_FollowsTheThrottleDevice`, `ThrottleUnplugged_ResetGivesTheKeyboardThrottleBack`.
+  2. Medium: `null` entries in `joystick.json` parsed silently and crashed the first flight update. Fixed: `Parse`
+     rejects them with a reason, rejects numeric enum values and bad thresholds, and the file read catches the
+     other read failures. `BadFile_IsRejectedWithAReason` gains the cases; with the null check removed, the case
+     fails.
+  3. Low: armed state could survive one device leaving while another arrives in the same update. Disputed with
+     evidence: the arriving device's key enters the table before the prune, so a departed key always makes the
+     table larger than the set seen. With the round 1 condition restored, the new test
+     `DeviceSwappedInOneUpdate_StillForgetsTheArmedState` passes. The prune is now written by membership anyway,
+     which is simpler, and the test stays.
+  4. Low: after the HOTAS goes away, the fallback could read leftover pedals as a stick. Fixed: the fallback is used
+     only while no profile has ever matched. Test `AfterAProfileMatched_LeftoverPedalsAreNotReadAsAStick` fails
+     without the fix.
+  5. Low: untested paths. Fixed: tests for the button-count change, the swap, the throttle loss and the pedals.
+
 ## 2026-11-25: PR #11 sky at infinity in each eye, round 1
 
 - Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)

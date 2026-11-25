@@ -163,7 +163,7 @@ public class JoystickBindingResolverTests
     // ---- buttons ----
 
     [Fact]
-    public void StickTriggerStages_FireThenMissile()
+    public void StickTrigger_FirstStageFires_SecondStageIsUnbound()
     {
         var r = new JoystickBindingResolver();
         r.Resolve([StickAt(0), ThrottleAt(1)]);
@@ -172,7 +172,22 @@ public class JoystickBindingResolverTests
         Assert.False(first.FireMissile);
         var second = r.Resolve([StickAt(0, pressed: [0, 1]), ThrottleAt(1)]);
         Assert.True(second.Fire);
-        Assert.True(second.FireMissile);
+        Assert.False(second.FireMissile);
+        Assert.False(second.Booster);
+    }
+
+    [Fact]
+    public void UserProfile_CanBindTheSecondStage()
+    {
+        var (profiles, error) = JoystickBindingFile.Parse("""
+            { "devices": [ { "match": "Gunfighter",
+                "axes": [ { "role": "Yaw", "axis": 0 }, { "role": "Pitch", "axis": 1 }, { "role": "Roll", "axis": 2 } ],
+                "buttons": [ { "command": "Fire", "button": 0 }, { "command": "FireMissile", "button": 1 } ] } ] }
+            """);
+        Assert.Null(error);
+        var r = new JoystickBindingResolver(profiles);
+        r.Resolve([StickAt(0)]);
+        Assert.True(r.Resolve([StickAt(0, pressed: [0, 1])]).FireMissile);
     }
 
     [Fact]
@@ -260,11 +275,154 @@ public class JoystickBindingResolverTests
     [InlineData("""{ "devices": [ { "axes": [] } ] }""")]
     [InlineData("""{ "devices": [ { "match": "  " } ] }""")]
     [InlineData("""{ "devices": [ { "match": "X", "axes": [ { "role": "Sideways", "axis": 0 } ] } ] }""")]
+    // Review r1 F2: null entries parsed silently and crashed the first flight update.
+    [InlineData("""{ "devices": [ null ] }""")]
+    [InlineData("""{ "devices": [ { "match": "Stick", "axes": [ null ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "Stick", "buttons": [ null ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "Stick", "axisCommands": [ null ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "X", "axes": [ { "role": 7, "axis": 0 } ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "X", "axes": [ { "role": "Yaw", "axis": 99999999999 } ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "X", "axisCommands": [ { "axis": 0, "negative": "StrafeLeft", "positive": "StrafeRight", "threshold": 0 } ] } ] }""")]
+    [InlineData("""{ "devices": [ { "match": "X", "axisCommands": [ { "axis": 0, "negative": "StrafeLeft", "positive": "StrafeRight", "threshold": 1.5 } ] } ] }""")]
     public void BadFile_IsRejectedWithAReason(string json)
     {
         var (profiles, error) = JoystickBindingFile.Parse(json);
         Assert.Empty(profiles);
         Assert.False(string.IsNullOrEmpty(error));
+    }
+
+    [Fact]
+    public void AxisCommands_ParseWithTheDefaultThreshold()
+    {
+        var (profiles, error) = JoystickBindingFile.Parse("""
+            { "devices": [ { "match": "Pad",
+                "axisCommands": [ { "axis": 2, "negative": "StrafeDown", "positive": "StrafeUp" } ],
+                "buttons": [ { "command": "Ripcord", "button": 3 } ] } ] }
+            """);
+        Assert.Null(error);
+        var c = Assert.Single(profiles[0].AxisCommands!);
+        Assert.Equal(new JoystickAxisCommandBinding(2, JoystickCommand.StrafeDown, JoystickCommand.StrafeUp, 0.5f), c);
+        Assert.Equal(new JoystickButtonBinding(JoystickCommand.Ripcord, 3), Assert.Single(profiles[0].Buttons));
+    }
+
+    // ---- side thrusters on the throttle's index-finger stick ----
+
+    [Theory]
+    [InlineData(0, -32767, JoystickCommand.StrafeLeft)]
+    [InlineData(0, 32767, JoystickCommand.StrafeRight)]
+    [InlineData(1, -32767, JoystickCommand.StrafeUp)]
+    [InlineData(1, 32767, JoystickCommand.StrafeDown)]
+    [InlineData(0, -16384, JoystickCommand.StrafeLeft)]  // just past half
+    public void ThrottleThumbStick_DrivesTheSideThrusters(int axis, int value, JoystickCommand expected)
+    {
+        var r = new JoystickBindingResolver();
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(axis, value), (3, 32767)])]);
+        Assert.True(f.Holds(expected));
+        foreach (var other in new[] { JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight, JoystickCommand.StrafeUp, JoystickCommand.StrafeDown })
+            if (other != expected) Assert.False(f.Holds(other));
+        // The thumb stick feeds no flight role.
+        Assert.Equal(0f, f.Axes.Yaw, 5);
+        Assert.Equal(0f, f.Axes.Pitch, 5);
+        Assert.Equal(-1f, f.Axes.Throttle, 5);
+    }
+
+    [Fact]
+    public void ThrottleThumbStick_InsideHalfDeflection_HoldsNothing()
+    {
+        var r = new JoystickBindingResolver();
+        var f = r.Resolve([ThrottleAt(0, [(0, 16000), (1, -16000)])]);
+        Assert.Equal(0, f.HeldMask);
+    }
+
+    [Fact]
+    public void ThrottleThumbStick_Diagonal_HoldsTwoThrusters()
+    {
+        var r = new JoystickBindingResolver();
+        var f = r.Resolve([ThrottleAt(0, [(0, 30000), (1, -30000)])]);
+        Assert.True(f.StrafeRight);
+        Assert.True(f.StrafeUp);
+        Assert.False(f.StrafeLeft);
+        Assert.False(f.StrafeDown);
+    }
+
+    [Fact]
+    public void Ripcord_IsAButtonCommand()
+    {
+        var profiles = new[] { new JoystickDeviceProfile("VKB-Sim Gunfighter", [], [new(JoystickCommand.Ripcord, 4)]) };
+        var r = new JoystickBindingResolver(profiles);
+        r.Resolve([StickAt(0)]);
+        Assert.True(r.Resolve([StickAt(0, pressed: [4])]).Ripcord);
+    }
+
+    // ---- review r1 F1: the throttle device going away ----
+
+    [Fact]
+    public void ThrottleBound_FollowsTheThrottleDevice()
+    {
+        var r = new JoystickBindingResolver();
+        Assert.True(r.Resolve([StickAt(0), ThrottleAt(1)]).ThrottleBound);
+        var stickOnly = r.Resolve([StickAt(0)]);
+        Assert.True(stickOnly.AnyBound);
+        Assert.False(stickOnly.ThrottleBound);
+    }
+
+    [Fact]
+    public void ThrottleUnplugged_ResetGivesTheKeyboardThrottleBack()
+    {
+        // The call site resets the controller when ThrottleBound goes false; after
+        // that a throttle role stuck at 0 must not override the keyboard.
+        var r = new JoystickBindingResolver();
+        var c = new JoystickFlightController();
+        c.Update(r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)])]).Axes);
+        Assert.NotNull(c.Update(r.Resolve([StickAt(0), ThrottleAt(1, [(3, -32767)])]).Axes).ThrottleOverride);
+
+        var lost = r.Resolve([StickAt(0)]);
+        Assert.False(lost.ThrottleBound);
+        // Without the reset the latch keeps overriding with the frozen 0.
+        var unreset = new JoystickFlightController();
+        unreset.Update(new JoystickAxes(0f, 0f, 0f, -1f));
+        unreset.Update(new JoystickAxes(0f, 0f, 0f, 1f));
+        Assert.Equal(0f, unreset.Update(lost.Axes).ThrottleOverride);
+
+        c.Reset();
+        for (int i = 0; i < 3; i++)
+            Assert.Null(c.Update(r.Resolve([StickAt(0)]).Axes).ThrottleOverride);
+    }
+
+    // ---- review r1 F3: armed state when one device leaves and another arrives ----
+
+    [Fact]
+    public void DeviceSwappedInOneUpdate_StillForgetsTheArmedState()
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0)]);
+        Assert.True(r.Resolve([StickAt(0, pressed: [0])]).Fire);
+        r.Resolve([ThrottleAt(0)]);                      // stick gone, throttle at the same index
+        Assert.False(r.Resolve([StickAt(0, pressed: [0])]).Fire);
+    }
+
+    [Fact]
+    public void ButtonCountChange_StartsFromRestAgain()
+    {
+        var profiles = new[] { new JoystickDeviceProfile("Pad", [], [new(JoystickCommand.Fire, 0)]) };
+        var r = new JoystickBindingResolver(profiles);
+        r.Resolve([Device(0, "Pad", 2, 4)]);
+        Assert.True(r.Resolve([Device(0, "Pad", 2, 4, pressed: [0])]).Fire);
+        Assert.False(r.Resolve([Device(0, "Pad", 2, 8, pressed: [0])]).Fire);
+    }
+
+    // ---- review r1 F4: pedals left connected after the HOTAS goes away ----
+
+    [Fact]
+    public void AfterAProfileMatched_LeftoverPedalsAreNotReadAsAStick()
+    {
+        var r = new JoystickBindingResolver();
+        Assert.True(r.LegacyAllowed);
+        r.Resolve([StickAt(0), ThrottleAt(1), PedalsAt(2)]);
+        Assert.False(r.LegacyAllowed);
+        var f = r.Resolve([PedalsAt(0, [(0, 32767), (1, 32767), (2, 32767)])]);
+        Assert.False(f.AnyBound);
+        Assert.Equal(default, f.Axes);
     }
 
     [Fact]

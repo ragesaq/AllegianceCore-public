@@ -9,17 +9,29 @@ namespace Allegiance.ClientCore.MonoGame.Flight;
 /// <c>numericValuesNew</c> outputs 0-3, <c>WinTrek.cpp:10822-10843</c>).</summary>
 public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 
-/// <summary>A held flight command a joystick button can drive. Native's
-/// <c>buttonCommandMap</c> binds joystick buttons to TK commands
-/// (<c>trekinput.cpp:675-730</c>); these are the three the port's flight path reads
-/// from a joystick: TK_FireWeapon (55), TK_FireMissile (56) and TK_FireBooster.</summary>
-public enum JoystickCommand { Fire, FireMissile, Booster }
+/// <summary>A flight command a joystick button (or an axis past a threshold) can
+/// drive. Native's <c>buttonCommandMap</c> binds joystick buttons to TK commands
+/// (<c>trekinput.cpp:675-730</c>): TK_FireWeapon (55), TK_FireMissile (56),
+/// TK_FireBooster, the four side thrusters TK_ThrustLeft/Right/Up/Down and
+/// TK_Ripcord. All but <see cref="Ripcord"/> are held commands; ripcord acts once
+/// per press, like its key.</summary>
+public enum JoystickCommand { Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord }
 
 /// <summary>One axis binding inside a <see cref="JoystickDeviceProfile"/>.</summary>
 public sealed record JoystickAxisBinding(JoystickRole Role, int Axis, bool Invert = false);
 
 /// <summary>One button binding inside a <see cref="JoystickDeviceProfile"/>.</summary>
 public sealed record JoystickButtonBinding(JoystickCommand Command, int Button);
+
+/// <summary>An axis read as two buttons: <paramref name="Negative"/> is held while the
+/// axis is past <paramref name="Threshold"/> (a fraction of full deflection) on its
+/// negative side, <paramref name="Positive"/> on its positive side. Allegiance's side
+/// thrusters are on/off, so this is how an analog thumb stick drives them.</summary>
+public sealed record JoystickAxisCommandBinding(
+    int Axis, JoystickCommand Negative, JoystickCommand Positive, float Threshold = JoystickAxisCommandBinding.DefaultThreshold)
+{
+    public const float DefaultThreshold = 0.5f;
+}
 
 /// <summary>
 /// The bindings for one physical device, chosen by a case-insensitive substring of
@@ -31,7 +43,8 @@ public sealed record JoystickButtonBinding(JoystickCommand Command, int Button);
 public sealed record JoystickDeviceProfile(
     string Match,
     IReadOnlyList<JoystickAxisBinding> Axes,
-    IReadOnlyList<JoystickButtonBinding> Buttons)
+    IReadOnlyList<JoystickButtonBinding> Buttons,
+    IReadOnlyList<JoystickAxisCommandBinding>? AxisCommands = null)
 {
     public bool Matches(string deviceName) =>
         Match.Length > 0 && deviceName.Contains(Match, StringComparison.OrdinalIgnoreCase);
@@ -41,9 +54,20 @@ public sealed record JoystickDeviceProfile(
 public readonly record struct JoystickDeviceSample(int Index, string Name, IReadOnlyList<int> Axes, IReadOnlyList<bool> Buttons);
 
 /// <summary>The bound result of one frame: the role axes (feeding
-/// <see cref="JoystickFlightController.Update"/>) and the held commands.</summary>
-public readonly record struct JoystickBindingFrame(
-    bool AnyBound, JoystickAxes Axes, bool Fire, bool FireMissile, bool Booster);
+/// <see cref="JoystickFlightController.Update"/>), whether any device binds the
+/// throttle role, and the held commands.</summary>
+public readonly record struct JoystickBindingFrame(bool AnyBound, JoystickAxes Axes, bool ThrottleBound, int HeldMask)
+{
+    public bool Holds(JoystickCommand command) => (HeldMask & (1 << (int)command)) != 0;
+    public bool Fire => Holds(JoystickCommand.Fire);
+    public bool FireMissile => Holds(JoystickCommand.FireMissile);
+    public bool Booster => Holds(JoystickCommand.Booster);
+    public bool StrafeLeft => Holds(JoystickCommand.StrafeLeft);
+    public bool StrafeRight => Holds(JoystickCommand.StrafeRight);
+    public bool StrafeUp => Holds(JoystickCommand.StrafeUp);
+    public bool StrafeDown => Holds(JoystickCommand.StrafeDown);
+    public bool Ripcord => Holds(JoystickCommand.Ripcord);
+}
 
 /// <summary>
 /// Resolves the connected devices against the device profiles and produces one
@@ -53,16 +77,17 @@ public readonly record struct JoystickBindingFrame(
 /// for each device the first matching profile wins. When two devices bind the same
 /// role or command, the device with the lower SDL index wins the axis, and a command
 /// is held when any device holds it.</para>
-/// <para><b>Fallback.</b> When no connected device matches any profile, the first
-/// connected device is read with <see cref="Legacy"/>, the port's layout before
-/// per-device bindings (<see cref="JoystickAxisLayout.DjiFpvRc3"/>, fire on button 1,
-/// booster on button 2), so a setup that worked before still works. A device that
-/// matches no profile while another device does is ignored (racing pedals, a second
-/// pad) rather than read as a stick or a throttle.</para>
+/// <para><b>Fallback.</b> When no connected device matches any profile, and none has
+/// matched since the resolver was made, the first connected device is read with
+/// <see cref="Legacy"/>, the port's layout before per-device bindings
+/// (<see cref="JoystickAxisLayout.DjiFpvRc3"/>, fire on button 1, booster on button 2),
+/// so a setup that worked before still works. A device that matches no profile while
+/// another device does, or after one has, is ignored (racing pedals left connected when
+/// the stick is unplugged, a second pad) rather than read as a stick or a throttle.</para>
 /// <para><b>Held at start.</b> A button counts as pressed only after it has been seen
 /// released since its device appeared: switches latched on at start (throttle mode
 /// switches, a hat some sticks report as held while idle) are their rest state, not a
-/// press.</para>
+/// press. A device that goes away forgets this state, so a reconnect starts again.</para>
 /// </summary>
 public sealed class JoystickBindingResolver
 {
@@ -82,28 +107,37 @@ public sealed class JoystickBindingResolver
 
     /// <summary>
     /// Built-in profiles for devices read out on real hardware. The stick follows
-    /// native's role order (X yaw, Y pitch, the third value, a twist, roll; native
-    /// default buttons 0 = TK_FireWeapon, 1 = TK_FireMissile, <c>defaultinputmap.mdl</c>
-    /// buttonCommandMap); the throttle device feeds only the throttle role, inverted
-    /// like native (<c>WinTrek.cpp:10842</c>).
+    /// native's role order (X yaw, Y pitch, the third value, a twist, roll) and fires
+    /// on button 0 like native's TK_FireWeapon default (<c>defaultinputmap.mdl</c>
+    /// buttonCommandMap). Native's button 1 = TK_FireMissile is not taken: on this
+    /// stick button 1 is the trigger's second stage, which ragesaq does not want as
+    /// missile fire. The throttle device feeds the throttle role, inverted like native
+    /// (<c>WinTrek.cpp:10842</c>), and its index-finger thumb stick drives the side
+    /// thrusters (ragesaq's choice; native gives the thrusters keys only).
     /// </summary>
     public static IReadOnlyList<JoystickDeviceProfile> BuiltIn { get; } =
     [
         // VKB-Sim Gunfighter (Modern Combat Pro Twist): axis 0 X, 1 Y, 2 twist; buttons
-        // 0 and 1 are the trigger's two stages.
+        // 0 and 1 are the trigger's two stages; the second stage is left unbound.
         new("VKB-Sim Gunfighter",
             [new(JoystickRole.Yaw, 0), new(JoystickRole.Pitch, 1), new(JoystickRole.Roll, 2)],
-            [new(JoystickCommand.Fire, 0), new(JoystickCommand.FireMissile, 1)]),
+            [new(JoystickCommand.Fire, 0)]),
         // Virpil MT-50CM2 (SDL name "LEFT VPC Throttle MT-50CM2"): axis 3 is the left
-        // lever; it reads +32767 at idle and falls towards full forward.
+        // lever; it reads +32767 at idle and falls towards full forward. Axes 0 and 1
+        // are the index-finger thumb stick: left/right and up/down thrust.
         new("VPC Throttle",
             [new(JoystickRole.Throttle, 3, Invert: true)],
-            []),
+            [],
+            [
+                new(0, JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight),
+                new(1, JoystickCommand.StrafeUp, JoystickCommand.StrafeDown),
+            ]),
     ];
 
     private readonly IReadOnlyList<JoystickDeviceProfile> _profiles;
     private readonly Dictionary<string, bool[]> _armed = new(StringComparer.Ordinal);
     private readonly HashSet<string> _seenThisFrame = new(StringComparer.Ordinal);
+    private bool _profileEverMatched;
 
     public JoystickBindingResolver(IReadOnlyList<JoystickDeviceProfile>? userProfiles = null)
     {
@@ -121,6 +155,10 @@ public sealed class JoystickBindingResolver
         return null;
     }
 
+    /// <summary>Whether <see cref="Legacy"/> may still be used: no profile has matched
+    /// a device since this resolver was made.</summary>
+    public bool LegacyAllowed => !_profileEverMatched;
+
     /// <summary>Resolve one frame. <paramref name="devices"/> are the connected devices
     /// in SDL index order.</summary>
     public JoystickBindingFrame Resolve(IReadOnlyList<JoystickDeviceSample> devices)
@@ -128,12 +166,14 @@ public sealed class JoystickBindingResolver
         var bound = new List<(JoystickDeviceSample Sample, JoystickDeviceProfile Profile)>();
         foreach (var d in devices)
             if (ProfileFor(d.Name) is { } p) bound.Add((d, p));
-        if (bound.Count == 0 && devices.Count > 0)
+        if (bound.Count > 0)
+            _profileEverMatched = true;
+        else if (devices.Count > 0 && !_profileEverMatched)
             bound.Add((devices[0], Legacy));
 
         _seenThisFrame.Clear();
         float? yaw = null, pitch = null, roll = null, throttle = null;
-        bool fire = false, missile = false, booster = false;
+        int held = 0;
         foreach (var (s, p) in bound)
         {
             foreach (var a in p.Axes)
@@ -148,29 +188,32 @@ public sealed class JoystickBindingResolver
                 }
             }
 
+            if (p.AxisCommands is { } axisCommands)
+                foreach (var c in axisCommands)
+                {
+                    float v = Normalize(s.Axes, c.Axis, false);
+                    if (v <= -c.Threshold) held |= 1 << (int)c.Negative;
+                    else if (v >= c.Threshold) held |= 1 << (int)c.Positive;
+                }
+
             bool[] armed = Armed(s);
             foreach (var b in p.Buttons)
-            {
-                if (!IsPressed(s, b.Button, armed)) continue;
-                switch (b.Command)
-                {
-                    case JoystickCommand.Fire: fire = true; break;
-                    case JoystickCommand.FireMissile: missile = true; break;
-                    case JoystickCommand.Booster: booster = true; break;
-                }
-            }
+                if (IsPressed(s, b.Button, armed)) held |= 1 << (int)b.Command;
         }
 
         // A device that has gone away forgets its button state, so a reconnect
         // starts from its own rest state again.
-        if (_armed.Count > _seenThisFrame.Count)
-            foreach (var key in new List<string>(_armed.Keys))
-                if (!_seenThisFrame.Contains(key)) _armed.Remove(key);
+        List<string>? gone = null;
+        foreach (var key in _armed.Keys)
+            if (!_seenThisFrame.Contains(key)) (gone ??= new()).Add(key);
+        if (gone is not null)
+            foreach (var key in gone) _armed.Remove(key);
 
         return new JoystickBindingFrame(
             bound.Count > 0,
             new JoystickAxes(yaw ?? 0f, pitch ?? 0f, roll ?? 0f, throttle ?? 0f),
-            fire, missile, booster);
+            throttle.HasValue,
+            held);
     }
 
     private bool[] Armed(in JoystickDeviceSample s)
@@ -203,11 +246,13 @@ public sealed class JoystickBindingResolver
 /// <summary>
 /// Reads the player's device profiles from <c>joystick.json</c> beside the other
 /// client settings. The file is optional: without it the built-in profiles and the
-/// fallback apply. A file that cannot be read is reported and ignored, never fatal.
+/// fallback apply. A file that cannot be read or parsed is reported and ignored,
+/// never fatal.
 /// <code>
 /// { "devices": [ { "match": "Sim Pedals",
 ///     "axes": [ { "role": "Yaw", "axis": 0, "invert": false } ],
-///     "buttons": [ { "command": "Fire", "button": 0 } ] } ] }
+///     "buttons": [ { "command": "Fire", "button": 0 } ],
+///     "axisCommands": [ { "axis": 1, "negative": "StrafeUp", "positive": "StrafeDown", "threshold": 0.5 } ] } ] }
 /// </code>
 /// </summary>
 public static class JoystickBindingFile
@@ -219,11 +264,15 @@ public static class JoystickBindingFile
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: false) },
     };
 
-    private sealed record FileModel(List<DeviceModel>? Devices);
-    private sealed record DeviceModel(string? Match, List<JoystickAxisBinding>? Axes, List<JoystickButtonBinding>? Buttons);
+    private sealed record FileModel(List<DeviceModel?>? Devices);
+    private sealed record DeviceModel(
+        string? Match,
+        List<JoystickAxisBinding?>? Axes,
+        List<JoystickButtonBinding?>? Buttons,
+        List<JoystickAxisCommandBinding?>? AxisCommands);
 
     /// <summary>Parse the file's text. Returns the profiles and null, or an empty list
     /// and the reason the text was rejected.</summary>
@@ -234,16 +283,38 @@ public static class JoystickBindingFile
         {
             model = JsonSerializer.Deserialize<FileModel>(json, Options);
         }
-        catch (JsonException e)
+        catch (Exception e) when (e is JsonException or NotSupportedException or ArgumentException)
         {
             return ([], e.Message);
         }
         var result = new List<JoystickDeviceProfile>();
         foreach (var d in model?.Devices ?? [])
         {
+            if (d is null)
+                return ([], "a device entry is null");
             if (string.IsNullOrWhiteSpace(d.Match))
                 return ([], "a device entry has no \"match\"");
-            result.Add(new JoystickDeviceProfile(d.Match, d.Axes ?? [], d.Buttons ?? []));
+            var axes = new List<JoystickAxisBinding>();
+            foreach (var a in d.Axes ?? [])
+            {
+                if (a is null) return ([], $"device \"{d.Match}\": an axes entry is null");
+                axes.Add(a);
+            }
+            var buttons = new List<JoystickButtonBinding>();
+            foreach (var b in d.Buttons ?? [])
+            {
+                if (b is null) return ([], $"device \"{d.Match}\": a buttons entry is null");
+                buttons.Add(b);
+            }
+            var axisCommands = new List<JoystickAxisCommandBinding>();
+            foreach (var c in d.AxisCommands ?? [])
+            {
+                if (c is null) return ([], $"device \"{d.Match}\": an axisCommands entry is null");
+                if (!(c.Threshold > 0f && c.Threshold <= 1f))
+                    return ([], $"device \"{d.Match}\": an axisCommands threshold is not in (0, 1]");
+                axisCommands.Add(c);
+            }
+            result.Add(new JoystickDeviceProfile(d.Match, axes, buttons, axisCommands));
         }
         return (result, null);
     }

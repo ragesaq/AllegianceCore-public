@@ -82,7 +82,8 @@ public sealed partial class Game1
                 Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} ignored: {error}");
             return profiles;
         }
-        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
             Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} not read: {e.Message}");
             return [];
@@ -102,7 +103,7 @@ public sealed partial class Game1
         foreach (var s in _joystickSamples)
         {
             string use = _joystickBindings!.ProfileFor(s.Name) is { } p ? $"profile \"{p.Match}\""
-                : anyMatched ? "no profile, ignored"
+                : anyMatched || !_joystickBindings.LegacyAllowed ? "no profile, ignored"
                 : s.Index == _joystickSamples[0].Index ? "no profile, legacy layout" : "no profile, ignored";
             Console.WriteLine($"[monogame] joystick {s.Index} \"{s.Name}\": {use}");
         }
@@ -873,7 +874,7 @@ public sealed partial class Game1
         _kKeyWasDown                = ActionDown(ks, "Suicide");
         _cKeyWasDown                = ActionDown(ks, "DropChaff");
         _fCloakWasDown              = ActionDown(ks, "ToggleCloak");
-        _lKeyWasDown                = ActionDown(ks, "Ripcord");
+        _lKeyWasDown                = ActionDown(ks, "Ripcord") || _joystickFrame.Ripcord;
         _nKeyWasDown                = ActionDown(ks, "DropMine");
         _gfireKeyWasDown            = ActionDown(ks, "ToggleGroupFire");
         _prevWKeyWasDown            = ActionDown(ks, "PrevWeapon");
@@ -1708,7 +1709,7 @@ public sealed partial class Game1
         // taken elsewhere; L is only the docked-shop "Launch" key, a separate
         // screen, the same dual-use pattern R/F already accept) and a loose
         // mnemonic for "ripcorLd".
-        bool lRipcord = ActionDown(ks, "Ripcord");
+        bool lRipcord = ActionDown(ks, "Ripcord") || CurrentJoystickFrame(gameTime).Ripcord;
         if (!composing && lRipcord && !_lKeyWasDown)
         {
             bool ripcordActive;
@@ -2089,9 +2090,16 @@ public sealed partial class Game1
         // with the arrow keys; see the P380 report on native's bInternalCamera gate),
         // so the joystick axes are read in every camera mode, as native does.
         bool joystickTurnActive = false;
+        bool joystickStrafeActive = false;
+        var jsFrame = CurrentJoystickFrame(gameTime);
+        // The device that fed the throttle went away (a split HOTAS's throttle
+        // unplugged while the stick stays): drop the latch, so the keyboard throttle
+        // has authority again instead of a frozen joystick value.
+        if (_joystickThrottleWasBound && !jsFrame.ThrottleBound)
+            _joystickFlight.Reset();
+        _joystickThrottleWasBound = jsFrame.ThrottleBound;
         if (!composing)
         {
-            var jsFrame = CurrentJoystickFrame(gameTime);
             if (jsFrame.AnyBound)
             {
                 var jsr = _joystickFlight.Update(jsFrame.Axes);
@@ -2120,6 +2128,17 @@ public sealed partial class Game1
                     cmd = cmd with { StateM = cmd.StateM | FlightInput.FireContribution(true, _groupFire, _selectedMount) };
                 if (jsFrame.Booster)
                     cmd = cmd with { StateM = cmd.StateM | ShipControlState.AfterburnerButton };
+                // Side thrusters, the same bits as the strafe keys (FlightInput.Translate).
+                if (jsFrame.StrafeLeft)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.LeftButton };
+                if (jsFrame.StrafeRight)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.RightButton };
+                if (jsFrame.StrafeUp)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.UpButton };
+                if (jsFrame.StrafeDown)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.DownButton };
+                // Like the keyboard check below, left and right strafe count as manual input.
+                joystickStrafeActive = jsFrame.StrafeLeft || jsFrame.StrafeRight;
             }
         }
 
@@ -2370,7 +2389,8 @@ public sealed partial class Game1
             input.PitchUp || input.PitchDown || input.YawLeft || input.YawRight ||
             input.RollLeft || input.RollRight ||
             mouseManualInput ||
-            joystickTurnActive);   // P380 — a real stick deflection past deadzone is manual input too
+            joystickTurnActive ||  // P380 — a real stick deflection past deadzone is manual input too
+            joystickStrafeActive);
         if (_autoPilotEngaged && manualFlightInput)
             DisengageAutopilot(AutopilotDisengageReason.ManualInput);
 

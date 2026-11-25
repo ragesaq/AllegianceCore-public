@@ -146,12 +146,27 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   *(derived)*.
 - A profile binds the yaw, pitch, roll and throttle roles to an axis and an invert flag, and the Fire, FireMissile
   and Booster commands to buttons. Hats are not bound yet.
-- Built-in profiles: the VKB Gunfighter stick (X yaw, Y pitch, twist roll, as native's role order gives; trigger
-  stages 0 and 1 fire and missile, as `defaultinputmap.mdl` gives) and the VPC throttle (left lever, axis 3,
-  inverted). Stick X as yaw follows native; whether ragesaq wants X as roll is for the flight test.
+- Built-in profiles: the VKB Gunfighter stick (X yaw, Y pitch, twist roll, as native's role order gives; the
+  trigger's first stage, button 0, fires, as `defaultinputmap.mdl` gives) and the VPC throttle (left lever, axis 3,
+  inverted). Native's default puts missile fire on button 1, which on this stick is the trigger's second stage;
+  the second stage is left unbound *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont want trigger stage 2 for missiles")*. A player profile can still bind it. Stick X as yaw follows native; whether ragesaq wants X as
+  roll is for the flight test.
+- The game's Controls screen (F6) rebinds keyboard keys only; mouse buttons are fixed and joystick inputs are not
+  on it *(observed in `Rendering/KeyBindingController.cs`, `Rendering/InputLayouts.cs`)*. Until a joystick
+  binding screen exists, `joystick.json` is the only way to change a joystick binding.
 - A player file `joystick.json` beside `player.json` adds profiles that are tried before the built-in ones. A file
   that cannot be parsed is logged and ignored.
 - When two bound devices give the same role, the lower SDL index wins; a command is held when any device holds it.
+- The throttle's index-finger thumb stick drives the side thrusters: axis 0 left and right, axis 1 up and down, each
+  held while the stick is past half its travel, because Allegiance's thrusters are on or off *(decided 2026-11 by
+  ragesaq, in Port's working session 2026-11-25: "there are also lateral and vertical thrusters useful for maneuvering in dogfighting, i want that bound to the index finger joystick on my throttle")*. Which way of axis 1 is up is assumed (pushing
+  the stick up reads negative) and is for the flight test. Left and right thrust count as manual input and drop
+  the autopilot, as the strafe keys do.
+- A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
+  now include the four side thrusters and ripcord. Ripcord acts once per press, like its key.
+- If the device that feeds the throttle goes away while another stays, the throttle latch is reset so the keyboard
+  throttle works again *(review round 1, finding 1)*. After a profile has matched once, the fallback is not used, so
+  leftover pedals never fly the ship *(finding 4)*.
 - A device that matches no profile while another does is ignored, so pedals feed nothing unless a profile binds them.
   When no device matches, the first joystick is read with the port's earlier layout (`DjiFpvRc3`, fire button 1,
   booster button 2), as before this change.
@@ -161,6 +176,9 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
 - The log names each device and whether it uses a profile, the earlier layout, or is ignored.
 
 ## Open questions
+
+- The stick's three thumb face buttons: ragesaq remembers them for ripcord and missiles *(Port's working session
+  2026-11-25: "there are three face buttons for the thumb on the joystick, my memory of them was that they were primarily used for the ripcord jump and missiles, but its been a long time since i played")*. Their button numbers are not known yet; a short capture pressing each one answers it.
 
 - Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.

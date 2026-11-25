@@ -1197,6 +1197,7 @@ public sealed partial class Game1 : Game
     private long _joystickFrameTicks = -1;
     private JoystickBindingFrame _joystickFrame;
     private string _joystickDevicesLogged = "";
+    private bool _joystickThrottleWasBound;
 
     // P499 — Bluetooth gamepad flight input (Android head + any desktop pad).
     // The MonoGame GamePad analog sticks are converted to role axes by the pure
