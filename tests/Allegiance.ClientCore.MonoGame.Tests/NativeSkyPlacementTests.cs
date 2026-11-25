@@ -133,4 +133,38 @@ public class NativeSkyPlacementTests
         float skyAspect = sky.M22 / sky.M11;
         Assert.Equal(4f / 3f, skyAspect, 0.0001f);
     }
+
+    [Fact]
+    public void SkyProjection_SymmetricSceneProjection_IsTheFieldOfViewRebuild()
+    {
+        // The flat path: every term equals the rebuild the sky has always used.
+        var sceneProj = Matrix.CreatePerspectiveFieldOfView(
+            MathHelper.ToRadians(50f), 16f / 9f, 10f, 80000f);
+        float vFov = 2f * MathF.Atan(1f / sceneProj.M22);
+        var expected = Matrix.CreatePerspectiveFieldOfView(vFov, sceneProj.M22 / sceneProj.M11, 1f, 80000f);
+        Assert.Equal(expected, NativeSkyPlacement.SkyProjection(sceneProj));
+    }
+
+    [Fact]
+    public void SkyProjection_OffCentreEyeProjection_PutsTheSkyWhereTheSceneIs()
+    {
+        // A VR eye's frustum is off-centre (one lighthouse headset's left eye,
+        // roughly). A sky direction must land on the same screen point under the
+        // sky's projection as under the eye's own, or the two eyes see the sky
+        // shifted in opposite directions and it does not converge.
+        float l = MathF.Tan(MathHelper.ToRadians(-54f)), r = MathF.Tan(MathHelper.ToRadians(48f));
+        float d = MathF.Tan(MathHelper.ToRadians(-55f)), u = MathF.Tan(MathHelper.ToRadians(52f));
+        const float near = 0.5f, far = 10000f;
+        var eyeProj = Matrix.CreatePerspectiveOffCenter(l * near, r * near, d * near, u * near, near, far);
+        var sky = NativeSkyPlacement.SkyProjection(eyeProj);
+
+        foreach (var dir in new[] { new Vector3(0, 0, -1), new Vector3(0.6f, -0.3f, -1), new Vector3(-0.8f, 0.5f, -1) })
+        {
+            Vector4 a = Vector4.Transform(new Vector4(dir * 5000f, 1f), eyeProj);
+            Vector4 b = Vector4.Transform(new Vector4(dir * 7500f, 1f), sky);
+            Assert.Equal(a.X / a.W, b.X / b.W, 0.00001f);
+            Assert.Equal(a.Y / a.W, b.Y / b.W, 0.00001f);
+            Assert.InRange(b.Z / b.W, 0f, 1f); // the dome shell still inside the sky's depth range
+        }
+    }
 }

@@ -11,5 +11,10 @@ Format: `- YYYY-MM-DD — owner — what was finished [node-id] (PR #n)` — or
 
 ---
 
+- 2026-11-25 — ragesaq — VR milestone 2: the scene drawn once per eye with the head pose and the HUD on a quad; seen in the headset, follow-ups ragesaq-009 to ragesaq-011 [ragesaq-007] (commit 2572cdd)
+- 2026-11-25 — ragesaq — VR milestone 1: the flat frame in an OpenXR headset on one quad layer, opt-in with --vr, flat fallback on any failure [ragesaq-002] (commit 1c521ad)
 - 2026-11-24 — ragesaq — Work before adoption is not itemized here; the repository's history through this commit is its record [ragesaq-000] (commit b76d6c0)
 - 2026-11-24 — ragesaq — Enrolled the fork in HyperBench (memory, work map, knowledge, recall with vectors) and moved the VR work here [ragesaq-001] (commit daaeaf9)
+- 2026-11-24 — ragesaq — Let merges made through GitHub pass the publish guard [ragesaq-003] (commit 10976d0)
+- 2026-11-24 — ragesaq — Made the publish guard fail closed when it cannot list the new commits [ragesaq-004] (commit 6da7254)
+- 2026-11-24 — ragesaq — Agents merge and change settings only with the operator's approval (AGENTS.md prime rule 4) [ragesaq-005] (commit 47e720b)

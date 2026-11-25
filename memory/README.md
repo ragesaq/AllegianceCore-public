@@ -33,6 +33,8 @@ repo wins. Report the disagreement and supersede the entry.
 | mem-006 | stays-a-fork | verified | 2026-11-24 | Operator decision: the repository stays in the fork network; leaving it was considered and declined |
 | mem-007 | guard-range | verified | 2026-11-24 | The publish guard passed when a commit was missing; CI scanned new branches from the first commit |
 | mem-008 | merge-and-settings-approval | witnessed | 2026-11-24 | Operator decision: agents merge, or change settings, only with the operator's approval for that one change |
+| mem-009 | windows-fast-tier | witnessed | 2026-11-24 | The test-tier runner fails on Windows (no fcntl); about 21 to 23 fast tests fail on master there, some intermittently |
+| mem-010 | stacked-pr-ci | witnessed | 2026-11-25 | A stacked PR gets no Linux build-and-test until it targets master; a base change does not start one, a reopen or push does |
 
 Add a row here in the same pull request that adds the entry file; `tools/check_memory.py` fails if the index and the store drift apart.
 

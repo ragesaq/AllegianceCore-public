@@ -400,6 +400,8 @@ list in **reverse**.
   `docs/reports/BROWSER_SEAMS_P1047.md`.
 - **`src/Allegiance.ClientCore.Game`** — the MonoGame presentation layer
   (rendering, HUD, input, screens).
+- **`src/Allegiance.ClientCore.Vr`** — the optional OpenXR presenter (the VR
+  client), referenced only by the desktop head; see section 16.
 - **`src/Allegiance.Bot`** — the minimal BotClass client used by the MCP driver
   and multi-player bots.
 - **`src/Allegiance.SinglePlayer`** — offline skirmish/training host embedded
@@ -3463,3 +3465,48 @@ list in **reverse**.
   `tools/p999-civ-strategy/coverage_receipts.py` audits the separate stages.
   Reused native gates: `docs/parity/p1001-native-gates.csv`; report:
   `docs/reports/CIV_STRATEGY_COMMANDER_P1001.md`.
+
+## 16. VR client (`src/Allegiance.ClientCore.Vr`, `ClientCore.Game/Vr`)
+
+No native analogue: native Allegiance has no VR, so there is no parity matrix.
+
+- **Opt-in VR** — `--vr` or `ALLEGIANCE_VR=1`; `ALLEGIANCE_OPENXR_LOADER` names
+  the `openxr_loader.dll` (for example SteamVR's). Without either, nothing
+  changes. Key: `src/Allegiance.ClientCore.Vr/VrOptions.cs`; the head hook is in
+  `src/Allegiance.ClientCore.MonoGame/Program.cs`.
+- **Frame sink seam** — at the start of `Draw` the game asks the
+  `IVrFrameSink` for the frame's two eye views (`BeginFrame`), and hands it the
+  finished frame just before the window present (`SubmitFrame`). `VrFrameSinkHost` attaches the
+  sink, hands pacing to the headset (vsync, the fixed time step and the
+  inactive-window sleep off) and drops a sink that fails or throws: the fixed
+  step and the sleep come back, vsync stays off until restart. Key:
+  `src/Allegiance.ClientCore.Game/Vr/IVrFrameSink.cs`,
+  `src/Allegiance.ClientCore.Game/Vr/VrFrameSinkHost.cs`,
+  `src/Allegiance.ClientCore.Game/Game1.Vr.cs`.
+- **Eye passes** (milestone 2) — when the headset gives eye views, `Draw`
+  resolves the game camera once, then runs its 3-D scene once per eye into an
+  eye render target (`for (int vrPass ...)` in `Game1.Rendering.cs`, body not
+  re-indented). `VrEyeCamera` turns the game camera into the eye's: head
+  rotation in the camera's frame, eye offset added to `cameraEye` (one game unit
+  is one metre), the headset's field of view with the game's depth terms. The
+  second eye skips per-frame work (`VrRepeatPass`: particle emission, clocks,
+  telemetry, the target preview). Upscaling, HDR, bloom, antialiasing and soft
+  particles are off in eye passes. The HUD is then drawn into the back buffer
+  over a transparent clear. Key: `src/Allegiance.ClientCore.Game/Vr/VrEyeCamera.cs`,
+  `src/Allegiance.ClientCore.Game/Vr/VrStereoFrame.cs`.
+- **OpenXR presenter** — an OpenXR session over `XR_KHR_opengl_enable` (WGL,
+  Windows only). A stereo frame goes out as a projection layer (one swapchain
+  per eye) plus the HUD on a quad 2 m ahead, sized to the game
+  camera's vertical field of view and blended by its alpha. A flat frame (no
+  tracked pose) goes out as milestone 1's opaque quad, 2.4 m wide. `GlBlitter`
+  copies framebuffer 0 and the eye textures (rows flipped) into the swapchains
+  with `glBlitFramebuffer`. Any failure logs `[vr] running flat: <reason>` and
+  tears OpenXR down. Key: `src/Allegiance.ClientCore.Vr/OpenXrPresenter.cs`,
+  `src/Allegiance.ClientCore.Vr/GlBlitter.cs`,
+  `src/Allegiance.ClientCore.Vr/VrSessionLifecycle.cs`,
+  `src/Allegiance.ClientCore.Vr/VirtualScreen.cs`.
+- Tests: `tests/Allegiance.ClientCore.MonoGame.Tests/VrPresenterTests.cs`,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrFrameSinkHostTests.cs`,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrEyeCameraTests.cs`,
+  `tests/Allegiance.ClientCore.MonoGame.Tests/VrScenePassTests.cs`. Survey,
+  decisions and traps: `knowledge/vr-client-survey.md`.

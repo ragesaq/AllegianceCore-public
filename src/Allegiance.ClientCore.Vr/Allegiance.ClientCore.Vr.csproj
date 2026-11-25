@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The OpenXR side of the VR client. Only the DesktopGL head references it;
+       the shared game library knows just the IVrFrameSink seam, so the browser
+       and Android heads carry no OpenXR dependency. Silk.NET ships the managed
+       bindings only: the native openxr_loader comes from the user's OpenXR
+       runtime install (ALLEGIANCE_OPENXR_LOADER, see VrOptions). -->
+
+  <PropertyGroup>
+    <AssemblyName>Allegiance.ClientCore.Vr</AssemblyName>
+    <RootNamespace>Allegiance.ClientCore.Vr</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.OpenXR" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenXR.Extensions.KHR" Version="2.23.0" />
+    <!-- The seam's eye views carry MonoGame math types; the game library keeps
+         its own MonoGame reference private. Same package as the DesktopGL head. -->
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Allegiance.ClientCore.MonoGame.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Allegiance.ClientCore.Game/Allegiance.ClientCore.Game.csproj" />
+  </ItemGroup>
+
+</Project>

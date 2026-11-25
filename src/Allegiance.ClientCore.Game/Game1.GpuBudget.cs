@@ -547,6 +547,7 @@ public sealed partial class Game1
             Exit();
         }
         _frameTelemetry?.Submitted();
+        SubmitVrFrame();
         long draws = GraphicsDevice.Metrics.DrawCount;
         var pp = GraphicsDevice.PresentationParameters;
         long start = Stopwatch.GetTimestamp();

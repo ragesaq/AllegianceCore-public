@@ -56,25 +56,26 @@
       "id": "ragesaq-002",
       "title": "OpenXR VR client on AllegianceCore",
       "owner": "ragesaq",
-      "status": "active",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Moved here from ragesaq/AllegianceVR (its node ragesaq-002) on 2026-11-24. Read knowledge/vr-client-survey.md, then agree milestone 1 with the operator: the existing flat frame shown in the headset on an OpenXR quad layer, with a flat fallback when no runtime is present.",
+      "next": "Done: PR #7 merged on 2026-11-25 as merge commit 1c521ad (reviewed head f945af7, which adds only records after the closeout review at f36ee31; cross-family review rounds 1 to 4 and the closeout in .hyperreview/README.md; build-and-test green on f945af7). ragesaq approved it in Port's working session (\"PR #7, then PR #9\"). The headset checklist passed for orientation, colours and smoothness; the live fall to flat when SteamVR closes stays unobserved. Milestone 2 continues as ragesaq-007.",
       "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/7",
         "knowledge/vr-client-survey.md"
       ],
-      "updated": "2026-11-24"
+      "updated": "2026-11-25"
     },
     {
       "id": "ragesaq-003",
       "title": "Let merges made through GitHub pass the publish guard",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "PR #3 (stacked on PR #2): guard change and memory/mem-005 update. Cross-family review round 1 at 2ca409f gave PASS (.hyperreview/README.md); its one low finding is fixed. Waits on the operator's approval to merge, after PR #2. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
+      "next": "Done: PR #3 merged on 2026-11-24 as merge commit 10976d0 (reviewed head ff20f84, cross-family review round 1 PASS). The first merges after email privacy came on (PR #2 to #5) were stamped with psiclawops-port's noreply address as author and GitHub <noreply@github.com> as committer, and the guard passes over them (memory/mem-005).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/3",
         "memory/mem-005-github-merge-identity.md",
@@ -86,11 +87,11 @@
       "id": "ragesaq-004",
       "title": "Make the publish guard fail closed when it cannot list the new commits",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-003"
       ],
-      "next": "PR #4 (stacked on PR #3): the guard fails when it cannot list its range, and guard.yml scans new and force-pushed branches from their merge base with the default branch (memory/mem-007). Cross-family review round 1 at 6528bdb gave PASS; round 2 at 0b032b7 gave PASS-WITH-CONDITIONS, both rounds' findings answered (.hyperreview/README.md). The root commit of a push that creates the default branch stays unscanned, as before; no push here takes that path. Waits on the operator's approval to merge after PR #2 and PR #3.",
+      "next": "Done: PR #4 merged on 2026-11-24 as merge commit 6da7254 (reviewed head 610ef8c, cross-family review rounds 1 PASS and 2 PASS-WITH-CONDITIONS, findings answered). The root commit of a push that creates the default branch stays unscanned, as recorded in memory/mem-007.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/4",
         "memory/mem-007-guard-range.md",
@@ -103,11 +104,11 @@
       "id": "ragesaq-005",
       "title": "Agents merge and change settings only with the operator's approval",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-004"
       ],
-      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 to 4 (1f6039c, e4e159a, 309921b, 326f945) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); round 4's two findings were record fixes. Waits on the operator's approval to merge after PR #2, #3 and #4.",
+      "next": "Done: PR #5 merged on 2026-11-24 as merge commit 47e720b (reviewed head dfb00ac, cross-family review rounds 1 to 4, all findings answered).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/5",
         "AGENTS.md",
@@ -126,6 +127,72 @@
       "next": "ragesaq's VR milestone 1 headset test (ragesaq-002) is done, and the HOTAS is plugged in. Device readout 2026-11-25 (knowledge/joystick-input.md, \"Device readout\"): SDL index 0 the VKB Gunfighter stick, 1 the Virpil MT-50CM2 throttle, 2 racing pedals that ragesaq does not use for this game. Next: a capture while ragesaq moves each control, to map axes and buttons; then the first PR as proposed in the note, \"Proposed first PR\": read every joystick, bind axis roles and buttons per device as native's input map did, defaults from defaultinputmap.mdl, unbound devices ignored. The binding screen is a later step, scoped with ragesaq.",
       "links": [
         "knowledge/joystick-input.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-007",
+      "title": "VR milestone 2: per-eye rendering with the head pose",
+      "owner": "ragesaq",
+      "status": "done",
+      "needs": [
+        "ragesaq-002"
+      ],
+      "next": "Done: PR #9 merged on 2026-11-25 as merge commit 2572cdd. ragesaq's headset test the same day passed for the picture upright, the 3-D scene's convergence and scale, and the HUD fixed ahead of the seat. It found the sky not converging (ragesaq-009), the HUD too close and large with doubled elements (ragesaq-010), and the HUD missing from ragesaq's OpenXR capture tool (ragesaq-011) (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\").",
+      "links": [
+        "https://github.com/ragesaq/AllegianceCore-public/pull/9",
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-008",
+      "title": "VR: run flat when the eye render targets cannot be created",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [],
+      "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. PR #9 merged as 2572cdd, so it no longer waits on that. Waits on: ragesaq's go-ahead; then a branch port/vr-eye-target-fallback from master.",
+      "links": [
+        ".hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md",
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-009",
+      "title": "VR: draw the sky at infinity in each eye",
+      "owner": "ragesaq",
+      "status": "review",
+      "needs": [],
+      "next": "In review as PR #11 (https://github.com/ragesaq/AllegianceCore-public/pull/11, branch port/vr-sky-stereo, stacked on port/m2-headset-result, PR #10): NativeSkyPlacement.SkyProjection keeps an off-centre projection's frustum (M31, M32) and takes only the sky's depth range; flat projections keep the old rebuild. Code head 9db16a4 passed the cross-family review, round 1, with no findings (.hyperreview/README.md). Evidence: a failing-first unit test, the MonoGame test project's fast filter failing the same 7 tests before and after on Windows, flat replay frames unchanged, a clean 60 s stereo run (knowledge/vr-client-survey.md). In the headset the starfield, planets and galaxies now converge (ragesaq, 2026-11-25). Next: merge approval after PR #10, then retarget to master and a green build-and-test.",
+      "links": [
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-010",
+      "title": "VR: a usable HUD in the headset",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [],
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): the HUD quad is close and large (about 80 by 50 degrees of view at 2 m) and some elements appear twice, overlapping, at different slants. Decided by ragesaq 2026-11-25: the HUD is drawn into the eye images, not on its own layer (same section). Work: draw the HUD in each eye pass at a comfortable distance and size, keep its markers over what they mark, drop the HUD quad layer, and keep the flat path's bytes. First step: check in the flat game's cockpit view whether the doubled elements are 3-D cockpit screens. Owner of the work: Port. Waits on: ragesaq-009 (the sky fix, in progress first); then a branch port/vr-hud-in-eyes.",
+      "links": [
+        "knowledge/vr-client-survey.md"
+      ],
+      "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-011",
+      "title": "VR: the HUD in OpenXR capture",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [
+        "ragesaq-010"
+      ],
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submits as its own quad layer. Decided by ragesaq 2026-11-25: the HUD moves into the eye images (ragesaq-010), so capture records it with no change to the capture tool. Waits on: ragesaq-010; then a capture check by ragesaq.",
+      "links": [
+        "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-25"
     }

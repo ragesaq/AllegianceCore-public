@@ -4,6 +4,201 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #11 sky at infinity in each eye, round 1
+
+- Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `8ccacfa..9db16a4`, head `9db16a4`, tree `72c2a09`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. The reviewer checked the projection algebra, the depth range of every sky element, that
+  no sky code assumes a symmetric projection, and that no flat path can reach the new branch. Observations:
+  1. A future flat projection jitter through `M31`/`M32` would reach the sky; desirable, worth a comment then. No
+     action now.
+  2. The off-centre test covers one eye; the copy is sign-symmetric, so the mirrored eye follows. Answered, no
+     change: the reviewer's own reading covers it, and a second eye's matrix adds no new path through the code.
+  3. The symmetric test checks values, not the early return; the two branches agree for symmetric input. No action.
+  4. Node `ragesaq-009` should name PR #11 and the reviewed head. Done in the commit that records this review.
+
+## 2026-11-25: PR #9 VR milestone 2, closeout
+
+- Record: [summary](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md), [receipt](closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Closeout-verification of the whole pull request, `f945af7..36989f0`, head `36989f0`, tree `81e8dd2`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS for the headset test. The ledger of rounds 1 and 2 is closed, deferred with an owner, or answered. The
+  reviewer re-checked that the upstream seam keeps its bytes (`--ignore-all-space` numstat agrees) and that no
+  upstream file was renormalized. New:
+  1. Low (N1): creating the eye render targets inside `Draw` (`Game1.Vr.cs`) has no catch, so a throw there ends the
+     game instead of running flat. Deferred: node `ragesaq-008` in `DAG.json` (Issues are turned off on this fork).
+     Opt-in `--vr` only, never observed.
+  - Its merge gates: PR #7 first (merged as `1c521ad`), then a green Linux `build-and-test` on the final head, which
+    did not run while this PR was based on `port/vr-m1`.
+
+## 2026-11-25: PR #9 VR milestone 2, round 2
+
+- Record: [summary](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/summary.md), [receipt](patch-review-2026-11-25T10-50-00Z-allegiancecore-vr-m2-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch,
+  including a first attempt that failed on the provider connection before the review began.
+- Delta review of `3677ec6..917f29b`, head `917f29b`, tree `a928ba9`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. Round 1's F2 to F4 and the swapchain limit are closed; the F1 dispute is accepted on the OpenXR
+  specification. New:
+  1. Low: the `ReadEyeSize` comment in `OpenXrPresenter.cs` still described one side-by-side swapchain. Fixed
+     (comment only).
+  - Notes, no action: the new test covers `GatherDust`'s `advance` flag but not the `advance: !VrRepeatPass` call
+    site; `EnsureSwapchain` would leak a swapchain handle if image enumeration failed after a successful create
+    (milestone 1 code, never observed).
+
+## 2026-11-25: PR #9 VR milestone 2, round 1
+
+- Record: [summary](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/summary.md), [receipt](patch-review-2026-11-25T08-09-00Z-allegiancecore-vr-m2-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `f945af7..3677ec6`, head `3677ec6`, tree `52add9f`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Findings and dispositions:
+  1. Medium: the HUD quad's `BLEND_TEXTURE_SOURCE_ALPHA_BIT` would premultiply an already-premultiplied buffer.
+     Disputed: the OpenXR specification says the bit only enables the layer's alpha (unset, the alpha is one), and
+     colour is taken as premultiplied unless `XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT` is set. No change; the
+     HUD's edges are on the headset checklist.
+  2. Low: the native debris field stepped twice per frame in stereo. Fixed: `NativeScene.GatherDust` takes
+     `advance`, false on the second eye; `VrScenePassTests` covers it and was seen to fail without the fix.
+  3. Low: the eye render targets outlived a dropped VR sink. Fixed: released when the host is no longer attached.
+  4. Low: the opt-in aleph glimpse would land on the HUD layer. Fixed by skipping it in stereo frames, documented.
+  - Observation: the HUD quad is fixed in the local space, so it does not follow the head. Kept for milestone 2 and on
+    the headset checklist.
+  - Limit acted on: the side-by-side eye swapchain was twice the recommended width. Each eye now has its own
+    swapchain at the recommended size.
+
+## 2026-11-25: PR #7 VR milestone 1, closeout
+
+- Record: [summary](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/summary.md), [receipt](closeout-review-2026-11-25T04-14-00Z-allegiancecore-vr-m1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Closeout-verification of the whole pull request, `47e720b..f36ee31`, head `f36ee31`, tree `4f34e85`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows status complete and assurance `independent_cross_family`; its served-model field was empty
+  this time, and the session banner and the locked route name `deepseek-v4.1-flash`.
+- Verdict: PASS-WITH-CONDITIONS, ready for the in-headset test. The ledger shows every round 1 to 4 finding closed,
+  except round 1 finding 5, rejected with its narrower benchmark case kept as residual risk. Four low items.
+  Dispositions (in the commit with this record):
+  - Low 1, an acquired swapchain image is not released when `xrWaitSwapchainImage` fails: not taken, with evidence.
+    The OpenXR 1.0 page for `xrReleaseSwapchainImage` says the runtime must return `XR_ERROR_CALL_ORDER_INVALID` if
+    no image has been waited on, so a release after a failed wait would itself fail and would replace the original
+    error. The page for `xrDestroySwapchain` sets no rule about acquired images; its only requirement is that GPU
+    work referring to the swapchain has completed. The code therefore releases only after a successful wait, which
+    is what round 1's summary meant by the release in the `finally`.
+  - Low 2, `GLOSSARY.md` had no VR entry, which the fork's `AGENTS.md` asks for when a system is added: fixed. A
+    layout row and a section 16 name the options, the seam, the presenter and the tests;
+    `tools/check-glossary-links.py` passes.
+  - Low 3, the survey note did not say what the flat game keeps after a fallback: fixed. It now says the fixed step
+    and the sleep come back but vsync stays off until restart, so the flat game can run uncapped. Its status line
+    now names the review and closeout.
+  - Low 4, the gate's "new tests 3x alone" was not reported: done. The 24 VR tests ran three times alone at
+    `e71e079` (the code is unchanged since), passing 24 of 24 each time. The same gate's `tools/build-tools.sh`,
+    which the closeout did not name, was also run: all 155 tool projects built at e71e079 (the code is unchanged since), with no warnings or errors.
+  - The two other `AGENTS.md` rules for new systems do not apply here: `docker-compose.yml` lists services, and the
+    existing desktop-client variable `ALLEGIANCE_UPDATE_FEED` is not in it either; Dockerfiles belong to server apps,
+    and the VR project is a client library like `Allegiance.ClientCore.Game`.
+  - The closeout's merge conditions stand: the Linux `build-and-test` job green on the head, and ragesaq's approval
+    at the reviewed head. These fixes are prose only, so the record is re-recorded with them and no delta review
+    is needed.
+
+## 2026-11-25: PR #7 VR milestone 1, round 4
+
+- Record: [summary](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/summary.md), [receipt](patch-review-2026-11-25T04-04-00Z-allegiancecore-vr-m1-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `969988d..e71e079` (the round 3 record and fix), head `e71e079`, tree `283fb41`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS, no findings. Round 3 findings 1 and 2 closed, and the reason for not sending an empty `xrEndFrame`
+  judged sound. The reviewer found that a context failure inside `SkipFrame` leaves no frame open and reaches the
+  flat fallback, and that nothing in the delta blocks the in-headset test. Residual risks it names: the skip paths
+  are unexercised, and the accepted call-order fallback to flat. The summary calls the presenter's `SubmitFrame`
+  method `Present`; the line numbers it cites are `SubmitFrame`'s.
+
+## 2026-11-25: PR #7 VR milestone 1, round 3
+
+- Record: [summary](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/summary.md), [receipt](patch-review-2026-11-25T03-50-00Z-allegiancecore-vr-m1-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `b3a8ea3..969988d` (the round 2 record and fixes), head `969988d`, tree `e693147`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS-WITH-CONDITIONS. Round 2 findings 1 to 3 closed. The reviewer agreed with keeping the session flag
+  for round 2's finding 2 and withdrew its suggestion to clear it. Two low findings. Dispositions (the fix in the
+  commit after this record, re-reviewed in round 4):
+  - Low 1, the two skip returns after `xrWaitFrame` and `xrBeginFrame` did not restore the game's GL context before
+    the game presents: fixed. `SkipFrame` restores the context, then sleeps, so every skip path restores it.
+  - Low 2, the round 2 entry said the runtime discards a frame left begun when `xrEndFrame` reports the session not
+    running, which is not established: fixed in the record. The round 2 entry now states the consequence the
+    reviewer names: if a runtime enforces the frame-call order, the next `xrWaitFrame` fails and VR falls back to
+    flat for the rest of that run, with the reason logged. That is a safe failure, it needs the STOPPING event to
+    be late or absent, and it is kept as residual risk. The reviewer's other fix, a best-effort empty `xrEndFrame`
+    before the next wait, is not taken: the session is not running, so that call would return the same error.
+  - Note, `SkipFrame` and the idle path both sleep the idle interval: kept as two call sites of one constant, since
+    `SkipFrame` now also restores the context.
+
+## 2026-11-25: PR #7 VR milestone 1, round 2
+
+- Record: [summary](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/summary.md), [receipt](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `30c2ae6..b3a8ea3` (the round 1 record and fixes), head `b3a8ea3`, tree `ad3bbde`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS-WITH-CONDITIONS. Round 1 findings 1 to 4 and 6 to 8 closed, finding 5's disposition right. Three low
+  findings. Dispositions (fixes in the commit after this record, re-reviewed in round 3):
+  - Low 1, the context check before the copy sat outside the `try` that ends an empty frame: fixed. The check is now
+    the first statement inside it.
+  - Low 2, the `XR_ERROR_SESSION_NOT_RUNNING` skips bypassed the idle sleep, so the uncapped loop could spin: fixed.
+    Each skip (after `xrWaitFrame`, `xrBeginFrame` or `xrEndFrame`) sleeps the idle interval. The session flag is
+    left alone on purpose: the application ends a session itself, on the runtime's STOPPING event, so clearing the
+    flag without that event could leave VR idle for the rest of the run, while a sleep keeps retrying at the idle
+    rate. The reviewer's related residual risk (a frame begun and not ended when `xrEndFrame` returns that error) is
+    kept. Round 3 corrected this line, which first said the runtime discards the frame: that is not established. If
+    a runtime enforces the frame-call order instead, the next `xrWaitFrame` fails and VR falls back to flat for the
+    rest of that run, with the reason logged.
+  - Low 3, round 1's line numbers for finding 5 were off by one: fixed in the round 1 entry (`Game1.Benchmark.cs:199`,
+    `:452`, `:467`).
+  - Note, nothing asserted the inactive-window sleep after `KeepPacing` and a fallback: the test
+    `Settings_applied_while_attached_are_what_the_fallback_restores` now does, and fails when `KeepPacing` overwrites
+    the saved sleep. Note, re-attach after `Dispose` is untested: kept, `Dispose` runs only at shutdown. Note, the DAG
+    node named only the round 1 head: it now names the round 2 head.
+
+## 2026-11-25: PR #7 VR milestone 1, round 1
+
+- Record: [summary](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/summary.md), [receipt](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/receipt.md)
+- The committed summary and receipt are the reviewer's text, unchanged.
+- Reviewed head `30c2ae6`, tree `37638b8`, the range `47e720b..30c2ae6`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0. The wrapper state shows the
+  served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance `independent_cross_family`. The clone's
+  refs were the same before and after the run (listing sha256 `8c513e17bfd61405eaa851e5379727c9e43f2b1a6fae68170a5f07038f4ec04b`).
+- Verdict: PASS-WITH-CONDITIONS, one low-medium and seven low findings. Dispositions (fixes in the commit after this
+  record, re-reviewed in round 2):
+  - Low-Medium 1, the copy cleared GL errors the game's own check watches for: fixed. `GlBlitter` logs the codes it
+    clears (the first five batches, then one line saying it stops).
+  - Low 2, the GL context was not checked before the first copy after swapchain creation: fixed. The presenter checks
+    it before every copy and before creating the blitter.
+  - Low 3, a begun frame was left open when the copy failed: fixed. An empty frame is ended before the teardown.
+  - Low 4, `XR_ERROR_SESSION_NOT_RUNNING` from the frame calls ended VR: fixed. That result now skips the frame; the
+    runtime's STOPPING event follows.
+  - Low 5, the saved flat pacing has several writers: not a defect in the scenario given. A benchmark suggestion with
+    no frame cap is applied through `ApplyBenchmarkSettings`, which calls `KeepVrPacing`, so the value saved is the
+    one the flat game has at that moment; the benchmark's end re-applies the original settings the same way
+    (`Game1.Benchmark.cs:452,467`; round 2 corrected these and the next line number). The finding does hold for a narrower case: `BeginBenchmark` sets the fixed step
+    directly (`Game1.Benchmark.cs:199`), so a VR failure between that line and the next `ApplyBenchmarkSettings`
+    restores the pre-benchmark step for the rest of that run. Benchmark-only, it needs a VR failure mid-run, and it
+    ends at the run's next settings change, so it is left as residual risk.
+  - Low 6, no test covered what the flat game is left with: fixed. The attach, submit, drop and pacing logic moved
+    from `Game1.Vr.cs` into `Vr/VrFrameSinkHost.cs` behind a small pacing interface, with 7 tests
+    (`VrFrameSinkHostTests`). Two of them fail when the fallback stops restoring the fixed step.
+  - Low 7, DAG `ragesaq-002` named no pull request or head: fixed. Status `review`, PR #7 linked, heads named.
+  - Low 8, the survey note said any failure logs `[vr] running flat:`: fixed; it now names both log lines.
+    `memory/mem-009` now names the environment it was seen in.
+  - Note, `IVrFrameSink` said "must not throw" while the game catches what a sink throws: the doc comment now says the
+    game drops a sink that throws. Note, `GlBlitter` frees the SDL handle it resolved from: kept, it matches
+    `HdCompressedUpload` and MonoGame keeps SDL2 loaded.
+
 ## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 4
 
 - Record: [summary](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/summary.md), [receipt](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/receipt.md)
