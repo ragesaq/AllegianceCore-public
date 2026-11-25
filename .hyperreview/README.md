@@ -4,6 +4,22 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 2
+
+- Record: [summary](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/summary.md), [receipt](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `e4e159a`, tree `1241018`, PR #5's own delta `0b032b7..e4e159a`, in a standalone clone. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All six round 1 findings are closed. Dispositions:
+  - New 1 (medium), "recorded on the pull request" was ambiguous and PR #5 had no review comment: fixed. Rule 4 now
+    says the result is posted as a comment on the pull request. The round 1 comment was posted after this review's
+    snapshot was taken, and this round's is posted too.
+  - New 2, the PR body described the round 1 text: fixed, the body now describes the rule as it stands.
+  - New 3, `mem-004` was said to belong to PR #2: fixed, it merged with PR #1.
+  - New 4, `mem-008`'s `seen-in:` named no runtime: fixed, it names Port (Claude Code, Claude Opus 5.5).
+  - New 5, the gloss of "the review gates" left out the build gate: fixed, rule 4 now says any build and test gate
+    the section names must pass as well.
+
 ## 2026-11-25: PR #4 publish guard fails closed, round 2
 
 - Record: [summary](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/summary.md), [receipt](patch-review-2026-11-25T00-30-00Z-allegiancecore-failclosed-r2/receipt.md)
