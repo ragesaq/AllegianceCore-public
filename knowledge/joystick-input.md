@@ -17,9 +17,9 @@ Allegiance did for that setup, and what porting it involves.
 - Native Allegiance bound each axis and command to a chosen device through its input map *(read from the native
   source, see below)*.
 - The port is proposed and deferred until after the VR milestone 1 headset test *(decided 2026-11 by ragesaq)*.
-- ragesaq's devices are read out below *(observed 2026-11-25)*. The pedals are not used for this game *(decided
-  2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont plan on using the pedals, those are for
-  racing")*.
+- ragesaq's devices are read out below *(observed 2026-11-25)*. ragesaq will not bind their own pedals, which are
+  racing pedals without a useful range of motion here; pedals must still be bindable for any player who wants
+  them *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont want to say that pedals shouldnt be viable if anyone wants to use them, i just dont plan on using mine as they dont have the range of motion that makes sense")*.
 
 ## Device readout (2026-11-25)
 
@@ -30,7 +30,7 @@ and `Joystick.GetState` for indexes 0 to 15, with all devices plugged in *(obser
 |---|---|---|---|---|---|
 | 0 | VKB-Sim Gunfighter Modern Combat Pro Twist | 8 | 128 | 2 | stick |
 | 1 | LEFT VPC Throttle MT-50CM2 | 6 | 79 | 0 | throttle |
-| 2 | Heusinkveld Sim Pedals Sprint | 3 | 0 | 0 | not used (ragesaq) |
+| 2 | Heusinkveld Sim Pedals Sprint | 3 | 0 | 0 | not bound by ragesaq (bindable for others) |
 
 - With this order the game today reads the stick and ignores the throttle *(derived: `CurrentJoystickState`
   reads index 0 only, above)*. The order is SDL's and can change between runs, so bindings follow the device name
@@ -38,7 +38,41 @@ and `Joystick.GetState` for indexes 0 to 15, with all devices plugged in *(obser
 - At rest the stick reports axis 0 at about -6,300 and axis 7 at -32,768, and the pedals all three axes at -32,768
   *(observed, one sample)*. Which physical control each axis and button is has not been mapped yet; that needs a
   capture while ragesaq moves each control.
-- A device that is not bound, such as the pedals, must be ignored, not read as a stick or a throttle *(derived)*.
+- Every device and axis is bindable, pedals included. A device with nothing bound, such as ragesaq's pedals, is
+  ignored: never read as a stick or a throttle just because of its index *(derived from ragesaq's decision above)*.
+
+### Control capture (2026-11-25)
+
+ragesaq moved the controls in a set order while the probe logged the first time each axis left its rest value (by
+more than 6,000 of 32,768) or each button or hat was pressed, and each axis's range over 90 s *(observed)*. The
+roles below are read from that order and are *(derived)* where noted:
+
+| Device | Input | Range seen | What it is |
+|---|---|---|---|
+| stick | axis 0 | full | roll, stick left and right (moved first) |
+| stick | axis 1 | full | pitch, stick forward and back (second) |
+| stick | axis 2 | full | yaw, twist (third) |
+| stick | axes 5 and 6 | full | a two-axis thumb control: both moved at the same instant *(derived)* |
+| stick | axis 7 | full, rest at the minimum | a lever or slider, likely the brake lever *(derived)* |
+| stick | axes 3 and 4 | none | not used by this stick |
+| stick | buttons 0 and 1 | | the trigger's two stages: pressed at the same instant *(derived)* |
+| stick | hat 0 | up, right, down, left | the main hat |
+| stick | buttons 2 to 9, 11, 13, 15, 20, 21, 23 | | other stick buttons ragesaq pressed |
+| throttle | axes 3 and 4 | full, rest at the maximum | the two throttle levers, moved together *(derived)* |
+| throttle | axes 0 and 1 | about 97% of full | a thumb stick on the throttle *(derived from the short range)* |
+| throttle | axes 2 and 5 | full | two further axes (rotaries or sliders); which is which is not known |
+| throttle | buttons 0 to 8, 10, 12 to 28, 31 to 33, 43 to 46, 48 to 54, 73 to 78 | | throttle buttons ragesaq pressed |
+| pedals | axis 0 | full | pedal axis, rest at the minimum (pressed once to check) |
+
+Open from the capture:
+- The throttle's axes 0 to 4 all first moved at 14.0 s, while the levers moved. Whether axes 0 and 1 (thumb stick)
+  and axis 2 moved by contact or by design needs a capture of one throttle control at a time.
+- Throttle buttons 34, 35 and 36 read pressed at rest, likely latched switches or a mode selector *(derived, not
+  checked)*. A binding must not fire a command on a button held from the start.
+- Stick hat 1 reads "up" at rest, and stick axis 0 read about -6,300 at rest. Either a hand was on the stick at the
+  rest sample, or the device reports this when idle. To check with the hands off.
+- Both throttle levers move from the maximum (+32,767) towards the minimum, so the throttle role is inverted, as
+  native's `NativeHotas` layout already marks *(derived)*.
 
 ## How it applies here
 
@@ -85,8 +119,8 @@ The in-game binding screen is a later step, scoped with ragesaq.
 
 ## Open questions
 
-- Which physical control is each axis, button and hat on the stick and the throttle. Answered by a capture while
-  ragesaq moves each control.
+- Which throttle control is each of axes 0, 1, 2 and 5, and what throttle buttons 34 to 36 and stick hat 1 report
+  at rest. Answered by a short capture of one control at a time, hands off at the start.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
 
 ## Timeline
@@ -95,8 +129,10 @@ The in-game binding screen is a later step, scoped with ragesaq.
   devices; Port read the client and native input code (findings above) and found no joystick connected to the host at
   that time (observed, a MonoGame joystick enumeration).
 - 2026-11-24 — ragesaq deferred the work until after the VR milestone 1 headset test (decided).
-- 2026-11-25 — with the HOTAS plugged in, Port read out the three devices the game sees (table above); ragesaq
-  decided the pedals are not used for this game.
+- 2026-11-25 — with the HOTAS plugged in, Port read out the three devices the game sees (table above). ragesaq
+  will not bind their own racing pedals, but pedals stay bindable for other players (decided).
+- 2026-11-25 — a 90 s control capture mapped the stick's axes, trigger and hat and the throttle's levers and buttons
+  (table above); a few throttle axes and rest states remain open.
 
 ## Boundary
 
