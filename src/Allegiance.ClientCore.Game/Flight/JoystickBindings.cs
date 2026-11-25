@@ -12,10 +12,10 @@ public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 /// <summary>A flight command a joystick button (or an axis past a threshold) can
 /// drive. Native's <c>buttonCommandMap</c> binds joystick buttons to TK commands
 /// (<c>trekinput.cpp:675-730</c>): TK_FireWeapon (55), TK_FireMissile (56),
-/// TK_FireBooster, the four side thrusters TK_ThrustLeft/Right/Up/Down and
-/// TK_Ripcord. All but <see cref="Ripcord"/> are held commands; ripcord acts once
-/// per press, like its key.</summary>
-public enum JoystickCommand { Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord }
+/// TK_FireBooster, the four side thrusters TK_ThrustLeft/Right/Up/Down, TK_Ripcord
+/// and TK_DropChaff. <see cref="Ripcord"/> and <see cref="DropChaff"/> act once per
+/// press, like their keys; the others are held.</summary>
+public enum JoystickCommand { Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff }
 
 /// <summary>One axis binding inside a <see cref="JoystickDeviceProfile"/>.</summary>
 public sealed record JoystickAxisBinding(JoystickRole Role, int Axis, bool Invert = false);
@@ -67,6 +67,7 @@ public readonly record struct JoystickBindingFrame(bool AnyBound, JoystickAxes A
     public bool StrafeUp => Holds(JoystickCommand.StrafeUp);
     public bool StrafeDown => Holds(JoystickCommand.StrafeDown);
     public bool Ripcord => Holds(JoystickCommand.Ripcord);
+    public bool DropChaff => Holds(JoystickCommand.DropChaff);
 }
 
 /// <summary>
@@ -111,7 +112,8 @@ public sealed class JoystickBindingResolver
     /// on button 0 like native's TK_FireWeapon default (<c>defaultinputmap.mdl</c>
     /// buttonCommandMap). Native's button 1 = TK_FireMissile is not taken: on this
     /// stick button 1 is the trigger's second stage, which ragesaq does not want as
-    /// missile fire. The throttle device feeds the throttle role, inverted like native
+    /// missile fire. The three thumb face buttons, left to right (buttons 3, 4 and 5),
+    /// are missiles, chaff and ripcord (ragesaq's choice). The throttle device feeds the throttle role, inverted like native
     /// (<c>WinTrek.cpp:10842</c>), and its index-finger thumb stick drives the side
     /// thrusters (ragesaq's choice; native gives the thrusters keys only).
     /// </summary>
@@ -119,9 +121,15 @@ public sealed class JoystickBindingResolver
     [
         // VKB-Sim Gunfighter (Modern Combat Pro Twist): axis 0 X, 1 Y, 2 twist; buttons
         // 0 and 1 are the trigger's two stages; the second stage is left unbound.
+        // Buttons 3, 4 and 5 are the thumb face buttons, left to right.
         new("VKB-Sim Gunfighter",
             [new(JoystickRole.Yaw, 0), new(JoystickRole.Pitch, 1), new(JoystickRole.Roll, 2)],
-            [new(JoystickCommand.Fire, 0)]),
+            [
+                new(JoystickCommand.Fire, 0),
+                new(JoystickCommand.FireMissile, 3),
+                new(JoystickCommand.DropChaff, 4),
+                new(JoystickCommand.Ripcord, 5),
+            ]),
         // Virpil MT-50CM2 (SDL name "LEFT VPC Throttle MT-50CM2"): axis 3 is the left
         // lever; it reads +32767 at idle and falls towards full forward. Axes 0 and 1
         // are the index-finger thumb stick: left/right and up/down thrust.

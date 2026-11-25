@@ -176,6 +176,18 @@ public class JoystickBindingResolverTests
         Assert.False(second.Booster);
     }
 
+    [Theory]
+    [InlineData(3, JoystickCommand.FireMissile)]
+    [InlineData(4, JoystickCommand.DropChaff)]
+    [InlineData(5, JoystickCommand.Ripcord)]
+    public void StickThumbButtons_LeftToRight_AreMissileChaffRipcord(int button, JoystickCommand expected)
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        var f = r.Resolve([StickAt(0, pressed: [button]), ThrottleAt(1)]);
+        Assert.Equal(1 << (int)expected, f.HeldMask);
+    }
+
     [Fact]
     public void UserProfile_CanBindTheSecondStage()
     {

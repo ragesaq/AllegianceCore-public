@@ -162,8 +162,17 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   ragesaq, in Port's working session 2026-11-25: "there are also lateral and vertical thrusters useful for maneuvering in dogfighting, i want that bound to the index finger joystick on my throttle")*. Which way of axis 1 is up is assumed (pushing
   the stick up reads negative) and is for the flight test. Left and right thrust count as manual input and drop
   the autopilot, as the strafe keys do.
+- The stick's three thumb face buttons are buttons 3, 4 and 5 from left to right *(observed: a 30 s capture
+  2026-11-25, hands off, then one press each at 21.2, 22.3 and 23.2 s)*. They are bound to missiles, chaff and
+  ripcord in that order *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "lets run the capture for the right joystick face thumb buttons, i'll start from left and go to right. the left one i want to be missiles, the next right one should be chaff (if there is one? some kind of deployable?) and the next right one should be ripcord")*.
+  Missiles fire while held, like the missile key; chaff drops once per press. Ripcord takes a few seconds to jump
+  *(ragesaq, Port's working session 2026-11-25: "ripcord is either a hold or a start and cancel, it takes a few
+  seconds to jump")*. The port's ripcord key is start and cancel: a press starts the countdown to the sector
+  selected on the starmap, a press during the countdown cancels it, and a press with no sector selected only
+  shows a hint (`Flight/RipcordKey.cs` `RequestFor`, `Game1.FlightInput.cs` TK_Ripcord block). The joystick
+  button feeds the same press detection, so it behaves the same *(observed in the code)*.
 - A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
-  now include the four side thrusters and ripcord. Ripcord acts once per press, like its key.
+  now include the four side thrusters, ripcord and chaff.
 - If the device that feeds the throttle goes away while another stays, the throttle latch is reset so the keyboard
   throttle works again *(review round 1, finding 1)*. After a profile has matched once, the fallback is not used, so
   leftover pedals never fly the ship *(finding 4)*.
@@ -177,8 +186,6 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
 
 ## Open questions
 
-- The stick's three thumb face buttons: ragesaq remembers them for ripcord and missiles *(Port's working session
-  2026-11-25: "there are three face buttons for the thumb on the joystick, my memory of them was that they were primarily used for the ripcord jump and missiles, but its been a long time since i played")*. Their button numbers are not known yet; a short capture pressing each one answers it.
 
 - Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.

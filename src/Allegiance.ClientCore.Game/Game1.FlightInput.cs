@@ -872,7 +872,7 @@ public sealed partial class Game1
         _viewChaseWasDown = ActionDown(ks, "ViewChase");
         _viewTurretWasDown = ActionDown(ks, "ViewTurret");
         _kKeyWasDown                = ActionDown(ks, "Suicide");
-        _cKeyWasDown                = ActionDown(ks, "DropChaff");
+        _cKeyWasDown                = ActionDown(ks, "DropChaff") || _joystickFrame.DropChaff;
         _fCloakWasDown              = ActionDown(ks, "ToggleCloak");
         _lKeyWasDown                = ActionDown(ks, "Ripcord") || _joystickFrame.Ripcord;
         _nKeyWasDown                = ActionDown(ks, "DropMine");
@@ -1663,7 +1663,7 @@ public sealed partial class Game1
         // sector — a plain instant command like native's TK_DropChaff. Bound to C —
         // free in flight (W/S/Q/E/Arrows/A/D/Shift/R/M/V/T/G/Enter/Back/Escape/Space/
         // K all taken) and the natural mnemonic for "chaff".
-        bool cChaff = ActionDown(ks, "DropChaff");
+        bool cChaff = ActionDown(ks, "DropChaff") || CurrentJoystickFrame(gameTime).DropChaff;
         if (!composing && cChaff && !_cKeyWasDown)
         {
             _session.SendFireExpendable(EquipmentType.ChaffLauncher);
