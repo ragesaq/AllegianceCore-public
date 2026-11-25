@@ -872,9 +872,12 @@ public sealed partial class Game1
         _viewChaseWasDown = ActionDown(ks, "ViewChase");
         _viewTurretWasDown = ActionDown(ks, "ViewTurret");
         _kKeyWasDown                = ActionDown(ks, "Suicide");
-        _cKeyWasDown                = ActionDown(ks, "DropChaff") || _joystickFrame.DropChaff;
+        _cKeyWasDown                = ActionDown(ks, "DropChaff");
         _fCloakWasDown              = ActionDown(ks, "ToggleCloak");
-        _lKeyWasDown                = ActionDown(ks, "Ripcord") || _joystickFrame.Ripcord;
+        _lKeyWasDown                = ActionDown(ks, "Ripcord");
+        // Joystick buttons held through launch count only after a release, which
+        // primes the joystick halves of the latches above without a stale frame.
+        _joystickBindings?.Disarm();
         _nKeyWasDown                = ActionDown(ks, "DropMine");
         _gfireKeyWasDown            = ActionDown(ks, "ToggleGroupFire");
         _prevWKeyWasDown            = ActionDown(ks, "PrevWeapon");

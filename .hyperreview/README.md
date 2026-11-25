@@ -4,6 +4,22 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 2
+
+- Record: [summary](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/summary.md), [receipt](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `b32f0e6..a25c734`, head `a25c734`, tree `7ffb38f`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 1: F1, F2 and F4 fixed; the reviewer agrees with the F3 dispute; F5 mostly
+  fixed, with the `Game1` glue (the reset call, the strafe bits, the ripcord edge) covered by reading only. New:
+  1. N1, low: the ripcord latch was primed from the last flight's cached joystick frame, so a thumb button held
+     through launch could ripcord on the first flight frame. Fixed after round 2: the prime no longer reads the
+     frame, and entering flight calls `JoystickBindingResolver.Disarm`, so a held button acts only after a release.
+     The chaff button, added after round 2, had the same path and gets the same fix. Test
+     `Disarm_HeldButtonActsOnlyAfterARelease`.
+  - Wording gaps acted on: the parity row's fallback sentence and the note now say the fallback applies only while
+    no profile has ever matched, and the note describes the ripcord and chaff buttons with the disarm on launch.
+
 ## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 1
 
 - Record: [summary](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/summary.md), [receipt](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/receipt.md)

@@ -167,6 +167,11 @@ public sealed class JoystickBindingResolver
     /// a device since this resolver was made.</summary>
     public bool LegacyAllowed => !_profileEverMatched;
 
+    /// <summary>Forget every device's armed state, so a button held now counts only
+    /// after it is released once. Called on entering flight, like the key latches'
+    /// prime, so a button held through launch does not act on the first frame.</summary>
+    public void Disarm() => _armed.Clear();
+
     /// <summary>Resolve one frame. <paramref name="devices"/> are the connected devices
     /// in SDL index order.</summary>
     public JoystickBindingFrame Resolve(IReadOnlyList<JoystickDeviceSample> devices)

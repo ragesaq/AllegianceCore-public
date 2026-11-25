@@ -414,6 +414,20 @@ public class JoystickBindingResolverTests
     }
 
     [Fact]
+    public void Disarm_HeldButtonActsOnlyAfterARelease()
+    {
+        // Review r2 N1: a thumb button held through launch must not ripcord on the
+        // first flight frame.
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0)]);
+        Assert.True(r.Resolve([StickAt(0, pressed: [5])]).Ripcord);
+        r.Disarm();
+        Assert.False(r.Resolve([StickAt(0, pressed: [5])]).Ripcord);
+        Assert.False(r.Resolve([StickAt(0)]).Ripcord);
+        Assert.True(r.Resolve([StickAt(0, pressed: [5])]).Ripcord);
+    }
+
+    [Fact]
     public void ButtonCountChange_StartsFromRestAgain()
     {
         var profiles = new[] { new JoystickDeviceProfile("Pad", [], [new(JoystickCommand.Fire, 0)]) };

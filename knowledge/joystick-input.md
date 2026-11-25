@@ -170,7 +170,9 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   seconds to jump")*. The port's ripcord key is start and cancel: a press starts the countdown to the sector
   selected on the starmap, a press during the countdown cancels it, and a press with no sector selected only
   shows a hint (`Flight/RipcordKey.cs` `RequestFor`, `Game1.FlightInput.cs` TK_Ripcord block). The joystick
-  button feeds the same press detection, so it behaves the same *(observed in the code)*.
+  button feeds the same press detection, so it behaves the same *(observed in the code)*. On entering flight every
+  joystick button is disarmed, so a button held through launch acts only after it is released once *(review round
+  2, finding N1)*.
 - A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
   now include the four side thrusters, ripcord and chaff.
 - If the device that feeds the throttle goes away while another stays, the throttle latch is reset so the keyboard
