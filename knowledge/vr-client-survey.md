@@ -245,3 +245,6 @@ Built on `port/vr-m2`, stacked on `port/vr-m1`. Not yet seen in the headset.
   found one stale comment, fixed. The headset test by ragesaq is next.
 - 2026-11-25: the closeout review passed; its one low item is node `ragesaq-008`. ragesaq approved merging PR #7 and
   then PR #9 once each is ready. PR #7 merged as `1c521ad`, and PR #9 was retargeted to `master`.
+- 2026-11-25: PR #9's first `build-and-test` against `master` failed in a step the public log does not show; the
+  rerun on the records-only head `c19e5ce` passed, and PR #9 merged as `2572cdd`. ragesaq's headset test of
+  milestone 2 is next.

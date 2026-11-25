@@ -120,11 +120,11 @@
       "id": "ragesaq-007",
       "title": "VR milestone 2: per-eye rendering with the head pose",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "waiting",
       "needs": [
         "ragesaq-002"
       ],
-      "next": "In review as PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9, branch port/vr-m2, base master after PR #7 merged as 1c521ad): the scene drawn once per eye with the head pose on an OpenXR projection layer, one swapchain per eye, the HUD on an alpha-blended quad (knowledge/vr-client-survey.md, \"Milestone 2 as built\"). Cross-family review rounds 1 and 2 and the closeout passed (.hyperreview/README.md); the closeout's one low item is ragesaq-008. ragesaq approved the merge once it is ready (\"PR #7, then PR #9\", Port's working session 2026-11-25). Waits on: a green Linux build-and-test on the head being merged; the first run against master, on 36989f0, failed in a step the public log does not show. Then: merge at that head, and ragesaq's headset test (upright, convergence and scale, HUD edges and placement, world-locked HUD).",
+      "next": "Merged: PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9) merged on 2026-11-25 as merge commit 2572cdd, at reviewed head c19e5ce, which adds only records after the closeout review at 36989f0. Cross-family rounds 1 and 2 and the closeout passed (.hyperreview/README.md); build-and-test green on c19e5ce. ragesaq approved the merge in Port's working session (\"PR #7, then PR #9\"). Waits on: ragesaq's headset test of a master build with --vr: the picture upright, the eyes converge and the scale feels right, the HUD's edges clean and over what it marks, the HUD fixed ahead of the seat. Then: done, with its ledger line (commit 2572cdd); a failed check becomes a new node.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/9",
         "knowledge/vr-client-survey.md"
@@ -136,10 +136,8 @@
       "title": "VR: run flat when the eye render targets cannot be created",
       "owner": "ragesaq",
       "status": "waiting",
-      "needs": [
-        "ragesaq-007"
-      ],
-      "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. Waits on PR #9 merging; then a branch port/vr-eye-target-fallback from master.",
+      "needs": [],
+      "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. PR #9 merged as 2572cdd, so it no longer waits on that. Waits on: ragesaq's go-ahead; then a branch port/vr-eye-target-fallback from master.",
       "links": [
         ".hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md",
         "knowledge/vr-client-survey.md"
