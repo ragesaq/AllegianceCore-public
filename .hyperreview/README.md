@@ -4,6 +4,31 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #7 VR milestone 1, round 2
+
+- Record: [summary](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/summary.md), [receipt](patch-review-2026-11-25T03-33-00Z-allegiancecore-vr-m1-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta review of `30c2ae6..b3a8ea3` (the round 1 record and fixes), head `b3a8ea3`, tree `ad3bbde`, in a standalone
+  clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+  The wrapper state shows the served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance
+  `independent_cross_family`. The clone's refs were the same before and after the run.
+- Verdict: PASS-WITH-CONDITIONS. Round 1 findings 1 to 4 and 6 to 8 closed, finding 5's disposition right. Three low
+  findings. Dispositions (fixes in the commit after this record, re-reviewed in round 3):
+  - Low 1, the context check before the copy sat outside the `try` that ends an empty frame: fixed. The check is now
+    the first statement inside it.
+  - Low 2, the `XR_ERROR_SESSION_NOT_RUNNING` skips bypassed the idle sleep, so the uncapped loop could spin: fixed.
+    Each skip (after `xrWaitFrame`, `xrBeginFrame` or `xrEndFrame`) sleeps the idle interval. The session flag is
+    left alone on purpose: the application ends a session itself, on the runtime's STOPPING event, so clearing the
+    flag without that event could leave VR idle for the rest of the run, while a sleep keeps retrying at the idle
+    rate. The reviewer's related residual risk (a frame begun and not ended when `xrEndFrame` returns that error) is
+    kept: the session is not running, so the runtime discards the frame.
+  - Low 3, round 1's line numbers for finding 5 were off by one: fixed in the round 1 entry (`Game1.Benchmark.cs:199`,
+    `:452`, `:467`).
+  - Note, nothing asserted the inactive-window sleep after `KeepPacing` and a fallback: the test
+    `Settings_applied_while_attached_are_what_the_fallback_restores` now does, and fails when `KeepPacing` overwrites
+    the saved sleep. Note, re-attach after `Dispose` is untested: kept, `Dispose` runs only at shutdown. Note, the DAG
+    node named only the round 1 head: it now names the round 2 head.
+
 ## 2026-11-25: PR #7 VR milestone 1, round 1
 
 - Record: [summary](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/summary.md), [receipt](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/receipt.md)
@@ -24,8 +49,8 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
   - Low 5, the saved flat pacing has several writers: not a defect in the scenario given. A benchmark suggestion with
     no frame cap is applied through `ApplyBenchmarkSettings`, which calls `KeepVrPacing`, so the value saved is the
     one the flat game has at that moment; the benchmark's end re-applies the original settings the same way
-    (`Game1.Benchmark.cs:451,466`). The finding does hold for a narrower case: `BeginBenchmark` sets the fixed step
-    directly (`Game1.Benchmark.cs:198`), so a VR failure between that line and the next `ApplyBenchmarkSettings`
+    (`Game1.Benchmark.cs:452,467`; round 2 corrected these and the next line number). The finding does hold for a narrower case: `BeginBenchmark` sets the fixed step
+    directly (`Game1.Benchmark.cs:199`), so a VR failure between that line and the next `ApplyBenchmarkSettings`
     restores the pre-benchmark step for the rest of that run. Benchmark-only, it needs a VR failure mid-run, and it
     ends at the run's next settings change, so it is left as residual risk.
   - Low 6, no test covered what the flat game is left with: fixed. The attach, submit, drop and pacing logic moved
