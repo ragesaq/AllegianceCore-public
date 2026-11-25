@@ -4,6 +4,40 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #7 VR milestone 1, round 1
+
+- Record: [summary](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/summary.md), [receipt](patch-review-2026-11-25T03-13-00Z-allegiancecore-vr-m1-r1/receipt.md)
+- The committed summary and receipt are the reviewer's text, unchanged.
+- Reviewed head `30c2ae6`, tree `37638b8`, the range `47e720b..30c2ae6`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0. The wrapper state shows the
+  served model `deepseek-v4.1-flash`, effort `high`, status complete, assurance `independent_cross_family`. The clone's
+  refs were the same before and after the run (listing sha256 `8c513e17bfd61405eaa851e5379727c9e43f2b1a6fae68170a5f07038f4ec04b`).
+- Verdict: PASS-WITH-CONDITIONS, one low-medium and seven low findings. Dispositions (fixes in the commit after this
+  record, re-reviewed in round 2):
+  - Low-Medium 1, the copy cleared GL errors the game's own check watches for: fixed. `GlBlitter` logs the codes it
+    clears (the first five batches, then one line saying it stops).
+  - Low 2, the GL context was not checked before the first copy after swapchain creation: fixed. The presenter checks
+    it before every copy and before creating the blitter.
+  - Low 3, a begun frame was left open when the copy failed: fixed. An empty frame is ended before the teardown.
+  - Low 4, `XR_ERROR_SESSION_NOT_RUNNING` from the frame calls ended VR: fixed. That result now skips the frame; the
+    runtime's STOPPING event follows.
+  - Low 5, the saved flat pacing has several writers: not a defect in the scenario given. A benchmark suggestion with
+    no frame cap is applied through `ApplyBenchmarkSettings`, which calls `KeepVrPacing`, so the value saved is the
+    one the flat game has at that moment; the benchmark's end re-applies the original settings the same way
+    (`Game1.Benchmark.cs:451,466`). The finding does hold for a narrower case: `BeginBenchmark` sets the fixed step
+    directly (`Game1.Benchmark.cs:198`), so a VR failure between that line and the next `ApplyBenchmarkSettings`
+    restores the pre-benchmark step for the rest of that run. Benchmark-only, it needs a VR failure mid-run, and it
+    ends at the run's next settings change, so it is left as residual risk.
+  - Low 6, no test covered what the flat game is left with: fixed. The attach, submit, drop and pacing logic moved
+    from `Game1.Vr.cs` into `Vr/VrFrameSinkHost.cs` behind a small pacing interface, with 7 tests
+    (`VrFrameSinkHostTests`). Two of them fail when the fallback stops restoring the fixed step.
+  - Low 7, DAG `ragesaq-002` named no pull request or head: fixed. Status `review`, PR #7 linked, heads named.
+  - Low 8, the survey note said any failure logs `[vr] running flat:`: fixed; it now names both log lines.
+    `memory/mem-009` now names the environment it was seen in.
+  - Note, `IVrFrameSink` said "must not throw" while the game catches what a sink throws: the doc comment now says the
+    game drops a sink that throws. Note, `GlBlitter` frees the SDL handle it resolved from: kept, it matches
+    `HdCompressedUpload` and MonoGame keeps SDL2 loaded.
+
 ## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 4
 
 - Record: [summary](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/summary.md), [receipt](patch-review-2026-11-25T02-00-00Z-allegiancecore-approval-r4/receipt.md)
