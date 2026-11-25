@@ -20,5 +20,5 @@ this public repository.
 | Effective model | session banner `model: deepseek-v4.1-flash`, `provider: opencode-go` |
 | Wrapper result | status `complete`, return code 0, finish reason `stop`, assurance `independent_cross_family` |
 | Started / finished | 2026-11-24T23:33:33Z / 2026-11-24T23:48:55Z (the folder name's time is the name chosen before launch) |
-| Verdict | PASS, three low findings (two fixed, one fixed differently), six notes |
+| Verdict | PASS, three low findings (one fixed, one fixed in part, one declined), six notes |
 | Read-only breach | The reviewer's probe scripts committed two throwaway commits onto the author clone's local `master` (the review worktree shares refs with it). Nothing was pushed: every remote ref matched the author's pushes. The author reset local `master` to its earlier commit from the reflog. The reviewed tree was unchanged. |
