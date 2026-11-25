@@ -1,9 +1,9 @@
 # Joystick input and a split HOTAS
 
-**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-24 · **Review by:** 2027-02-24
+**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
 
-**Status:** in progress (findings recorded; the work waits on the VR milestone 1 headset test, `DAG.json` node
-`ragesaq-006`)
+**Status:** in progress (findings and a device readout recorded; the VR milestone 1 headset test it waited on is
+done; `DAG.json` node `ragesaq-006`)
 
 ## What this answers
 
@@ -17,7 +17,28 @@ Allegiance did for that setup, and what porting it involves.
 - Native Allegiance bound each axis and command to a chosen device through its input map *(read from the native
   source, see below)*.
 - The port is proposed and deferred until after the VR milestone 1 headset test *(decided 2026-11 by ragesaq)*.
-- No hardware readout of ragesaq's devices exists yet: they were unplugged when this was written *(observed 2026-11)*.
+- ragesaq's devices are read out below *(observed 2026-11-25)*. The pedals are not used for this game *(decided
+  2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont plan on using the pedals, those are for
+  racing")*.
+
+## Device readout (2026-11-25)
+
+Read with a probe on the game's own input stack (MonoGame DesktopGL 3.8.5.1 on SDL2), `Joystick.GetCapabilities`
+and `Joystick.GetState` for indexes 0 to 15, with all devices plugged in *(observed)*:
+
+| SDL index | Device (SDL name) | Axes | Buttons | Hats | Role |
+|---|---|---|---|---|---|
+| 0 | VKB-Sim Gunfighter Modern Combat Pro Twist | 8 | 128 | 2 | stick |
+| 1 | LEFT VPC Throttle MT-50CM2 | 6 | 79 | 0 | throttle |
+| 2 | Heusinkveld Sim Pedals Sprint | 3 | 0 | 0 | not used (ragesaq) |
+
+- With this order the game today reads the stick and ignores the throttle *(derived: `CurrentJoystickState`
+  reads index 0 only, above)*. The order is SDL's and can change between runs, so bindings follow the device name
+  and identifier, not the index (proposed first PR, step 1).
+- At rest the stick reports axis 0 at about -6,300 and axis 7 at -32,768, and the pedals all three axes at -32,768
+  *(observed, one sample)*. Which physical control each axis and button is has not been mapped yet; that needs a
+  capture while ragesaq moves each control.
+- A device that is not bound, such as the pedals, must be ignored, not read as a stick or a throttle *(derived)*.
 
 ## How it applies here
 
@@ -64,8 +85,8 @@ The in-game binding screen is a later step, scoped with ragesaq.
 
 ## Open questions
 
-- Which HOTAS ragesaq has, and how its axes and buttons enumerate under SDL2. Answered by a readout with the devices
-  plugged in.
+- Which physical control is each axis, button and hat on the stick and the throttle. Answered by a capture while
+  ragesaq moves each control.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
 
 ## Timeline
@@ -74,6 +95,8 @@ The in-game binding screen is a later step, scoped with ragesaq.
   devices; Port read the client and native input code (findings above) and found no joystick connected to the host at
   that time (observed, a MonoGame joystick enumeration).
 - 2026-11-24 — ragesaq deferred the work until after the VR milestone 1 headset test (decided).
+- 2026-11-25 — with the HOTAS plugged in, Port read out the three devices the game sees (table above); ragesaq
+  decided the pedals are not used for this game.
 
 ## Boundary
 

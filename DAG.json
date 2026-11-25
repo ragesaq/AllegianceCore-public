@@ -123,11 +123,11 @@
       "needs": [
         "ragesaq-002"
       ],
-      "next": "Waits on ragesaq's VR milestone 1 headset test (ragesaq-002, PR #7): ragesaq deferred this work until then on 2026-11-24. Then: get a readout of ragesaq's stick and throttle (separate USB devices) with both plugged in, and open the first PR as proposed in knowledge/joystick-input.md, \"Proposed first PR\": read every joystick, bind axis roles and buttons per device as native's input map did, defaults from defaultinputmap.mdl. The binding screen is a later step, scoped with ragesaq.",
+      "next": "ragesaq's VR milestone 1 headset test (ragesaq-002) is done, and the HOTAS is plugged in. Device readout 2026-11-25 (knowledge/joystick-input.md, \"Device readout\"): SDL index 0 the VKB Gunfighter stick, 1 the Virpil MT-50CM2 throttle, 2 racing pedals that ragesaq does not use for this game. Next: a capture while ragesaq moves each control, to map axes and buttons; then the first PR as proposed in the note, \"Proposed first PR\": read every joystick, bind axis roles and buttons per device as native's input map did, defaults from defaultinputmap.mdl, unbound devices ignored. The binding screen is a later step, scoped with ragesaq.",
       "links": [
         "knowledge/joystick-input.md"
       ],
-      "updated": "2026-11-24"
+      "updated": "2026-11-25"
     }
   ]
 }
