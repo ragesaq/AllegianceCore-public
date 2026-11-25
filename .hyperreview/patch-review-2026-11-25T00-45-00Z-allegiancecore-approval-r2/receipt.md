@@ -21,4 +21,4 @@ this public repository.
 | Wrapper result | status `complete`, return code 0, finish reason `stop`, assurance `independent_cross_family` |
 | Started / finished | 2026-11-24T23:59:52Z / 2026-11-25T00:09:41Z |
 | Verdict | PASS-WITH-CONDITIONS, one medium and four low findings, all answered |
-| Read-only check | The author clone's branches and tags were unchanged after the run (checked by the author with `git for-each-ref`). |
+| Read-only check | Author-attested: the author compared the author clone's branches and tags with `git for-each-ref` after the run and saw no change. The listing was not kept. |

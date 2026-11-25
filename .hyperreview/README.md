@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 3
+
+- Record: [summary](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/summary.md), [receipt](patch-review-2026-11-25T01-30-00Z-allegiancecore-approval-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged.
+- Reviewed head `309921b`, tree `8cd1ba7`, the delta `e4e159a..309921b`, in a standalone clone. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All five round 2 findings are closed (New 5 in substance). Dispositions:
+  - Low 1, the PR body said `check_map.py` passes without saying where: fixed in the body. The checks ran in the
+    author's clone, where `origin/master` exists; in a clone without it, the node-loss gate cannot compare.
+  - Low 2, "any build and test gate they name" had no clear antecedent and left out committing the summary: fixed.
+    Rule 4 now says "each build and test gate listed there passes" and that the review result "is committed and
+    posted as a comment on the pull request".
+  - Low 3, the round 2 receipt's read-only check had no evidence: fixed. That receipt now says the check was
+    author-attested and the listing was not kept; this round's receipt records the listing's digest.
+
 ## 2026-11-25: PR #5 agents merge and change settings on operator approval, round 2
 
 - Record: [summary](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/summary.md), [receipt](patch-review-2026-11-25T00-45-00Z-allegiancecore-approval-r2/receipt.md)

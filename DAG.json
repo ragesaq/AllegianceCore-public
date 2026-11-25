@@ -107,7 +107,7 @@
       "needs": [
         "ragesaq-004"
       ],
-      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 (1f6039c) and 2 (e4e159a) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); the round 2 answers await a round 3 delta review, then the operator's approval to merge after PR #2, #3 and #4.",
+      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 (1f6039c), 2 (e4e159a) and 3 (309921b) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); the round 3 answers await a round 4 delta review, then the operator's approval to merge after PR #2, #3 and #4.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/5",
         "AGENTS.md",
