@@ -56,11 +56,11 @@
       "id": "ragesaq-002",
       "title": "OpenXR VR client on AllegianceCore",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "Milestone 1 is in review as PR #7 (https://github.com/ragesaq/AllegianceCore-public/pull/7, branch port/vr-m1): the flat frame on an OpenXR quad layer, opt-in with --vr or ALLEGIANCE_VR=1, flat fallback on any failure (knowledge/vr-client-survey.md, \"Milestone 1 as built\"). Reviews are done (records in .hyperreview/README.md). On 2026-11-25 ragesaq saw it in the headset as a floating screen, which is milestone 1's design. ragesaq's checklist passed for orientation, colours and smoothness; the live fall to flat when SteamVR closes is still unobserved. The build-and-test fast-tier failures on this branch are one failed test in Allegiance.Core.Tests, a project this PR does not touch. Next: ragesaq's approval to merge at the reviewed head. ragesaq approved milestone 2 as proposed on 2026-11-25 (per-eye rendering with the head pose, the HUD on its own quad); it is node ragesaq-007, built on port/vr-m2 stacked on this branch.",
+      "next": "Done: PR #7 merged on 2026-11-25 as merge commit 1c521ad (reviewed head f945af7, which adds only records after the closeout review at f36ee31; cross-family review rounds 1 to 4 and the closeout in .hyperreview/README.md; build-and-test green on f945af7). ragesaq approved it in Port's working session (\"PR #7, then PR #9\"). The headset checklist passed for orientation, colours and smoothness; the live fall to flat when SteamVR closes stays unobserved. Milestone 2 continues as ragesaq-007.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/7",
         "knowledge/vr-client-survey.md"
@@ -71,11 +71,11 @@
       "id": "ragesaq-003",
       "title": "Let merges made through GitHub pass the publish guard",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-001"
       ],
-      "next": "PR #3 (stacked on PR #2): guard change and memory/mem-005 update. Cross-family review round 1 at 2ca409f gave PASS (.hyperreview/README.md); its one low finding is fixed. Waits on the operator's approval to merge, after PR #2. The operator turned on email privacy for ragesaq, psiclawops-port and psiclawops-socket on 2026-11-24; the first GitHub merge after that shows whether the author address is the noreply one.",
+      "next": "Done: PR #3 merged on 2026-11-24 as merge commit 10976d0 (reviewed head ff20f84, cross-family review round 1 PASS). The first merges after email privacy came on (PR #2 to #5) were stamped with psiclawops-port's noreply address as author and GitHub <noreply@github.com> as committer, and the guard passes over them (memory/mem-005).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/3",
         "memory/mem-005-github-merge-identity.md",
@@ -87,11 +87,11 @@
       "id": "ragesaq-004",
       "title": "Make the publish guard fail closed when it cannot list the new commits",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-003"
       ],
-      "next": "PR #4 (stacked on PR #3): the guard fails when it cannot list its range, and guard.yml scans new and force-pushed branches from their merge base with the default branch (memory/mem-007). Cross-family review round 1 at 6528bdb gave PASS; round 2 at 0b032b7 gave PASS-WITH-CONDITIONS, both rounds' findings answered (.hyperreview/README.md). The root commit of a push that creates the default branch stays unscanned, as before; no push here takes that path. Waits on the operator's approval to merge after PR #2 and PR #3.",
+      "next": "Done: PR #4 merged on 2026-11-24 as merge commit 6da7254 (reviewed head 610ef8c, cross-family review rounds 1 PASS and 2 PASS-WITH-CONDITIONS, findings answered). The root commit of a push that creates the default branch stays unscanned, as recorded in memory/mem-007.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/4",
         "memory/mem-007-guard-range.md",
@@ -104,11 +104,11 @@
       "id": "ragesaq-005",
       "title": "Agents merge and change settings only with the operator's approval",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [
         "ragesaq-004"
       ],
-      "next": "PR #5 (stacked on PR #4): AGENTS.md prime rule 4 and memory/mem-008 record the operator's 2026-11-24 decision. Cross-family review rounds 1 to 4 (1f6039c, e4e159a, 309921b, 326f945) gave PASS-WITH-CONDITIONS, all findings answered (.hyperreview/README.md); round 4's two findings were record fixes. Waits on the operator's approval to merge after PR #2, #3 and #4.",
+      "next": "Done: PR #5 merged on 2026-11-24 as merge commit 47e720b (reviewed head dfb00ac, cross-family review rounds 1 to 4, all findings answered).",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/5",
         "AGENTS.md",
@@ -120,11 +120,11 @@
       "id": "ragesaq-007",
       "title": "VR milestone 2: per-eye rendering with the head pose",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "waiting",
       "needs": [
         "ragesaq-002"
       ],
-      "next": "In review as PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9, branch port/vr-m2, base master after PR #7 merged as 1c521ad): the scene drawn once per eye with the head pose on an OpenXR projection layer, one swapchain per eye, the HUD on an alpha-blended quad (knowledge/vr-client-survey.md, \"Milestone 2 as built\"). Cross-family review rounds 1 and 2 and the closeout passed (.hyperreview/README.md); the closeout's one low item is ragesaq-008. ragesaq approved the merge once it is ready (\"PR #7, then PR #9\", Port's working session 2026-11-25). Waits on: a green Linux build-and-test on the head being merged; the first run against master, on 36989f0, failed in a step the public log does not show. Then: merge at that head, and ragesaq's headset test (upright, convergence and scale, HUD edges and placement, world-locked HUD).",
+      "next": "Merged: PR #9 (https://github.com/ragesaq/AllegianceCore-public/pull/9) merged on 2026-11-25 as merge commit 2572cdd, at reviewed head c19e5ce, which adds only records after the closeout review at 36989f0. Cross-family rounds 1 and 2 and the closeout passed (.hyperreview/README.md); build-and-test green on c19e5ce. ragesaq approved the merge in Port's working session (\"PR #7, then PR #9\"). Waits on: ragesaq's headset test of a master build with --vr: the picture upright, the eyes converge and the scale feels right, the HUD's edges clean and over what it marks, the HUD fixed ahead of the seat. Then: done, with its ledger line (commit 2572cdd); a failed check becomes a new node.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/9",
         "knowledge/vr-client-survey.md"
@@ -136,10 +136,8 @@
       "title": "VR: run flat when the eye render targets cannot be created",
       "owner": "ragesaq",
       "status": "waiting",
-      "needs": [
-        "ragesaq-007"
-      ],
-      "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. Waits on PR #9 merging; then a branch port/vr-eye-target-fallback from master.",
+      "needs": [],
+      "next": "Found by the PR #9 closeout review, item N1 (.hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md). Game1.Vr.cs creates both eye render targets inside Draw with no catch, so a throw there ends the game instead of running flat. Fix: catch around creating and binding them in BeginVrScenePass, call Abandon(reason), draw flat; test through the host's abandon path. Owner of the work: Port. PR #9 merged as 2572cdd, so it no longer waits on that. Waits on: ragesaq's go-ahead; then a branch port/vr-eye-target-fallback from master.",
       "links": [
         ".hyperreview/closeout-review-2026-11-25T11-10-00Z-allegiancecore-vr-m2/summary.md",
         "knowledge/vr-client-survey.md"

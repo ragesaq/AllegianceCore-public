@@ -27,13 +27,15 @@ through GitHub ("Accept it"); a merge made locally with noreply identities and
 pushed was declined. Later the same day the operator said they had turned on
 "Keep my email addresses private" for `ragesaq`, `psiclawops-port` and
 `psiclawops-socket`. GitHub then stamps each account's noreply address as the
-author of a merge. Port has not seen that yet: its API token cannot read the
-setting, and no merge has happened since. The first GitHub merge after the
-change will show it.
+author of a merge. Seen on 2026-11-24: Port merged PR #2 to #5 through the
+GitHub API, and each merge commit (8961ffb, 10976d0, 6da7254, 47e720b) has
+author `psiclawops-port <323790917+psiclawops-port@users.noreply.github.com>`
+and committer `GitHub <noreply@github.com>`.
 
 GitHub's committer address stays `noreply@github.com` whatever the setting.
 `scripts/publish-guard.sh` accepts that one address as a committer (never as an
 author) from ragesaq-003 on. With both in place a GitHub merge passes the
-guard. Until ragesaq-003 is merged, a red guard on a push to `master` that is
-only a GitHub merge commit is expected. The guard still applies, and must pass,
+guard: `bash scripts/publish-guard.sh daaeaf9 47e720b` passes over all 27
+commits. The PR #2 merge push ran the guard from before ragesaq-003, so a red
+guard on that one push was expected. The guard still applies, and must pass,
 on every pull request's own commits.
