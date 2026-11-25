@@ -184,6 +184,7 @@ public sealed partial class Game1
         _graphics.SynchronizeWithVerticalRetrace = s.Vsync;
         IsFixedTimeStep = s.FrameCap > 0;
         if (s.FrameCap > 0) TargetElapsedTime = TimeSpan.FromSeconds(1d / s.FrameCap);
+        KeepVrPacing();
         _graphics.ApplyChanges();
     }
     private void BeginBenchmark(BenchmarkCommand command, bool fromMenu)

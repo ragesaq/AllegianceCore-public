@@ -45,7 +45,11 @@ public sealed partial class Game1
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _relativeMouse.Dispose();
+        if (disposing)
+        {
+            DisposeVrSink();
+            _relativeMouse.Dispose();
+        }
         base.Dispose(disposing);
     }
 }

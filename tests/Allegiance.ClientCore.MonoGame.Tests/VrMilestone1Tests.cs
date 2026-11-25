@@ -1,0 +1,101 @@
+using Allegiance.ClientCore.Vr;
+using Silk.NET.OpenXR;
+using Xunit;
+
+namespace Allegiance.ClientCore.MonoGame.Tests;
+
+public sealed class VrMilestone1Tests
+{
+    private static Func<string, string?> Env(params (string Name, string Value)[] values) =>
+        name => values.FirstOrDefault(v => v.Name == name).Value;
+
+    [Fact]
+    public void Vr_switch_enables_vr_and_is_removed_from_the_arguments()
+    {
+        string[] args = ["--lobby", "http://x", "--vr", "host"];
+        var options = VrOptions.Take(ref args, Env());
+        Assert.True(options.Enabled);
+        Assert.Equal(["--lobby", "http://x", "host"], args);
+    }
+
+    [Fact]
+    public void Environment_enables_vr_without_touching_the_arguments()
+    {
+        string[] args = ["--training"];
+        var options = VrOptions.Take(ref args, Env((VrOptions.EnableVariable, "1")));
+        Assert.True(options.Enabled);
+        Assert.Equal(["--training"], args);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("0")]
+    [InlineData("true")]
+    public void Vr_is_off_unless_asked_for(string? value)
+    {
+        string[] args = ["--debris", "0.5"];
+        var options = VrOptions.Take(ref args, name => name == VrOptions.EnableVariable ? value : null);
+        Assert.False(options.Enabled);
+        Assert.Equal(["--debris", "0.5"], args);
+    }
+
+    [Fact]
+    public void Configured_loader_is_tried_before_the_default_names()
+    {
+        string[] args = [];
+        var options = VrOptions.Take(ref args, Env((VrOptions.LoaderVariable, "custom/openxr_loader.dll")));
+        var candidates = options.LoaderCandidates();
+        Assert.Equal("custom/openxr_loader.dll", candidates[0]);
+        Assert.True(candidates.Count > 1);
+    }
+
+    [Fact]
+    public void Blank_loader_variable_means_the_default_search()
+    {
+        string[] args = [];
+        var options = VrOptions.Take(ref args, Env((VrOptions.LoaderVariable, "  ")));
+        Assert.Null(options.LoaderPath);
+    }
+
+    [Theory]
+    [InlineData(SessionState.Idle, VrSessionAction.None)]
+    [InlineData(SessionState.Ready, VrSessionAction.Begin)]
+    [InlineData(SessionState.Synchronized, VrSessionAction.None)]
+    [InlineData(SessionState.Visible, VrSessionAction.None)]
+    [InlineData(SessionState.Focused, VrSessionAction.None)]
+    [InlineData(SessionState.Stopping, VrSessionAction.End)]
+    [InlineData(SessionState.LossPending, VrSessionAction.TearDown)]
+    [InlineData(SessionState.Exiting, VrSessionAction.TearDown)]
+    public void Session_state_changes_map_to_the_lifecycle_actions(SessionState state, VrSessionAction expected)
+    {
+        Assert.Equal(expected, VrSessionLifecycle.OnStateChanged(state));
+    }
+
+    [Fact]
+    public void Virtual_screen_keeps_the_back_buffer_aspect()
+    {
+        var (width, height) = VirtualScreen.SizeMetres(1920, 1080);
+        Assert.Equal(VirtualScreen.WidthMetres, width);
+        Assert.Equal(VirtualScreen.WidthMetres * 1080f / 1920f, height, 5);
+        Assert.Throws<ArgumentOutOfRangeException>(() => VirtualScreen.SizeMetres(0, 1080));
+    }
+
+    [Fact]
+    public void Missing_loader_fails_closed_to_flat_without_throwing()
+    {
+        var log = new List<string>();
+        string missing = Path.Combine(Path.GetTempPath(), "no-such-dir-" + Guid.NewGuid().ToString("N"), "openxr_loader.dll");
+        using var presenter = new OpenXrQuadPresenter([missing], log.Add);
+
+        presenter.SubmitFrame(1280, 720);
+
+        Assert.True(presenter.Failed);
+        Assert.Contains("no OpenXR loader found", presenter.FailureReason);
+        Assert.Contains(VrOptions.LoaderVariable, presenter.FailureReason);
+        Assert.Contains(log, line => line.StartsWith("[vr] running flat:", StringComparison.Ordinal));
+
+        int logged = log.Count;
+        presenter.SubmitFrame(1280, 720);
+        Assert.Equal(logged, log.Count);
+    }
+}
