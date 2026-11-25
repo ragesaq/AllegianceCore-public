@@ -164,10 +164,27 @@ public sealed class JoystickBindingResolver
             ]),
         // Virpil MT-50CM2 (SDL name "LEFT VPC Throttle MT-50CM2"): axis 3 is the left
         // lever; it reads +32767 at idle and falls towards full forward. Axes 0 and 1
-        // are the index-finger thumb stick: left/right and up/down thrust.
+        // are the index-finger thumb stick: left/right and up/down thrust. The grip's
+        // targeting controls, by Virpil's diagram numbers: push buttons 15, 16 and 21,
+        // and the 5-way castle switches 20 (enemies) and 19 (friendlies and navigation),
+        // each read as up, right, down, left and centre.
         new("VPC Throttle",
             [new(JoystickRole.Throttle, 3, Invert: true)],
-            [],
+            [
+                new(JoystickCommand.TargetNothing, 32),             // 15
+                new(JoystickCommand.TargetCenter, 20),              // 16
+                new(JoystickCommand.ToggleAutopilot, 31),           // 21
+                new(JoystickCommand.TargetEnemy, 29),               // 20 up
+                new(JoystickCommand.Target, 30),                    // 20 right
+                new(JoystickCommand.TargetEnemyPrev, 27),           // 20 down
+                new(JoystickCommand.TargetHostile, 28),             // 20 left
+                new(JoystickCommand.TargetEnemyNearest, 26),        // 20 centre
+                new(JoystickCommand.TargetFriendly, 24),            // 19 up
+                new(JoystickCommand.TargetWarpNearest, 25),         // 19 right
+                new(JoystickCommand.TargetFriendlyPrev, 22),        // 19 down
+                new(JoystickCommand.TargetFriendlyBaseNearest, 23), // 19 left
+                new(JoystickCommand.TargetFriendlyNearest, 21),     // 19 centre
+            ],
             [
                 new(0, JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight),
                 new(1, JoystickCommand.StrafeUp, JoystickCommand.StrafeDown),

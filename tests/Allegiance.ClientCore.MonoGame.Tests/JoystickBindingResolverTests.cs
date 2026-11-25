@@ -488,6 +488,39 @@ public class JoystickBindingResolverTests
         Assert.Equal(JoystickCommand.TargetCenter, c);
     }
 
+    // Capture 2026-11-25 (knowledge/joystick-input.md): Virpil's diagram controls in press order.
+    [Theory]
+    [InlineData(32, "TargetNothing")]             // 15
+    [InlineData(20, "TargetCenter")]              // 16
+    [InlineData(31, "ToggleAutopilot")]           // 21
+    [InlineData(29, "TargetEnemy")]               // castle 20 up
+    [InlineData(30, "Target")]                    // castle 20 right
+    [InlineData(27, "TargetEnemyPrev")]           // castle 20 down
+    [InlineData(28, "TargetHostile")]             // castle 20 left
+    [InlineData(26, "TargetEnemyNearest")]        // castle 20 centre
+    [InlineData(24, "TargetFriendly")]            // castle 19 up
+    [InlineData(25, "TargetWarpNearest")]         // castle 19 right
+    [InlineData(22, "TargetFriendlyPrev")]        // castle 19 down
+    [InlineData(23, "TargetFriendlyBaseNearest")] // castle 19 left
+    [InlineData(21, "TargetFriendlyNearest")]     // castle 19 centre
+    public void ThrottleGrip_TargetingButtons(int button, string action)
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, pressed: [button])]);
+        Assert.True(f.HoldsAction(action));
+        Assert.True(JoystickKeyActions.TryGet(action, out var command));
+        Assert.Equal(1 << (int)command, f.HeldMask);
+    }
+
+    [Fact]
+    public void ThrottleRestButtons_AreNotBound()
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        Assert.Equal(0, r.Resolve([StickAt(0), ThrottleAt(1, pressed: [34, 35, 36, 43])]).HeldMask);
+    }
+
     [Fact]
     public void UserProfile_BindsATargetingButton_HeldByActionName()
     {

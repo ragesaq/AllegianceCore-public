@@ -180,8 +180,25 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   of the MT-50CM2: push buttons 15, 16 and 21 and the 5-way castle switches 19 and 20 *(Port's working session
   2026-11-25: "i think button 15, 16, hat 19, hat 20, and button 21 are the ones to target for now")*. Those are
   Virpil's labels, not the button numbers the game reads; the throttle reports 79 buttons and no hats (device
-  readout), so each castle switch is five buttons, four directions and a centre press *(derived)*. A capture maps
-  them.
+  readout), so each castle switch is five buttons, four directions and a centre press *(derived)*.
+- A 180 s capture 2026-11-25 mapped them *(observed)*. ragesaq pressed 21, 15, 16, then castle 20 up, right, down,
+  left and centre, then castle 19 the same way, as they feel the directions in the hand. Each press logged exactly
+  one new throttle button, in order: 31, 32, 20; 29, 30, 27, 28, 26; 24, 25, 22, 23, 21. Throttle buttons 35, 36 and
+  43 read pressed at rest this time.
+
+  | Control (Virpil diagram) | Button | Command |
+  |---|---|---|
+  | 15 push | 32 | `TargetNothing` (clear target) |
+  | 16 push | 20 | `TargetCenter` (the target under the reticle) |
+  | 21 push | 31 | `ToggleAutopilot` (autopilot to the target) |
+  | 20 up, right, down, left, centre | 29, 30, 27, 28, 26 | next enemy, cycle any target, previous enemy, hostile, nearest enemy |
+  | 19 up, right, down, left, centre | 24, 25, 22, 23, 21 | next friendly, nearest aleph, previous friendly, nearest friendly base, nearest friendly |
+
+  The three push buttons follow ragesaq's choice *(decided 2026-11 by ragesaq, in Port's working session
+  2026-11-25: "i want 15 to clear target, its not a natural press, i want 16 to select target, that is a natural
+  high frequency press button so the action should match, and then 21 can be to autopilot to the target")*. The
+  castle switches follow Port's proposal, which ragesaq accepted as a place to start (same message: "this is a good
+  place to start"). Port read "select target" as `TargetCenter`, the press that picks what the pilot is looking at.
 - The joystick targeting commands are named exactly like the key actions they press: `Target`, `TargetCenter`,
   `TargetNothing`, `TargetHostile`, `ToggleAutopilot`, next, nearest and previous for `TargetEnemy` and
   `TargetFriendly`, and nearest for `TargetEnemyBase`, `TargetFriendlyBase` and `TargetWarp`. Each acts once per
