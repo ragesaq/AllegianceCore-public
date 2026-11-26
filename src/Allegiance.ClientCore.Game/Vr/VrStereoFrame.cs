@@ -17,10 +17,9 @@ public sealed record VrStereoFrame(VrEyeView Left, VrEyeView Right, int EyeWidth
 /// <summary>The finished eye images for <see cref="IVrFrameSink.SubmitFrame"/>:
 /// OpenGL texture names, both <see cref="Width"/> by <see cref="Height"/>, rows
 /// stored top first (MonoGame render-target order, the reverse of the back
-/// buffer). <c>default</c> means no eye was drawn this frame.
-/// <see cref="HudVerticalFovRadians"/> is the game camera's vertical field of
-/// view, so the HUD layer can cover the same angle; 0 when unknown.</summary>
-public readonly record struct VrEyeImages(uint Left, uint Right, int Width, int Height, float HudVerticalFovRadians)
+/// buffer). <c>default</c> means no eye was drawn this frame. The HUD is
+/// already drawn into them (Game1.VrHud.cs).</summary>
+public readonly record struct VrEyeImages(uint Left, uint Right, int Width, int Height)
 {
     public bool Present => Left != 0 && Right != 0 && Width > 0 && Height > 0;
 }

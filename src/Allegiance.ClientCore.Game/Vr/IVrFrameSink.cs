@@ -16,9 +16,10 @@ public interface IVrFrameSink : IDisposable
     /// <summary>Called once per frame on the render thread, after the frame is
     /// complete in the back buffer and before it is presented to the window.
     /// The graphics context is current. <paramref name="eyes"/> holds the eye
-    /// images when the game drew the views <see cref="BeginFrame"/> returned;
-    /// the back buffer then holds only the HUD and 2-D screens over a transparent
-    /// background. A sink that cannot continue sets <see cref="Failed"/>; the
+    /// images, with the HUD drawn into them, when the game drew the views
+    /// <see cref="BeginFrame"/> returned; the back buffer then holds a mirror of
+    /// the left eye for the window. Otherwise the back buffer holds the whole
+    /// flat frame. A sink that cannot continue sets <see cref="Failed"/>; the
     /// game drops it, and drops one that throws the same way.</summary>
     void SubmitFrame(int backBufferWidth, int backBufferHeight, VrEyeImages eyes);
 

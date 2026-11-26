@@ -207,7 +207,7 @@ public sealed class VrFrameSinkHostTests
         host.Attach(sink);
 
         Assert.Same(Stereo, host.BeginFrame());
-        var eyes = new VrEyeImages(7, 8, 1440, 1600, 1.2f);
+        var eyes = new VrEyeImages(7, 8, 1440, 1600);
         host.Submit(1280, 720, eyes);
 
         Assert.Equal(eyes, sink.LastEyes);

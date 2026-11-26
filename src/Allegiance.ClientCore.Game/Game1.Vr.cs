@@ -17,7 +17,6 @@ public sealed partial class Game1
     private RenderTarget2D? _vrRightEye;
     private int _vrPass = -1;
     private bool _vrEyesDrawn;
-    private float _vrHudFov;
 
     // Pinned to the DesktopGL package, as HdCompressedUpload's TextureId is.
     private static readonly FieldInfo? VrGlTexture =
@@ -70,16 +69,17 @@ public sealed partial class Game1
     {
         if (_vrFrame is not { } frame) return;
         _vrPass = pass;
-        _vrHudFov = VrEyeCamera.VerticalFieldOfView(centre.Projection);
         (view, proj, cameraEye) = VrEyeCamera.ForEye(centre.View, centre.Projection, centre.Eye,
             pass == 0 ? frame.Left : frame.Right);
+        _vrEyeCameras[pass] = (view, proj, cameraEye);
         GraphicsDevice.SetRenderTarget(VrEyeTarget(pass, frame.EyeWidth, frame.EyeHeight));
     }
 
     /// <summary>After the scene passes: the camera goes back to the game's own,
-    /// for the radar and HUD drawn after the scene. After eye passes the back
-    /// buffer is bound again and cleared to transparent, so it carries only the
-    /// HUD, which the headset shows over the eyes.</summary>
+    /// for the radar and HUD drawn after the scene. After eye passes the HUD
+    /// image is bound and cleared to transparent, so the HUD and 2-D screens
+    /// drawn after the scene land there; <see cref="ComposeVrHud"/> then draws it
+    /// into both eyes.</summary>
     private void EndVrScenePasses((Matrix View, Matrix Projection, Vector3 Eye) centre,
         ref Matrix view, ref Matrix proj, ref Vector3 cameraEye)
     {
@@ -87,7 +87,8 @@ public sealed partial class Game1
         _vrPass = -1;
         _vrEyesDrawn = true;
         (view, proj, cameraEye) = centre;
-        GraphicsDevice.SetRenderTarget(null);
+        var pp = GraphicsDevice.PresentationParameters;
+        GraphicsDevice.SetRenderTarget(VrHudImage(pp.BackBufferWidth, pp.BackBufferHeight));
         GraphicsDevice.Clear(Color.Transparent);
     }
 
@@ -127,7 +128,19 @@ public sealed partial class Game1
                 _vrHost.Abandon("the eye images have no OpenGL texture name (MonoGame internals changed)");
                 return;
             }
-            eyes = new VrEyeImages(leftName, rightName, left.Width, left.Height, _vrHudFov);
+            try
+            {
+                ComposeVrHud();
+            }
+            catch (Exception ex)
+            {
+                // Drawing the HUD into the eyes is the game's side of the seam, so a
+                // failure there runs the game flat rather than ending it.
+                GraphicsDevice.SetRenderTarget(null);
+                _vrHost.Abandon($"the HUD could not be drawn into the eye images: {ex.GetType().Name}: {ex.Message}");
+                return;
+            }
+            eyes = new VrEyeImages(leftName, rightName, left.Width, left.Height);
         }
         _vrHost.Submit(pp.BackBufferWidth, pp.BackBufferHeight, eyes);
     }
@@ -147,6 +160,7 @@ public sealed partial class Game1
         _vrRightEye?.Dispose();
         _vrLeftEye = null;
         _vrRightEye = null;
+        ReleaseVrHud();
     }
 
     private sealed class VrPacing(Game1 game) : IVrPacingTarget

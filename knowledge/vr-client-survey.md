@@ -256,6 +256,12 @@ ragesaq, reported in Port's working session with a screenshot of SteamVR's VR Vi
   a flat run: 600 counted frames per 5 s with vsync at 60 Hz)*. Halve the count before comparing it with the headset
   rate. The fix belongs in its own PR, not in VR work.
 
+- **Anything drawn near the head is clipped by the game's near plane.** An eye projection copies the game's depth
+  terms, so its near plane is 1 m in the cockpit and 10 m outside. The 1 m HUD panel lost everything nearer than that:
+  only its top rows showed *(observed 2026-11-25 in a full-resolution dump of the left eye)*. Seat-space drawing uses
+  `VrHudGeometry.SeatProjection`, the eye's field of view with a 5 cm near plane. A window screenshot of the mirror
+  shrinks the eye image about five times, so check HUD detail in a dump of the eye image itself.
+
 ## Open questions
 
 - What one game unit is in metres. It sets the eye separation and the cockpit scale. *(Answered above: one metre,

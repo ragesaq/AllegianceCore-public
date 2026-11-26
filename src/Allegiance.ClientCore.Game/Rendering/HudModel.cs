@@ -228,6 +228,10 @@ public sealed record HudContext
     /// <summary>Native ShowJoystickIndicator preference, default on
     /// (WinTrek.cpp:2739,3059).</summary>
     public bool ShowJoystickIndicator { get; init; } = true;
+    /// <summary>The VR client draws its own aim reticle in the world, far away
+    /// (Game1.VrHud.cs), so the flat centre reticle stays off the near HUD panel.
+    /// False everywhere else.</summary>
+    public bool CentreReticleInWorld { get; init; }
     /// <summary>P1038 — true when the incoming-missile warning is armed: an
     /// in-sector enemy missile is tracking the own ship (native
     /// <c>MISSILE_TRACK_WARNING(208)</c>, <see cref="MissileTrackState"/>). Null when the
@@ -351,7 +355,7 @@ public sealed class HudModel
     public bool InstrumentsVisible => FlightVisible && !Context.CommandView;
     // Native indicator.cpp:763 permits internal/chase/missile cameras.
     public bool IndicatorsVisible => InstrumentsVisible && Context.Camera is CameraMode.Cockpit or CameraMode.Chase or CameraMode.ExternalMissile;
-    public bool ReticleVisible => IndicatorsVisible && Context.Camera == CameraMode.Cockpit;
+    public bool ReticleVisible => IndicatorsVisible && Context.Camera == CameraMode.Cockpit && !Context.CentreReticleInWorld;
     public bool MouseStickVisible => IndicatorsVisible && Telemetry?.MouseStick is not null;
     /// <summary>P948 — the transient mouse-option readout draws on any flight
     /// frame (not only while mouse flight is enabled), so a pilot who changes the
