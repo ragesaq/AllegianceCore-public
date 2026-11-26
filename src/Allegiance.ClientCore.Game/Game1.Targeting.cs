@@ -152,7 +152,9 @@ public sealed partial class Game1
     /// (<see cref="DataWarpIGC.ClusterId"/>, <see cref="DataStationIGC.ClusterId"/>,
     /// <see cref="DataAsteroidIGC.ClusterId"/>). This only shrinks the candidate
     /// POOL to what is really in the player's current sector; how a candidate is
-    /// CHOSEN from within that pool (<see cref="SelectCandidates"/>) is untouched.
+    /// CHOSEN from within that pool is the consumer's rule: <see cref="SelectCandidates"/>
+    /// for the autopilot's implicit pick, <see cref="PickFrontTarget"/> for target
+    /// center, which also skips a gunner's carrier (the pool keeps it).
     /// The self / not-visible / no-update ship filters are preserved exactly.
     /// </summary>
     internal static List<CandidateObject> GatherSectorCandidates(
@@ -1028,7 +1030,7 @@ public sealed partial class Game1
     /// the rising edge of the chord being down.</summary>
     private bool TargetEdgeDown(KeyboardState ks, string action)
     {
-        return _targetPressEdges.Observe(action, ActionDown(ks, action));
+        return _targetPressEdges.Observe(action, ActionDown(ks, action) || JoystickHoldsAction(action));
     }
 
     /// <summary>Dispatch one class-filtered command TRIAD (next/nearest/prev
@@ -1378,11 +1380,10 @@ public sealed partial class Game1
     //                             target (and implicitly the autopilot, since
     //                             this port's DisengageAutopilot clears both).
     //   TK_TargetCenter (10127) FindTarget(c_ttFront|AllTypes|AllSides,
-    //                             orientation) → SetTarget — the candidate
-    //                             nearest the reticle/fwd vector. This port's
-    //                             PickNearestTarget already ranks candidates
-    //                             nearest-to-crosshair (screen-space DistSq),
-    //                             so it is the direct reuse (no new ranking).
+    //                             orientation) → SetTarget — the object at
+    //                             the smallest angle off the nose, any kind and
+    //                             side (PickFrontTarget; not the ship-first
+    //                             PickNearestTarget tiers).
     //   TK_TargetCommand (10408) selects the independent accepted slot;
     //   production key handling is in Game1.Orders.cs (P675).
     //
@@ -1439,15 +1440,61 @@ public sealed partial class Game1
         SendCurrentCommandToServer(null);
     }
 
-    /// <summary>P417 — TK_TargetCenter: select the candidate nearest the
-    /// reticle/crosshair. Reuses the existing nearest-to-crosshair ranking
-    /// (PickNearestTarget — the same screen-space DistSq ordering CollectTargetCandidates
-    /// already applies), which is this port's analogue of native's
-    /// c_ttFront nearest-target (WinTrek.cpp:10127-10151).</summary>
+    /// <summary>P417 — TK_TargetCenter: select the object at the smallest angle
+    /// off the ship's nose, native's <c>FindTarget(c_ttFront | c_ttAllTypes |
+    /// c_ttAllSides)</c> (WinTrek.cpp:10127-10151). Native ranks every findable
+    /// object in the sector by angle alone, with no ship-first tier and no view
+    /// frustum, so this does not reuse <see cref="PickNearestTarget"/>, whose
+    /// ship tier let any ship in view win over the object under the reticle
+    /// (found in ragesaq's headset test, 2026-11-25).
+    ///
+    /// <para>In a turret native ranks from the carrier's position along the
+    /// turret's facing (the gunner's own orientation, with the parent ship
+    /// passed to FindTarget, which never returns that ship). The port's gunner
+    /// pose is the carrier's render pose (its last update when it has none) and
+    /// the locally integrated turret aim; the own-ship simulation is not stepped
+    /// while boarded, so <see cref="TryOwnPose"/> would give a frozen pose
+    /// there. <see cref="PickFrontTarget"/> skips the carrier, which stays in the
+    /// gathered pool.</para></summary>
     private void SelectCentermostTarget()
     {
         if (!TryOwnPose(out var pos, out var orient, out _)) return;
-        var picked = PickNearestTarget(pos, orient);
+        var forward = orient.GetForward();
+        var world = _session.World;
+        var objs = new List<CandidateObject>();
+        short parent = -1;
+        SimVec? carrierPos = null;
+        Orientation? carrierOrient = null;
+        lock (_session.Gate)
+        {
+            if (world.MyShipId is { } me && world.Ships.TryGetValue(me, out var ownShip))
+            {
+                parent = ownShip.ParentId;
+                objs = GatherSectorCandidates(world.Ships, world.Warps, world.Stations,
+                                              world.Asteroids, me, ownShip.SectorId,
+                                              ShipRoleBits, StationRoleBits,
+                                              world.Probes, world.Treasures);
+                if (parent != -1 && world.Ships.TryGetValue(parent, out var carrierShip) && carrierShip.Latest is { } cl)
+                {
+                    carrierPos = cl.Position;
+                    carrierOrient = cl.Orientation;
+                }
+            }
+        }
+        if (parent != -1)
+        {
+            if (_poses.TryGetValue(parent, out var carrier))
+            {
+                carrierPos = carrier.Position;
+                carrierOrient = carrier.Orientation;
+            }
+            if (carrierPos is { } cp && carrierOrient is { } co)
+            {
+                pos = cp;
+                forward = _turretSeeded ? _turretOrientation.GetForward() : co.GetForward();
+            }
+        }
+        var picked = PickFrontTarget(objs, pos, forward, _autoTarget, excludeShipId: parent);
         if (picked is { } p)
         {
             CommitTargetForPlayer(p);
@@ -1455,7 +1502,45 @@ public sealed partial class Game1
             RefreshWindowTitle();
         }
         else
-            Console.WriteLine("[monogame] target center: nothing in view");
+            Console.WriteLine("[monogame] target center: nothing in the sector");
+    }
+
+    /// <summary>Native's <c>c_ttFront</c> ranking (common.cpp:509-640): the
+    /// object whose direction from <paramref name="position"/> makes the
+    /// smallest angle with <paramref name="forward"/>, scored like
+    /// <c>Orientation::CosForward2</c> (a signed squared cosine, so an object
+    /// behind is chosen only when nothing is ahead). The current target is
+    /// considered last and kept only when nothing else qualifies, so a repeat
+    /// press steps to the next best object, as native does. The ship
+    /// <paramref name="excludeShipId"/> (a gunner's carrier, native's
+    /// <c>pship</c>) is never picked; -1 excludes nothing.</summary>
+    internal static AutopilotTarget? PickFrontTarget(
+        IReadOnlyList<CandidateObject> objects, SimVec position, SimVec forward,
+        AutopilotTarget? current, short excludeShipId = -1)
+    {
+        CandidateObject? best = null;
+        float bestScore = float.NegativeInfinity;
+        bool currentSeen = false;
+        foreach (var o in objects)
+        {
+            if (excludeShipId != -1 && o.Kind == TargetKind.Ship && o.Id == excludeShipId) continue;
+            if (current is { } c && c.Kind == o.Kind && c.Id == o.Id)
+            {
+                currentSeen = true;
+                continue;
+            }
+            var d = o.Position - position;
+            float l2 = d.LengthSquared();
+            float dot = forward.X * d.X + forward.Y * d.Y + forward.Z * d.Z;
+            float score = l2 > 0f ? (dot >= 0f ? dot * dot / l2 : -dot * dot / l2) : 0f;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = o;
+            }
+        }
+        if (best is { } b) return new AutopilotTarget(b.Kind, b.Id, b.Name);
+        return currentSeen && current is { } kept ? new AutopilotTarget(kept.Kind, kept.Id, kept.Name) : null;
     }
 
     // ═══════════════════════════════════════════════════════════════════

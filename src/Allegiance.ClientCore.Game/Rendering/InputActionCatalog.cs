@@ -196,7 +196,7 @@ public static class InputActionCatalog
         new("TargetEnemyBaseNearest", "TARGETING / AUTOPILOT", "Nearest enemy base, ANY sector [TK_TargetEnemyBaseNearest]", K(Keys.Z), S(Keys.U)),
         new("TargetFriendlyBaseNearest", "TARGETING / AUTOPILOT", "Nearest friendly base, ANY sector [TK_TargetFriendlyBaseNearest]", S(Keys.Z), S(Keys.B)),
         new("TargetNothing", "TARGETING / AUTOPILOT", "Target nothing (clear target / autopilot) [TK_TargetNothing]", K(Keys.OemSemicolon), null),
-        new("TargetCenter", "TARGETING / AUTOPILOT", "Target center (nearest to reticle) [TK_TargetCenter]", K(Keys.OemQuotes), null),
+        new("TargetCenter", "TARGETING / AUTOPILOT", "Target center (nearest the nose) [TK_TargetCenter]", K(Keys.OemQuotes), null),
         // P623 — CLASS-FILTERED targeting: the 33 TK_Target{Enemy|Friendly}
         // {Bomber|Fighter|Miner|Constructor|Lifepod|MajorBase}[Nearest|Prev]
         // commands (igc.h:377-415). Each class resolves to a Habm/Sabm ability-bit

@@ -31,10 +31,9 @@ namespace Allegiance.ClientCore.MonoGame.Tests;
 /// (<c>World.MyShipId</c> resolves to a live <c>ShipEntity</c>) — the exact datum
 /// TargetSelf reads to select "me".</item>
 /// <item><b>TargetCenter</b> (<c>SelectCentermostTarget</c> → the production
-/// <see cref="Game1.GatherSectorCandidates"/> + <see cref="Game1.SelectCandidates"/>
-/// nearest-to-reticle ranking): the reticle-ranked selection, run against the real
-/// gathered candidates, picks a real in-sector ship (never empty, always one of the
-/// real wire ships) and orders nearest-to-crosshair.</item>
+/// <see cref="Game1.GatherSectorCandidates"/> + <see cref="Game1.PickFrontTarget"/>
+/// angle-off-the-nose ranking): run against the real gathered candidates from the
+/// own ship's real pose, it picks one of those candidates, never nothing.</item>
 /// </list>
 /// TargetNothing reuses <see cref="AutopilotSteering"/>/DisengageAutopilot's exact
 /// clear path (already covered by the P212/G-key live behaviour); its only new code
@@ -83,7 +82,7 @@ public sealed class MiscKeyBindingLiveTests
 
     /// <summary>⭐ LIVE: the peer's own ship is present and identifiable in its own
     /// real world (the TargetSelf backing datum), and the production
-    /// gather + reticle-ranking returns a real in-sector ship for TargetCenter.</summary>
+    /// gather + front ranking returns a real in-sector candidate for TargetCenter.</summary>
     [Trait("Requires", "Artwork")]
     [SkippableFact]
     public void Live_own_ship_is_real_and_center_ranking_selects_a_real_ship()
@@ -134,30 +133,25 @@ public sealed class MiscKeyBindingLiveTests
 
         short me;
         List<Game1.CandidateObject> objs;
+        SimVec ownPos;
+        SimVec ownForward;
         lock (peer.Gate)
         {
             me = peer.World.MyShipId!.Value;
             var sector = peer.World.Ships[me].SectorId;
+            ownPos = peer.World.Ships[me].Latest!.Position;
+            ownForward = peer.World.Ships[me].Latest!.Orientation.GetForward();
             objs = Game1.GatherSectorCandidates(peer.World.Ships, peer.World.Warps,
                                                 peer.World.Stations, peer.World.Asteroids,
                                                 me, sector, null, null);
         }
 
-        // ⭐ TargetCenter backing: the reticle-ranked production selection over the
-        // real gathered candidates yields a real in-sector ship (one of the two
-        // drones / the own ship's sector mates) — never empty. A projector that
-        // puts everything dead-centre simulates the crosshair; the tier rule then
-        // offers the ships tier.
-        var ranked = Game1.SelectCandidates(objs, _ => (0f, 0f),
-            out _, out _, out _, out _, out _);
-        Assert.NotEmpty(ranked);
-        Assert.All(ranked, r => Assert.Equal(Game1.TargetKind.Ship, r.Kind));
-
-        // The enemy and friendly drones are the real ships in the peer's sector;
-        // a reticle-centred pick surfaces a real ship id from the peer's world.
-        var realIds = ranked.Select(r => r.Id).ToHashSet();
-        Assert.True(realIds.Contains(enemyDrone.Id) || realIds.Contains(friendDrone.Id),
-            "center ranking should surface a real in-sector drone");
+        // ⭐ TargetCenter backing: the production front ranking over the real
+        // gathered candidates, from the own ship's real pose, picks one of them.
+        Assert.Contains(objs, o => o.Kind == Game1.TargetKind.Ship && (o.Id == enemyDrone.Id || o.Id == friendDrone.Id));
+        var picked = Game1.PickFrontTarget(objs, ownPos, ownForward, null);
+        Assert.NotNull(picked);
+        Assert.Contains(objs, o => o.Kind == picked!.Value.Kind && o.Id == picked.Value.Id);
     }
 
     private static ConnectionSession Connect(Srv server, string name)
