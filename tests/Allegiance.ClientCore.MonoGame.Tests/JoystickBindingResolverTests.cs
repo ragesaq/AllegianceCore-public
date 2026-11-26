@@ -486,6 +486,7 @@ public class JoystickBindingResolverTests
         Assert.False(JoystickKeyActions.TryGet("Ripcord", out _));
         Assert.False(JoystickKeyActions.TryGet("DropChaff", out _));
         Assert.False(JoystickKeyActions.TryGet("FireMissile", out _));
+        Assert.False(JoystickKeyActions.TryGet("ViewRecenter", out _));
         Assert.True(JoystickKeyActions.TryGet("TargetCenter", out var c));
         Assert.Equal(JoystickCommand.TargetCenter, c);
     }
@@ -530,6 +531,16 @@ public class JoystickBindingResolverTests
 
     // Probe 2026-11-26: with the lever past the afterburner detent the throttle holds
     // button 75 (the Virpil configurator's logical button 76).
+    [Fact]
+    public void ThrottleButton42_HoldsTheVrRecenter()
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, pressed: [42])]);
+        Assert.True(f.Holds(JoystickCommand.ViewRecenter));
+        Assert.Equal(1 << (int)JoystickCommand.ViewRecenter, f.HeldMask);
+    }
+
     [Fact]
     public void ThrottlePastTheAfterburnerDetent_HoldsTheBooster()
     {

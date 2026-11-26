@@ -1198,6 +1198,7 @@ public sealed partial class Game1 : Game
     private JoystickBindingFrame _joystickFrame;
     private JoystickBindingFrame _targetJoystickFrame;
     private bool _joystickDockedLastFrame;
+    private bool _vrRecenterWasDown;
     private string _joystickDevicesLogged = "";
     private bool _joystickThrottleWasBound;
 

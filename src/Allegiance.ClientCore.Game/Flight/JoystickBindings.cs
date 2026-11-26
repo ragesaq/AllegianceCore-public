@@ -20,7 +20,7 @@ public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 /// and are read through <see cref="JoystickKeyActions"/>.</para></summary>
 public enum JoystickCommand
 {
-    Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff,
+    Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff, ViewRecenter,
     Target, TargetCenter, TargetNothing, TargetHostile, ToggleAutopilot,
     TargetEnemy, TargetEnemyNearest, TargetEnemyPrev,
     TargetFriendly, TargetFriendlyNearest, TargetFriendlyPrev,
@@ -190,6 +190,7 @@ public sealed class JoystickBindingResolver
                 new(JoystickCommand.TargetFriendlyPrev, 22),        // 19 down
                 new(JoystickCommand.TargetFriendlyBaseNearest, 23), // 19 left
                 new(JoystickCommand.TargetFriendlyNearest, 21),     // 19 centre
+                new(JoystickCommand.ViewRecenter, 42),              // logical 43 in VPC (ragesaq, 2026-11-25)
             ],
             [
                 new(0, JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight),

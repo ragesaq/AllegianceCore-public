@@ -245,8 +245,28 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   behaviour for a setup that worked before.
 - The log names each device and whether it uses a profile, the earlier layout, or is ignored.
 
-## Open questions
+## VR recenter button
 
+- ragesaq asked for "a button to reset the worldpsace around the headset, this is a common button to use in sims, it
+  wasnt perfectly aligned" *(observed 2026-11-25, headset test of the combined build of PR #15 and PR #14)*.
+- The joystick command `ViewRecenter` asks the VR client to make the head's current position and facing the seated
+  origin. Only the turn about the vertical axis is taken from the head, so the horizon stays level with the runtime's
+  gravity *(derived: a seated sim recenters the turn, not the tilt)*. It works docked and in flight and needs no key
+  action, because native has no VR *(read, the code on branch `port/vr-recenter`)*.
+- It is done in the presenter by replacing the OpenXR `LOCAL` space the frame is placed in with one offset to the
+  head, located against a second `LOCAL` space and a `VIEW` space kept for that purpose *(read, same code)*. The
+  eye views, the HUD layer and the flat quad all follow it.
+- The built-in throttle profile binds it to throttle button 42, logical button 43 in VPC *(decided 2026-11-25 by
+  ragesaq: "it should be button 42 0-based / 43 logical in vpc")*. A capture that day saw it pressed, with 43 not held
+  at rest *(observed 2026-11-25, a 120 s probe)*. Another device can bind it in `joystick.json` as
+  `{ "command": "ViewRecenter", "button": <n> }`.
+- A press made while the headset is not tracked waits about a second (90 headset frames of a running session) for
+  tracking, and the session stopping drops it *(review round 2, finding F4)*; a runtime
+  error during the recenter is logged and leaves the view as it was, and VR keeps running *(read, same code; review
+  round 1 findings F1 and F2)*. A recenter also moves the flat panel in front of where the head faces at the press
+  *(read, review round 1)*.
+
+## Open questions
 
 - Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
@@ -265,6 +285,8 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   axis and settled the rest states; only the encoders' button pairs remain open.
 - 2026-11-25 — the first binding PR: per-device profiles by name, built-in stick and throttle profiles, a player
   file, the earlier layout as the fallback, held buttons ignored until released.
+- 2026-11-25 — ragesaq asked for a VR recenter button after the combined headset test; Port added the
+  `ViewRecenter` command on branch `port/vr-recenter`; ragesaq chose throttle button 42 (logical 43) after a capture.
 
 ## Boundary
 
