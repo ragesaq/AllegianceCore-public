@@ -160,6 +160,7 @@ public sealed class VrHudZonesTests
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["location"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["orders and badges"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["camera"]);
+        Assert.Equal(VrHudZones.ZoneId.Systems, byName["status"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems low"]);
     }
@@ -276,6 +277,50 @@ public sealed class VrHudZonesTests
         Assert.Contains("floor", reason);
     }
 
+    [Fact]
+    public void Of_the_sweep_the_zones_are_used_for_exactly_the_sizes_the_note_gives()
+    {
+        // knowledge/vr-hud-design.md, "Which image sizes get zones": of the
+        // sizes tried, 1200 to 1366 px across and 534 to 740 px high.
+        var used = new List<string>();
+        foreach (var row in SweepSizes())
+            if (VrHudZones.ClassicLayout((int)row[0], (int)row[1], out _) is not null) used.Add($"{row[0]}x{row[1]}");
+        Assert.Equal(new[] { "1200x534", "1200x600", "1200x680", "1200x720", "1280x534", "1280x600", "1280x680", "1280x720",
+            "1366x534", "1366x600", "1366x680", "1366x720" }, used);
+        foreach (var (w, h) in new[] { (1200, 740), (1366, 740) })
+            Assert.True(VrHudZones.ClassicLayout(w, h, out var reason) is not null, $"{w}x{h}: {reason}");
+        Assert.Null(VrHudZones.ClassicLayout(1140, 720, out var narrow));
+        Assert.Contains("'status'", narrow);
+        Assert.Null(VrHudZones.ClassicLayout(1440, 720, out var wide));
+        Assert.Contains("floor", wide);
+    }
+
+    [Fact]
+    public void The_status_lines_are_centred_where_the_classic_hud_draws_them()
+    {
+        // HudRenderer.TopStatusCenterX: right of the chat pane's right edge,
+        // then 16 px and 110 px at Classic's unscaled text.
+        Assert.Equal(Rendering.ChatPaneLayout.Width - Rendering.ChatPaneLayout.LeftFromCentre + 16 + 110,
+            VrHudZones.StatusCentrePixels);
+    }
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1200, 534)]
+    [InlineData(1366, 740)]
+    public void The_status_cutout_holds_the_afterburner_weapon_mode_mining_and_time_dilation_lines(int width, int height)
+    {
+        // Drawn at y 16, 20 plus a line, 58 and 82 in the medium Verdana
+        // (12 px lines), centred on StatusCentrePixels; the widest, about
+        // 130 px, is "AFTERBURNER ACTIVE".
+        var lines = new Rectangle(width / 2 + VrHudZones.StatusCentrePixels - 65, 16, 130, 96 - 16);
+        var placements = VrHudZones.ClassicLayout(width, height, out var reason);
+        Assert.True(placements is not null, reason);
+        var status = placements!.Single(p => p.Cutout.Name == "status");
+        Assert.Equal(VrHudZones.ZoneId.Systems, status.Cutout.Zone);
+        Assert.True(status.Cutout.Source.Contains(lines), $"{status.Cutout.Source} does not hold {lines}");
+    }
+
     public static TheoryData<int, int> SweepSizes()
     {
         var sizes = new TheoryData<int, int>();
@@ -287,7 +332,7 @@ public sealed class VrHudZonesTests
 
     [Theory]
     [MemberData(nameof(SweepSizes))]
-    public void Wherever_the_zones_are_used_no_pixel_is_shown_twice_and_text_keeps_the_floor(int width, int height)
+    public void Wherever_the_zones_are_used_the_cutouts_are_disjoint_and_text_keeps_the_floor(int width, int height)
     {
         var placements = VrHudZones.ClassicLayout(width, height, out _);
         if (placements is null) return;

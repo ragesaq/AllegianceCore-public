@@ -4,6 +4,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 2
+
+- Record: [summary](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/summary.md), [receipt](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `13614bf..b4ba3d0`, head `b4ba3d0`, tree `d81443d`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. Round 1's five findings resolved. Two new findings:
+  1. N1, medium (the afterburner and power, weapon mode, mining and time dilation lines, drawn at the image's top
+     right of the chat pane, were in no cut-out, so VR did not show them; the code comment and the note said the
+     systems cut-out held them): fixed. A "status" cut-out, 158 px centred where the Classic HUD draws those
+     lines (`VrHudZones.StatusLines`), is shown in the systems zone beside the systems cut-out. The zone has no
+     height to spare to put it above. The comment and the note's cut-out table are corrected. Tests: the status
+     cut-out holds the lines' rectangle, and its centre matches the HUD's own formula. The narrowest widths now
+     refuse the zones, because the status cut-out meets the location box there: of the sizes tried, zones are
+     used from 1200 to 1366 px across.
+  2. N2, low, tests (the sweep could not fail on a size it refused, and the note's range was untested): fixed.
+     A test asserts the exact list of sweep sizes that get zones, and the sizes just outside the range; the
+     sweep's name no longer claims more than it checks.
+- The fixes change code, so they are re-reviewed in round 3.
+
 ## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 1
 
 - Record: [summary](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/summary.md), [receipt](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/receipt.md)

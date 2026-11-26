@@ -153,9 +153,11 @@ public static class VrHudZones
         list.Add(new Cutout("camera", ZoneId.Navigation, 1, new Rectangle(0, h - CameraStripPixels, 160, CameraStripPixels)));
 
         // E: the afterburner, power, weapon mode, mining and time dilation
-        // lines (the text layout moves them below 126 px, out of the box it
-        // keeps for them), the weapons pane or the inventory (F4) in its place.
-        // Below the target cut-out's top it starts right of that cut-out.
+        // lines, centred right of the chat pane at the image's top; beside
+        // them, the rest of the ship's status lines and the weapons pane, or
+        // the inventory (F4) in its place. Below the target cut-out's top
+        // that part starts right of the target cut-out.
+        list.Add(new Cutout("status", ZoneId.Systems, 0, StatusLines(w)));
         int systemsLeft = cx + CommsHalfWidthPixels + 2;
         int systemsSplit = paneTop - 2;
         list.Add(new Cutout("systems", ZoneId.Systems, 0,
@@ -175,6 +177,22 @@ public static class VrHudZones
     /// left of the centre) and the keys hint, which VR keeps this narrow, clear
     /// of the weapons pane (from about 882 px in a 1280-wide image).</summary>
     public const int CommsHalfWidthPixels = 240;
+
+    /// <summary>Where the afterburner, power, weapon mode, mining and time
+    /// dilation lines are centred: this far right of the image's middle
+    /// (<c>HudRenderer.TopStatusCenterX</c>, Classic's text unscaled), from
+    /// y 16 to about 96.</summary>
+    public const int StatusCentrePixels = 321;
+
+    /// <summary>Half the width kept for those lines: their widest,
+    /// "AFTERBURNER ACTIVE" or "TIME DILATION 100%" in the medium Verdana, is
+    /// about 130 px; this keeps 158, up to the comms strip's edge.</summary>
+    public const int StatusHalfWidthPixels = 79;
+
+    /// <summary>The status lines' cut-out, from y 12 down to the systems
+    /// cut-out's top.</summary>
+    public static Rectangle StatusLines(int imageWidth) =>
+        new(imageWidth / 2 + StatusCentrePixels - StatusHalfWidthPixels, 12, 2 * StatusHalfWidthPixels, SystemsTopPixels - 12);
 
     /// <summary>Where the systems cut-out starts down the image: under the
     /// location and turret lines.</summary>
