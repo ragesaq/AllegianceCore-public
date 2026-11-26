@@ -4,6 +4,23 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #22 VR HUD step 2, round 3
+
+- Record: [summary](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/summary.md), [receipt](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `6737eaa..0314c5e`, head `0314c5e`, tree `bb3df52`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. The fixes from ragesaq's second headset look: markers as flat shapes facing the head,
+  the original velocity marker art, and in VR the port's text lines off the target pane and a larger target preview.
+  The reviewer found the flat game unchanged. Three notes, no code change:
+  1. N1: the canted-eye test cannot fail on what its name says, because any fixed point triangulates to itself. The
+     plane's orientation is carried by the other billboard test and the mutants; that `DrawVrMarker` uses the plane
+     is shown by the VR run and the headset, not by a test. Left as stated.
+  2. N2: the preview's enlargement is cached in the renderer during `Draw`, so a harness that paints the preview
+     outside `Draw` after a VR frame would get 1.5 times. No shipped path does. Left as stated.
+  3. N3: a marker is now skipped when an edge of its plane falls behind the eye. That needs the anchor about 80° off
+     the eye's forward, far outside the image. Left as stated.
+
 ## 2026-11-26: PR #22 VR HUD step 2, round 2
 
 - Record: [summary](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/summary.md), [receipt](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/receipt.md)
