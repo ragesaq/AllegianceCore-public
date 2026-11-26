@@ -177,7 +177,7 @@ service with upstream, not two.
 | Item | Choice | Rejected | Who and when decided | Last reconciled |
 |---|---|---|---|---|
 | Where the HUD is composited | into each eye image | its own composition layer (milestone 2), fixing capture in the capture tool | ragesaq, 2026-11 | 2026-11-25 |
-| Aiming reticle depth | infinity (kept after the step 1 headset test: "lets have the aim reticle sit at infinity for now") | at the depth of the object behind it (Meta guidance, Star Wars Squadrons); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; reconfirmed 2026-11-25 | 2026-11-25 |
+| Aiming reticle depth | infinity, except that a selected or locked target under the reticle (within 3°, or half its bracket) gives it that target's depth, held between 15 and 100 m and eased over 0.2 s ("your recommendation for the smaller version sounds like a plan to me") | always at infinity (the step 1 build; ragesaq kept it after the first headset test); snapping to the target's distance wherever it is, with a 25 m rest distance (a prompt from another assistant: the reticle shows where the guns point, so an off-axis target must not set its depth, and a 25 m rest brings it back toward the near HUD); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; revised 2026-11-25 | 2026-11-25 |
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
@@ -268,8 +268,38 @@ and answered in this one, 2026-11-25)*:
   - The cockpit depth-tests over world brackets: no cockpit model exists yet; the scene's own depth is the
     follow-up's test.
   - Off-screen target arrows on a ring 2 to 5 m out near the canopy edge: the edge arrows step 1 lacks.
-- Next (a layer 2 follow-up, proposal): test bracket depth against the scene's depth buffer, with the near clamp; off-screen arrows
-  on a ring a few metres out. Then a headset look to confirm the bracket confusion is gone.
+- Next (a layer 2 follow-up): test bracket depth against the scene's depth buffer, with the near clamp; off-screen arrows
+  on a ring a few metres out. Then a headset look to confirm the bracket confusion is gone. Built: see below.
+
+## The layer 2 follow-up as built (branch `port/vr-hud-bracket-depth`)
+
+Stacked on step 1 (PR #15). What it changes, all in the eye images and none of it in a flat frame:
+
+- **Brackets are tested against the scene's depth.** Each marker is placed on the line from the head (midway between
+  the eyes) to its object, at the near side of the sphere its bracket frames, so the object does not hide its own
+  bracket, and never farther than 100 m. It is drawn with a read-only depth test at that point's depth, so a nearer
+  object that passes in front of it hides it. Beyond 100 m the clamp changes nothing that can be seen: vergence is
+  under 0.04° *(derived: 64 mm / 100 m)*. `VrHudGeometry.MarkerAnchor`, `BufferDepth`.
+- **The scene's depth is still in the eye images when the HUD is drawn.** Checked on the GPU *(measured: a temporary
+  probe, removed before commit, drew a half-clear sheet over the whole left eye at depth 0.9999 with the same read-only
+  depth test, in the battle replay with SteamVR)*: asteroids and ships stayed unpainted, while the sky and a planet,
+  which are drawn without writing depth, were painted. So the depth the scene wrote is intact at compose time.
+- **Off-view arrows.** When the selection's or the lock's marker falls outside either eye's image, an arrow in its
+  colour sits on a ring 30° off the view's centre, 3 m out, on the side the object lies, and points that way. An
+  object straight behind gives an arrow pointing down. `VrHudGeometry.OffViewArrow`.
+- **The aim reticle's depth** follows the decision table: infinity, unless a selected or locked target is under it.
+  Its depth is eased as an inverse distance, which stereo disparity is proportional to, so it moves at an even rate
+  and can return to infinity. `VrHudGeometry.ReticleInverseDistance`, `SmoothInverseDistance`.
+- **Draw order in each eye:** the aim reticle and the arrows over the scene, then the markers with the depth test,
+  then the panel, which at 1 m is nearer than every marker.
+- **Why the reticle stays at infinity in most cases** *(Port, 2026-11-25, answering a prompt from another assistant
+  that ragesaq passed on)*: the stereo offset between a point at distance d and infinity is about 64 mm / d. That is
+  0.01° at 300 m and 0.04° at 100 m. Only at about 20 m and nearer (0.18°) does it reach roughly where the eyes stop
+  fusing two images at the centre of view *(read: Panum's fusional area, about 10 to 20 arcminutes at the fovea;
+  textbook figure, not measured here)*. So infinity only fails for a close target under the reticle, which is the
+  case the change covers.
+- Tests: `VrHudGeometryTests`, 90 VR tests. Each of 9 deliberate breaks of the new geometry made a test fail.
+- Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
 
 ## Open questions
 
@@ -292,6 +322,8 @@ and answered in this one, 2026-11-25)*:
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
 - 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
+- 2026-11-25: Port built the layer 2 follow-up on `port/vr-hud-bracket-depth` (above). ragesaq accepted Port's
+  smaller version of a reticle-depth prompt from another assistant: a target under the reticle gives it depth.
 - 2026-11-25: ragesaq tested step 1 in the headset (above): the brackets' depth confused, the boresight was right;
   the aim reticle stays at infinity.
 - 2026-11-25: Port built step 1 on `port/vr-hud-in-eyes` (above). From a first look in the headset, ragesaq asked

@@ -308,4 +308,95 @@ public sealed class VrHudGeometryTests
         Assert.False(VrHudGeometry.TryProject(Vector3.Backward * 50f, Matrix.Identity, GameProjection, Width, Height, out _));
         Assert.False(VrHudGeometry.TryProjectDirection(Vector3.Backward, Matrix.Identity, GameProjection, Width, Height, out _));
     }
+
+    [Fact]
+    public void A_far_marker_is_pulled_in_to_the_clamp_along_the_line_to_its_object()
+    {
+        var relative = new Vector3(300f, -200f, -2400f);
+        var anchor = VrHudGeometry.MarkerAnchor(relative, MathHelper.ToRadians(2f));
+        Assert.InRange(anchor.Length(), VrHudGeometry.MarkerDepthClampMetres - 0.01f, VrHudGeometry.MarkerDepthClampMetres + 0.01f);
+        Near3(Vector3.Normalize(relative), Vector3.Normalize(anchor), 1e-4f);
+    }
+
+    [Fact]
+    public void A_near_marker_sits_in_front_of_the_sphere_its_bracket_frames()
+    {
+        // A ship 30 m away whose bracket covers 10 degrees: its hull reaches
+        // about 2.6 m toward the head, so the bracket must be nearer than 27.4 m,
+        // and not far nearer.
+        var relative = new Vector3(0f, 0f, -30f);
+        float angle = MathHelper.ToRadians(10f);
+        float hull = 30f * MathF.Tan(angle / 2f);
+        var anchor = VrHudGeometry.MarkerAnchor(relative, angle);
+        Assert.InRange(anchor.Length(), 30f - hull - 0.01f, 30f - hull + 0.01f);
+        Near3(Vector3.Normalize(relative), Vector3.Normalize(anchor), 1e-5f);
+    }
+
+    [Fact]
+    public void A_nearer_point_gets_a_smaller_depth_buffer_value()
+    {
+        var view = LookingAlong(new Vector3(0.2f, 0f, -1f));
+        float near = VrHudGeometry.BufferDepth(new Vector3(0f, 0f, -20f), view, GameProjection);
+        float clamp = VrHudGeometry.BufferDepth(new Vector3(0f, 0f, -100f), view, GameProjection);
+        float far = VrHudGeometry.BufferDepth(new Vector3(0f, 0f, -3000f), view, GameProjection);
+        Assert.True(0f < near && near < clamp && clamp < far && far < 1f, $"{near} {clamp} {far}");
+        Assert.True(VrHudGeometry.BufferDepth(new Vector3(0f, 0f, 40f), view, GameProjection) < 0f);
+    }
+
+    [Theory]
+    [InlineData(1f, 0f, -1f, 1f, 0f)]
+    [InlineData(0f, 1f, 0.5f, 0f, -1f)]
+    [InlineData(0f, 0f, 1f, 0f, 1f)]
+    public void An_off_view_arrow_sits_on_the_ring_on_the_objects_side_and_points_there(
+        float x, float y, float z, float imageX, float imageY)
+    {
+        float ring = MathHelper.ToRadians(30f);
+        var (point, direction) = VrHudGeometry.OffViewArrow(new Vector3(x, y, z), ring, 3f);
+        Assert.InRange(point.Length(), 2.999f, 3.001f);
+        float offAxis = MathF.Acos(Vector3.Dot(Vector3.Normalize(point), Vector3.Forward));
+        Assert.InRange(offAxis, ring - 1e-4f, ring + 1e-4f);
+        Assert.InRange(Vector2.Distance(new Vector2(imageX, imageY), direction), 0f, 1e-4f);
+        // The ring point lies on the same side of the view's centre the arrow points to.
+        Assert.True(Vector2.Dot(new Vector2(point.X, -point.Y), direction) > 0f);
+    }
+
+    [Theory]
+    [InlineData(40f, 0f, 40f)]      // under the reticle: its near side, about 39.3 m
+    [InlineData(8f, 0f, 15f)]       // a fly-by: held at 15 m
+    [InlineData(900f, 0f, 100f)]    // far: held at 100 m
+    [InlineData(40f, 6f, 0f)]       // 6 degrees off the boresight: no depth (infinity)
+    public void A_target_under_the_reticle_gives_it_its_depth_held_between_15_and_100_m(
+        float distance, float offDegrees, float expectedMetres)
+    {
+        var nose = Vector3.Normalize(new Vector3(0.2f, 0.1f, -1f));
+        var off = Vector3.Transform(nose, Matrix.CreateFromAxisAngle(Vector3.UnitY, MathHelper.ToRadians(offDegrees)));
+        float bracket = MathHelper.ToRadians(2f);
+        float inverse = VrHudGeometry.ReticleInverseDistance(nose, off * distance, bracket);
+        if (expectedMetres == 0f) { Assert.Equal(0f, inverse); return; }
+        float tolerance = expectedMetres == 40f ? 1f : 0.01f;
+        Assert.InRange(1f / inverse, expectedMetres - tolerance, expectedMetres + 0.01f);
+    }
+
+    [Fact]
+    public void A_near_ships_hull_under_the_reticle_gives_it_depth_though_its_centre_is_off_the_cone()
+    {
+        // 20 m away, 5 degrees off, with a 16 degree bracket: its hull is under the reticle.
+        var nose = Vector3.Forward;
+        var off = Vector3.Transform(nose, Matrix.CreateRotationY(MathHelper.ToRadians(5f)));
+        Assert.True(VrHudGeometry.ReticleInverseDistance(nose, off * 20f, MathHelper.ToRadians(16f)) > 0f);
+        Assert.Equal(0f, VrHudGeometry.ReticleInverseDistance(nose, off * 20f, MathHelper.ToRadians(2f)));
+        Assert.Equal(0f, VrHudGeometry.ReticleInverseDistance(nose, -nose * 20f, MathHelper.ToRadians(16f)));
+    }
+
+    [Fact]
+    public void The_reticle_depth_eases_to_its_target_in_about_a_fifth_of_a_second_and_back_to_infinity()
+    {
+        float target = 1f / 30f, current = 0f;
+        for (int frame = 0; frame < 15; frame++) current = VrHudGeometry.SmoothInverseDistance(current, target, 1f / 75f);
+        // After one time constant (0.2 s) it has covered about 63% of the way.
+        Assert.InRange(current / target, 0.60f, 0.66f);
+        Assert.True(VrHudGeometry.SmoothInverseDistance(current, target, 0f) == current);
+        for (int frame = 0; frame < 150; frame++) current = VrHudGeometry.SmoothInverseDistance(current, 0f, 1f / 75f);
+        Assert.True(current < target * 1e-4f);
+    }
 }

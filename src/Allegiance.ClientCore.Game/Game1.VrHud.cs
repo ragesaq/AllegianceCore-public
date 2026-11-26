@@ -53,6 +53,17 @@ public sealed partial class Game1
     private readonly (Matrix View, Matrix Projection, Vector3 Eye)[] _vrEyeCameras = new (Matrix, Matrix, Vector3)[2];
     private bool _vrAimReticle;
     private bool _vrHudLogged;
+    // The aim reticle's depth as an inverse distance (1/m, 0 is infinity),
+    // smoothed toward a target under it, and when it was last stepped.
+    private float _vrReticleInverseDistance;
+    private long _vrReticleStepTicks;
+    // The depth-buffer value the marker being drawn is tested at (VrLine and
+    // the label text pass it to SpriteBatch as the layer depth).
+    private float _vrMarkerDepth;
+
+    // Off-view arrows: on a ring this far off the view's centre, this far away.
+    private static readonly float VrArrowRingRadians = MathHelper.ToRadians(30f);
+    private const float VrArrowRingMetres = 3f;
 
     /// <summary>Where the HUD is drawn in a stereo frame: an image the size of the
     /// back buffer, so every HUD layout and viewport reads as in the flat game.
@@ -246,8 +257,9 @@ public sealed partial class Game1
 
     private static Color ToColour(HudColor c) => new(c.R, c.G, c.B, c.A);
 
-    /// <summary>Draws the HUD into both eye images: the HUD image on the seat's
-    /// panel, then the markers and the aim reticle. Called once per stereo frame
+    /// <summary>Draws the HUD into both eye images: the aim reticle and the
+    /// off-view arrows, then the markers tested against the scene's depth, then
+    /// the HUD image on the seat's panel. Called once per stereo frame
     /// after the frame is complete, before the eyes are handed to the headset.
     /// The window then shows the left eye.</summary>
     private void ComposeVrHud()
@@ -256,6 +268,12 @@ public sealed partial class Game1
         var gd = GraphicsDevice;
         _vrPixel ??= CreateVrPixel(gd);
         _vrPanelEffect ??= new BasicEffect(gd) { TextureEnabled = true, LightingEnabled = false, VertexColorEnabled = false };
+        // The head: midway between the eyes. Markers and arrows are placed from
+        // it, so both eyes see one point and its disparity.
+        var head = (_vrEyeCameras[0].Eye + _vrEyeCameras[1].Eye) / 2f;
+        GatherVrArrows(head, left.Width, left.Height);
+        var nose = VrNoseInWorld(frame.Left);
+        StepVrReticleDepth(nose, head);
         for (int pass = 0; pass < 2; pass++)
         {
             var target = pass == 0 ? left : right;
@@ -263,24 +281,50 @@ public sealed partial class Game1
             gd.SetRenderTarget(target);
             var seatView = VrHudGeometry.SeatView(eye);
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
-            if (_vrHudImage is { } hud) DrawVrPanel(hud, seatView, VrHudGeometry.SeatProjection(proj));
             if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
 
+            // The aim reticle (at infinity, or at the depth of a target under it)
+            // and the off-view arrows (on a ring 3 m out) draw over the scene.
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
                 DepthStencilState.None, RasterizerState.CullNone);
             try
             {
-                if (_vrAimReticle && VrHudGeometry.TryProjectDirection(Vector3.Forward, seatView, proj,
-                        target.Width, target.Height, out var nose))
-                    DrawVrReticle(nose, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(1.5f), proj, target.Height),
+                if (_vrAimReticle && VrReticlePixel(nose, head, seatView, view, proj, eyeWorld, target.Width, target.Height,
+                        out var aim))
+                    DrawVrReticle(aim, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(1.5f), proj, target.Height),
                         VrLineWidth(proj, target.Height));
-                foreach (var marker in _vrMarkers)
+                foreach (var arrow in _vrArrows)
                 {
-                    if (!VrHudGeometry.TryProject(marker.World - eyeWorld, view, proj, target.Width, target.Height, out var at)) continue;
-                    DrawVrMarker(marker, at, proj, target.Width, target.Height);
+                    if (!VrHudGeometry.TryProject(arrow.World - eyeWorld, view, proj, target.Width, target.Height, out var at)) continue;
+                    DrawVrArrow(at, arrow.ImageDirection, VrHudGeometry.PixelsForAngleAt(MathHelper.ToRadians(2.5f), at, proj,
+                        target.Width, target.Height), VrLineWidth(proj, target.Height), arrow.Colour);
                 }
             }
             finally { _spriteBatch.End(); }
+
+            // Markers are tested against the scene's depth, read only: a nearer
+            // object that passes in front of a marker hides it, as it would hide
+            // anything behind it. Each is drawn at its anchor's depth.
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.DepthRead, RasterizerState.CullNone);
+            try
+            {
+                foreach (var marker in _vrMarkers)
+                {
+                    var anchor = VrMarkerAnchor(marker, head) - eyeWorld;
+                    if (!VrHudGeometry.TryProject(anchor, view, proj, target.Width, target.Height, out var at)) continue;
+                    _vrMarkerDepth = Math.Clamp(VrHudGeometry.BufferDepth(anchor, view, proj), 0f, 1f);
+                    DrawVrMarker(marker, at, proj, target.Width, target.Height);
+                }
+            }
+            finally
+            {
+                _spriteBatch.End();
+                _vrMarkerDepth = 0f;
+            }
+
+            // The panel last: at 1 m it is nearer than every marker.
+            if (_vrHudImage is { } hud) DrawVrPanel(hud, seatView, VrHudGeometry.SeatProjection(proj));
         }
 
         gd.SetRenderTarget(null);
@@ -296,6 +340,89 @@ public sealed partial class Game1
                 (int)size.X, (int)size.Y), Color.White);
         }
         finally { _spriteBatch.End(); }
+    }
+
+    /// <summary>A marker's anchor in the world: on the line from the head to its
+    /// object, in front of the object and at most 100 m away
+    /// (<see cref="VrHudGeometry.MarkerAnchor"/>).</summary>
+    private static Vector3 VrMarkerAnchor(in VrMarker marker, Vector3 head) =>
+        head + VrHudGeometry.MarkerAnchor(marker.World - head, marker.AngleRadians);
+
+    /// <summary>The boresight's direction in the world: the seat's forward,
+    /// taken through the eye's seat view and back out of its world view.</summary>
+    private Vector3 VrNoseInWorld(in VrEyeView eye)
+    {
+        var inEye = Vector3.TransformNormal(Vector3.Forward, VrHudGeometry.SeatView(eye));
+        return Vector3.Normalize(Vector3.TransformNormal(inEye, Matrix.Invert(_vrEyeCameras[0].View)));
+    }
+
+    /// <summary>Moves the reticle's depth toward the nearest selection or lock
+    /// whose object is under it (<see cref="VrHudGeometry.ReticleInverseDistance"/>),
+    /// or toward infinity when none is.</summary>
+    private void StepVrReticleDepth(Vector3 nose, Vector3 head)
+    {
+        float target = 0f;
+        if (_vrAimReticle)
+            foreach (var marker in _vrMarkers)
+                if (marker.Shape is VrMarkerShape.Selection or VrMarkerShape.Lock)
+                    target = MathF.Max(target, VrHudGeometry.ReticleInverseDistance(nose, marker.World - head, marker.AngleRadians));
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        float seconds = _vrReticleStepTicks == 0 ? 0f
+            : MathF.Min(0.1f, (float)((now - _vrReticleStepTicks) / (double)System.Diagnostics.Stopwatch.Frequency));
+        _vrReticleStepTicks = now;
+        _vrReticleInverseDistance = _vrAimReticle
+            ? VrHudGeometry.SmoothInverseDistance(_vrReticleInverseDistance, target, seconds)
+            : 0f;
+    }
+
+    /// <summary>Where the aim reticle falls in one eye: along the boresight at
+    /// its smoothed depth, or the boresight's own direction at infinity.</summary>
+    private bool VrReticlePixel(Vector3 nose, Vector3 head, Matrix seatView, Matrix view, Matrix proj, Vector3 eyeWorld,
+        int width, int height, out Vector2 at)
+    {
+        if (_vrReticleInverseDistance > 1e-4f)
+            return VrHudGeometry.TryProject(head + nose / _vrReticleInverseDistance - eyeWorld, view, proj, width, height, out at);
+        return VrHudGeometry.TryProjectDirection(Vector3.Forward, seatView, proj, width, height, out at);
+    }
+
+    private readonly record struct VrArrow(Vector3 World, Vector2 ImageDirection, Color Colour);
+    private readonly List<VrArrow> _vrArrows = new();
+
+    /// <summary>For the selection and the lock: when the marker falls outside
+    /// either eye's image, an arrow on a ring off the view's centre, 3 m out,
+    /// on the side the object lies.</summary>
+    private void GatherVrArrows(Vector3 head, int width, int height)
+    {
+        _vrArrows.Clear();
+        var (view0, _, _) = _vrEyeCameras[0];
+        var toWorld = Matrix.Invert(view0);
+        foreach (var marker in _vrMarkers)
+        {
+            if (marker.Shape is not (VrMarkerShape.Selection or VrMarkerShape.Lock)) continue;
+            var anchor = VrMarkerAnchor(marker, head);
+            bool inView = true;
+            for (int pass = 0; pass < 2 && inView; pass++)
+            {
+                var (view, proj, eyeWorld) = _vrEyeCameras[pass];
+                inView = VrHudGeometry.TryProject(anchor - eyeWorld, view, proj, width, height, out var at)
+                    && at.X >= 0f && at.X <= width && at.Y >= 0f && at.Y <= height;
+            }
+            if (inView) continue;
+            var inViewSpace = Vector3.TransformNormal(marker.World - head, view0);
+            var (point, direction) = VrHudGeometry.OffViewArrow(inViewSpace, VrArrowRingRadians, VrArrowRingMetres);
+            _vrArrows.Add(new VrArrow(head + Vector3.TransformNormal(point, toWorld), direction, marker.Colour));
+        }
+    }
+
+    private void DrawVrArrow(Vector2 at, Vector2 direction, float size, float line, Color colour)
+    {
+        var across = new Vector2(-direction.Y, direction.X);
+        var tip = at + direction * size * 0.6f;
+        var left = at - direction * size * 0.4f + across * size * 0.45f;
+        var right = at - direction * size * 0.4f - across * size * 0.45f;
+        VrLine(tip, left, line, colour);
+        VrLine(left, right, line, colour);
+        VrLine(right, tip, line, colour);
     }
 
     /// <summary>One line on the first stereo frame: where the head looks in seat
@@ -403,8 +530,9 @@ public sealed partial class Game1
             string text = FontText.Safe(_hudSmall, raw);
             var size = _hudSmall.MeasureString(text) * scale;
             var at = new Vector2(topCentre.X - size.X / 2f, y);
-            _spriteBatch.DrawString(_hudSmall, text, at + new Vector2(scale, scale), Color.Black * 0.7f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-            _spriteBatch.DrawString(_hudSmall, text, at, marker.Colour, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_hudSmall, text, at + new Vector2(scale, scale), Color.Black * 0.7f, 0f, Vector2.Zero, scale,
+                SpriteEffects.None, _vrMarkerDepth);
+            _spriteBatch.DrawString(_hudSmall, text, at, marker.Colour, 0f, Vector2.Zero, scale, SpriteEffects.None, _vrMarkerDepth);
             y += _hudSmall.LineSpacing * scale;
         }
     }
@@ -434,7 +562,7 @@ public sealed partial class Game1
         float length = delta.Length();
         if (length < 0.5f) return;
         _spriteBatch.Draw(_vrPixel!, from, null, colour, MathF.Atan2(delta.Y, delta.X), new Vector2(0, 0.5f),
-            new Vector2(length, width), SpriteEffects.None, 0f);
+            new Vector2(length, width), SpriteEffects.None, _vrMarkerDepth);
     }
 
     private void ReleaseVrHud()
