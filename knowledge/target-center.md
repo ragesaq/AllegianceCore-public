@@ -58,6 +58,7 @@ Which object the target-center command (native `TK_TargetCenter`; the `'` key, r
   port used, and the Controls label fixed after it.
 - 2026-11-26 — round 2: PASS-WITH-CONDITIONS; the gunner's carrier left out of the candidates, the live test and the
   test comments made to match the new rule.
+- 2026-11-26 — round 3: PASS; the pool's comment and two tests of the carrier exclusion added after it.
 
 ## Sources
 

@@ -152,7 +152,9 @@ public sealed partial class Game1
     /// (<see cref="DataWarpIGC.ClusterId"/>, <see cref="DataStationIGC.ClusterId"/>,
     /// <see cref="DataAsteroidIGC.ClusterId"/>). This only shrinks the candidate
     /// POOL to what is really in the player's current sector; how a candidate is
-    /// CHOSEN from within that pool (<see cref="SelectCandidates"/>) is untouched.
+    /// CHOSEN from within that pool is the consumer's rule: <see cref="SelectCandidates"/>
+    /// for the autopilot's implicit pick, <see cref="PickFrontTarget"/> for target
+    /// center, which also skips a gunner's carrier (the pool keeps it).
     /// The self / not-visible / no-update ship filters are preserved exactly.
     /// </summary>
     internal static List<CandidateObject> GatherSectorCandidates(
@@ -1452,7 +1454,8 @@ public sealed partial class Game1
     /// pose is the carrier's render pose (its last update when it has none) and
     /// the locally integrated turret aim; the own-ship simulation is not stepped
     /// while boarded, so <see cref="TryOwnPose"/> would give a frozen pose
-    /// there. The carrier is left out of the candidates.</para></summary>
+    /// there. <see cref="PickFrontTarget"/> skips the carrier, which stays in the
+    /// gathered pool.</para></summary>
     private void SelectCentermostTarget()
     {
         if (!TryOwnPose(out var pos, out var orient, out _)) return;

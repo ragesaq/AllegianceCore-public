@@ -4,6 +4,18 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #16 target center by angle off the nose, round 3
+
+- Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-target-center-r3/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-target-center-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2384326..2165561`, head `2165561`, tree `68ee129`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. N1 to N4 fixed. Fixed after round 3:
+  1. L1, low: the candidate pool's comment names both consumers and says `PickFrontTarget` skips the carrier, which
+     stays in the pool.
+  2. L2, low: tests `ExcludingTheCarrier_KeepsAnotherKindWithTheSameId` and `CarrierAsTheCurrentTarget_IsNotKept`.
+     Each fails when its guard is broken (the kind check removed; the exclusion moved after the current-target test).
+
 ## 2026-11-26: PR #16 target center by angle off the nose, round 2
 
 - Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/receipt.md)

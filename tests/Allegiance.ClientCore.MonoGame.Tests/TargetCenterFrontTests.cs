@@ -86,6 +86,21 @@ public class TargetCenterFrontTests
     }
 
     [Fact]
+    public void ExcludingTheCarrier_KeepsAnotherKindWithTheSameId()
+    {
+        var objs = new[] { Obj(Game1.TargetKind.Ship, 5, 0, 0, -10), Obj(Game1.TargetKind.Station, 5, 400, 0, -1000) };
+        var picked = Game1.PickFrontTarget(objs, Origin, Forward, null, excludeShipId: 5);
+        Assert.Equal((Game1.TargetKind.Station, (short)5), (picked!.Value.Kind, picked.Value.Id));
+    }
+
+    [Fact]
+    public void CarrierAsTheCurrentTarget_IsNotKept()
+    {
+        var current = new Game1.AutopilotTarget(Game1.TargetKind.Ship, 5, "Ship5");
+        Assert.Null(Game1.PickFrontTarget(new[] { Obj(Game1.TargetKind.Ship, 5, 0, 0, -10) }, Origin, Forward, current, excludeShipId: 5));
+    }
+
+    [Fact]
     public void NoObjects_PicksNothing() =>
         Assert.Null(Game1.PickFrontTarget(new List<Game1.CandidateObject>(), Origin, Forward, null));
 }
