@@ -4,6 +4,15 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #18 VR recenter button, round 3
+
+- Record: [summary](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/summary.md), [receipt](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Light delta patch review of `7d3b45f..d9522e2`, head `d9522e2`, tree `50417d1`, in a standalone clone with no
+  remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no new findings. F4 fixed: the session's end is the only stop that leaves the presenter alive, and a
+  press made while stopped is kept until the next begun frame.
+
 ## 2026-11-26: PR #18 VR recenter button, round 2
 
 - Record: [summary](patch-review-2026-11-26T06-00-00Z-allegiancecore-vr-recenter-r2/summary.md), [receipt](patch-review-2026-11-26T06-00-00Z-allegiancecore-vr-recenter-r2/receipt.md)

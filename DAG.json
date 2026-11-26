@@ -218,7 +218,7 @@
       "needs": [
         "ragesaq-006"
       ],
-      "next": "Asked by ragesaq 2026-11-25 after the combined headset test of PR #15 and PR #14: the view was not perfectly aligned. Branch port/vr-recenter, stacked on port/hotas-bindings (PR #14), adds the joystick command ViewRecenter and the presenter's recenter (knowledge/joystick-input.md, \"VR recenter button\"). Bound to throttle button 42 (logical 43 in VPC), ragesaq's choice after a capture. Round 1 review (head 90979ec): PASS, three low findings fixed (a recenter failure no longer ends VR, a press while untracked waits for tracking, an independent yaw test). Round 2 (head 7d3b45f): PASS, F4 low fixed (the session's end cancels a waiting press). Next: a headset test by ragesaq and merge approval. Owner of the work: Port.",
+      "next": "Asked by ragesaq 2026-11-25 after the combined headset test of PR #15 and PR #14: the view was not perfectly aligned. Branch port/vr-recenter, stacked on port/hotas-bindings (PR #14), adds the joystick command ViewRecenter and the presenter's recenter (knowledge/joystick-input.md, \"VR recenter button\"). Bound to throttle button 42 (logical 43 in VPC), ragesaq's choice after a capture. Round 1 review (head 90979ec): PASS, three low findings fixed (a recenter failure no longer ends VR, a press while untracked waits for tracking, an independent yaw test). Round 2 (head 7d3b45f): PASS, F4 low fixed (the session's end cancels a waiting press). Round 3 (head d9522e2): PASS, no findings. Next: a headset test by ragesaq and merge approval. Owner of the work: Port.",
       "links": [
         "knowledge/joystick-input.md"
       ],
