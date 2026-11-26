@@ -627,16 +627,28 @@ A zone lays out its cut-outs in rows, pushed toward the flight block: comms down
 navigation up and right, systems up and left. The two systems parts share their right edge and meet in the image,
 so they are stacked right-aligned with no gap and join as they were. A pixel covers about 0.045°, what it covered on
 the step 1 panel for a 1280-wide image, so the small font's 14 px line is about 0.63°. At 1280 by 720 every zone
-holds its content at that scale. A zone whose content is larger than the zone is scaled down as a whole and the game
-logs it once (`[vr] HUD zone`).
+holds its content at that scale.
+
+**Which image sizes get zones** *(review round 1 finding, 2026-11-26)*. The cut-outs follow the flat layout's
+anchors: some are fixed pixels (the 480 px comms strip, the 330 px orders block, the 200 px location box), some follow
+the image (comms down to 0.40 h, the target pane and the minimap). They hold together only near the 1280 by 720 image
+they were taken from. For a larger image, comms and systems grow past their zones, and fitting them would shrink the
+text under the 0.6° floor (at 1920 by 1080 a 14 px line would be about 0.36°), which rule 6 forbids. For a smaller one
+the cut-outs overlap, so an element would show in two zones. So before it uses the zones, the game checks the layout
+for the image's size (`VrHudZones.ClassicLayout`): every cut-out lies in the image, no two share pixels, and no zone
+scales its 14 px line under 0.6°. When the check fails, the whole HUD image is shown on one panel below the nose, as
+for another skin, and the game logs the reason once for that size (`[vr] HUD zones do not hold`). The default window,
+1280 by 720, gets zones. Of the sizes the tests try, it passes from 1140 to 1440 px across and from 534 to 740 px
+high (comms reaches the floor at about 760 px high), and fails at 1024 px across or less, at 480 px high or less, and
+at 768 px high or more.
 
 **What moved in VR.** The port's text lines go to the image's lower left, which the flat layout leaves empty
 (`VrHudGeometry.PortTextTop`), so they can be cut out alone. The keys hint is kept to the 480 px comms strip, so it
 stays clear of the weapons pane: a long hint is drawn smaller, as the flat game does for a narrow window. The target
 bearing arrow is left out, as the zone table says.
 
-**Modal screens.** While the expanded starmap, the scoreboard, pilot info, the team pane, help, credits, the main
-menu, the key bindings, the settings panel, the quick-chat menu, command view, the hangar, death or the lifepod, the
+**Modal screens.** While the expanded starmap, the scoreboard, pilot info, the team pane, the game-state pane (F7),
+the player pings, the spectator's sector map, the investment pane, help, credits, the main menu, the key bindings, the settings panel, the quick-chat menu, command view, the hangar, death or the lifepod, the
 ripcord countdown, the briefing or the game-over panel is up, or when the frame has no in-flight HUD, the whole HUD
 image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block is hidden
 (`Game1.VrHudModalOpen`). A skin other than Classic keeps the whole image on one panel below the nose at 2 m
@@ -652,13 +664,27 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
   - At 1280 by 720 nothing is scaled.
   - The two systems parts join.
   - A zone too small for its content scales it to fit.
-- The VR HUD test set: 178 of 178.
-- 11 mutants of the zone code: 10 are caught by a test. The one left, a larger target margin, is still a valid layout.
+  - `ClassicLayout` gives zones for 1280 by 720 and 1280 by 740. It refuses 1600 by 900, 1920 by 1080,
+    2560 by 1440 and 1280 by 768 for the text floor. It refuses 800 by 480 and 640 by 360 for overlapping
+    cut-outs, and 400 by 300 for a cut-out off the image.
+  - Over 100 sizes from 640 by 360 to 1920 by 1080, wherever the zones are used, no two cut-outs share pixels and
+    a 14 px line keeps 0.6°.
+- The zone and geometry tests: 228 of 228. The whole suite: 8 failures, in shader hashes, the voice catalog,
+  the mouse wheel, profile storage and the screenshot path, none in the VR HUD code; the same 8 as before
+  layer 4.
+- 14 mutants of the zone code, each caught by a test. Three remove one check of `ClassicLayout` each, and one
+  lowers its floor. The first run had 11 mutants: 10 were caught, and the one left, a larger target margin, was a
+  valid layout, so the margin's lower bound got a test of its own.
 - A 60 s training run in VR under SteamVR, with nobody wearing the headset. The mirror window showed the minimap and
   location in D at the left, the joined systems pane in E at the right, and the wrapped port lines in C. Zone B
   was above the view of the headset, which lay pitched 14° down.
 
 **Known gaps.**
+- Zones only for an image near 1280 by 720: of the sizes tried, 1140 to 1440 px across and 534 to 740 px high
+  (above). A larger window, such as
+  1920 by 1080 through `--window` or a resize, gets the whole image on one panel. There the text is smaller than
+  0.6°, as it was on the step 2 panel. Zones for every size would need cut-outs taken from each element's own drawn
+  rectangle at that size, rather than from fixed anchors.
 - The training callouts are drawn near the image's centre, which no cut-out holds, so VR does not show them.
 - The ordinary tips at the foot of the image are cut out with the target zone, not with comms.
 - The objectives' bearing arrows fall in the systems cut-out.
@@ -704,6 +730,8 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-26: review round 1 of layer 4 (WARN): the zones are used only for the image sizes whose layout they hold,
+  and four more in-flight full panes are shown whole (above).
 - 2026-11-26: Port built layer 4, the zones, for the Classic skin on `port/vr-hud-zones` (above), stacked on
   PR #22.
 - 2026-11-26: ragesaq found the panel's text on the ring and asked for layout criteria covering every element;

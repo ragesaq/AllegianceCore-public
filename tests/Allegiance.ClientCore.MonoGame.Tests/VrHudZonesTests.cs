@@ -229,6 +229,82 @@ public sealed class VrHudZonesTests
         }
     }
 
+    [Fact]
+    public void The_zones_hold_the_default_1280_by_720_image()
+    {
+        var placements = VrHudZones.ClassicLayout(1280, 720, out var reason);
+        Assert.True(placements is not null, reason);
+        Assert.Equal(VrHudZones.ClassicCutouts(1280, 720).Count, placements!.Count);
+    }
+
+    [Theory]
+    [InlineData(1920, 1080)]
+    [InlineData(1600, 900)]
+    [InlineData(2560, 1440)]
+    public void A_larger_image_whose_zones_would_shrink_the_text_is_refused(int width, int height)
+    {
+        // Rule 6: a zone never shrinks its text under the floor.
+        Assert.Null(VrHudZones.ClassicLayout(width, height, out var reason));
+        Assert.Contains("floor", reason);
+    }
+
+    [Theory]
+    [InlineData(800, 480)]
+    [InlineData(640, 360)]
+    public void A_smaller_image_whose_cutouts_overlap_or_leave_it_is_refused(int width, int height)
+    {
+        Assert.Null(VrHudZones.ClassicLayout(width, height, out var reason));
+        Assert.True(reason!.Contains("share pixels") || reason.Contains("not inside"), reason);
+    }
+
+    [Fact]
+    public void A_cutout_off_the_image_is_refused_before_it_is_sampled()
+    {
+        // 400 px across: the 480 px comms strip starts left of the image.
+        Assert.Null(VrHudZones.ClassicLayout(400, 300, out var reason));
+        Assert.Contains("'comms'", reason);
+        Assert.Contains("not inside", reason);
+    }
+
+    [Fact]
+    public void The_floor_is_the_line_between_zones_and_the_panel()
+    {
+        // Comms runs to 0.40 h + 22: at 740 px high its 14 px line keeps 0.6°,
+        // at 768 it would fall to about 0.59°.
+        Assert.NotNull(VrHudZones.ClassicLayout(1280, 740, out var reason));
+        Assert.Null(VrHudZones.ClassicLayout(1280, 768, out reason));
+        Assert.Contains("floor", reason);
+    }
+
+    public static TheoryData<int, int> SweepSizes()
+    {
+        var sizes = new TheoryData<int, int>();
+        foreach (int w in new[] { 640, 800, 1024, 1140, 1200, 1280, 1366, 1440, 1600, 1920 })
+            foreach (int h in new[] { 360, 480, 534, 600, 680, 720, 768, 800, 900, 1080 })
+                sizes.Add(w, h);
+        return sizes;
+    }
+
+    [Theory]
+    [MemberData(nameof(SweepSizes))]
+    public void Wherever_the_zones_are_used_no_pixel_is_shown_twice_and_text_keeps_the_floor(int width, int height)
+    {
+        var placements = VrHudZones.ClassicLayout(width, height, out _);
+        if (placements is null) return;
+        var image = new Rectangle(0, 0, width, height);
+        foreach (var p in placements)
+        {
+            Assert.True(image.Contains(p.Cutout.Source) && p.Cutout.Source.Width > 0 && p.Cutout.Source.Height > 0, p.Cutout.Name);
+            Assert.True(p.Where.Within(VrHudZones.Get(p.Cutout.Zone)), p.Cutout.Name);
+            float line = VrHudZones.SmallLinePixels * p.Where.Height / p.Cutout.Source.Height;
+            Assert.True(line >= VrHudZones.TextFloorDegrees - 1e-4f, $"{p.Cutout.Name}: a 14 px line is {line}°");
+        }
+        for (int i = 0; i < placements.Count; i++)
+            for (int j = i + 1; j < placements.Count; j++)
+                Assert.False(placements[i].Cutout.Source.Intersects(placements[j].Cutout.Source),
+                    $"{placements[i].Cutout.Name} and {placements[j].Cutout.Name} share pixels");
+    }
+
     private static void AssertNear(Vector3 expected, Vector3 actual)
     {
         Assert.True(Vector3.Distance(expected, actual) < 1e-4f, $"expected {expected}, got {actual}");

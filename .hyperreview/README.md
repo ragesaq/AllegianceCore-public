@@ -4,6 +4,31 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 1
+
+- Record: [summary](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/summary.md), [receipt](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `601a46a..13614bf`, head `13614bf`, tree `c89b94f`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. The 1280 by 720 image was sound; the defects were in other image sizes and the modal list.
+  1. F1, high (for an image larger than 1280 by 720 the zones shrank their text under the 0.6° floor, against
+     rule 6): fixed. `VrHudZones.ClassicLayout` gives the zones only when no zone scales its 14 px line under
+     0.6°; otherwise the whole image goes on one panel, and the game logs why. Making the HUD image a fixed
+     1280 by 720 in VR, the reviewer's other suggestion, was not taken: the HUD reads the back buffer's size in
+     18 places. Zones for every size need cut-outs from each element's drawn rectangle; the note records it as
+     a known gap.
+  2. F2, medium (for a smaller image the cut-outs overlapped, so an element showed in two zones): fixed by the
+     same check, which also refuses a cut-out that overlaps another or leaves the image.
+  3. F3, medium (the game-state pane, the player pings and the spectator's sector map were cut into zones):
+     fixed, with a fourth the review did not list, the investment pane, which also opens in flight full screen.
+     The suggested test of the modal list is declined: it would list the same flags as the code, and the flags
+     are `Game1` state that no pure function holds.
+  4. F4, low (the placement log named the fallback panel while the zones or the modal panel were drawn): fixed.
+     The log names the surface drawn.
+  5. F5, low, record: fixed. The note says which sizes get zones and why, and gives the mutant count: 14, each
+     caught (the record of the first run said 10 of 11, and the one left had since got its own test).
+- The fixes change code, so they are re-reviewed in round 2.
+
 ## 2026-11-26: PR #22 VR HUD step 2, round 4
 
 - Record: [summary](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/summary.md), [receipt](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/receipt.md)

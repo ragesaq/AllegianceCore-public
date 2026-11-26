@@ -76,7 +76,7 @@ public static class VrHudZones
     /// across at 1 m, about 57.6°), about 0.045°. It is the same for every image
     /// size, because the Classic HUD draws its text at fixed pixel sizes: the
     /// small font's line (14 px) stays at about 0.63°, above the 0.6° floor
-    /// (rule 6).</summary>
+    /// (rule 6), while its zone keeps it unscaled.</summary>
     public static readonly float DegreesPerPixel = MathHelper.ToDegrees(2f * MathF.Atan(0.55f)) / 1280f;
 
     /// <summary>Where a zone puts its content: across (left, centre, right) and
@@ -114,7 +114,8 @@ public static class VrHudZones
 
     /// <summary>The Classic HUD's cut-outs for a HUD image this size, from the
     /// flat layout's own rules (knowledge/vr-hud-design.md, "Layer 4 as
-    /// built"). The sources do not overlap, so no element is shown twice. In VR
+    /// built"). <see cref="ClassicLayout"/> checks that the sources lie in the
+    /// image and do not overlap, so no element is shown twice. In VR
     /// the port's text lines are drawn in the image's lower left
     /// (<see cref="VrHudGeometry.PortTextTop"/>) and the keys hint is kept
     /// within the comms strip.</summary>
@@ -227,6 +228,53 @@ public static class VrHudZones
                 y += RowHeight(row) + layout.RowGapPixels;
             }
         }
+        return placements;
+    }
+
+    /// <summary>The text size floor (rule 6), and the small font's line, the
+    /// smallest text the Classic HUD draws in a zone.</summary>
+    public const float TextFloorDegrees = 0.6f;
+    public const int SmallLinePixels = 14;
+
+    /// <summary>The least scale a zone may show its content at: below it the
+    /// small font's line falls under <see cref="TextFloorDegrees"/>.</summary>
+    public static float MinimumScale => TextFloorDegrees / (SmallLinePixels * DegreesPerPixel);
+
+    /// <summary>Classic's zones for a HUD image this size, or null, with the
+    /// reason, when the zones cannot hold its layout: a cut-out leaves the
+    /// image or has no area, two cut-outs share pixels (an element would be
+    /// shown twice, or cut in two), or a zone would shrink its text below the
+    /// floor (rule 6: "never shrinks it"). The cut-outs follow the flat
+    /// layout's anchors, which hold together only near the 1280 by 720 image
+    /// they were taken from; for another size the caller shows the whole image
+    /// on one panel.</summary>
+    public static IReadOnlyList<Placement>? ClassicLayout(int imageWidth, int imageHeight, out string? reason)
+    {
+        var cutouts = ClassicCutouts(imageWidth, imageHeight);
+        var image = new Rectangle(0, 0, imageWidth, imageHeight);
+        for (int i = 0; i < cutouts.Count; i++)
+        {
+            var a = cutouts[i];
+            if (a.Source.Width <= 0 || a.Source.Height <= 0 || !image.Contains(a.Source))
+            {
+                reason = $"'{a.Name}' {a.Source} is not inside the image";
+                return null;
+            }
+            for (int j = i + 1; j < cutouts.Count; j++)
+                if (a.Source.Intersects(cutouts[j].Source))
+                {
+                    reason = $"'{a.Name}' and '{cutouts[j].Name}' share pixels";
+                    return null;
+                }
+        }
+        var placements = Place(cutouts);
+        foreach (var p in placements)
+            if (p.Scale < MinimumScale)
+            {
+                reason = $"zone {p.Cutout.Zone} would scale its text by {p.Scale:0.00}, under the {TextFloorDegrees}° floor";
+                return null;
+            }
+        reason = null;
         return placements;
     }
 

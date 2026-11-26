@@ -61,6 +61,8 @@ public sealed partial class Game1
     // coordinates, for the HUD image size they were laid out for.
     private readonly List<(Vector3 Tl, Vector3 Tr, Vector3 Bl, Vector3 Br, Vector2 Uv0, Vector2 Uv1)> _vrZoneQuads = new();
     private (int Width, int Height) _vrZoneImageSize;
+    // Whether the zones hold the layout of an image that size.
+    private bool _vrZonesFit;
     // The flight reference block (layer 3) and the HUD model of the stereo
     // frame it is drawn from; the flight-path marker's world direction (layer 1).
     private RenderTarget2D? _vrFlightImage;
@@ -349,10 +351,12 @@ public sealed partial class Game1
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
         // Layer 4: a modal screen is shown alone on one panel ahead, with the
-        // flight block hidden; otherwise Classic's elements go to their zones,
-        // and another skin's HUD image hangs on one panel below the nose.
+        // flight block hidden; otherwise Classic's elements go to their zones
+        // when they hold this image's layout, and the HUD image of another skin,
+        // or of a size the zones do not hold, hangs on one panel below the nose.
         bool modal = VrHudModalOpen(_vrHudModel);
-        bool zoned = !modal && _hudSkins?.Active.Definition.Id == Rendering.Skins.HudSkinIds.Classic;
+        bool zoned = !modal && _hudSkins?.Active.Definition.Id == Rendering.Skins.HudSkinIds.Classic
+            && _vrHudImage is { } zoneImage && VrZonesFit(zoneImage);
         var flightImage = !modal && _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
         for (int pass = 0; pass < 2; pass++)
         {
@@ -361,7 +365,8 @@ public sealed partial class Game1
             gd.SetRenderTarget(target);
             var seatView = VrHudGeometry.SeatView(eye);
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
-            if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
+            if (pass == 0 && !_vrHudLogged)
+                LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage, zoned, modal ? VrHudZones.ModalPanel : VrPanel);
 
             // The flight reference block first, 10 m out in the seat: the
             // reticle, the arrows and the markers draw over it.
@@ -537,21 +542,25 @@ public sealed partial class Game1
     /// <summary>One line on the first stereo frame: where the head looks in seat
     /// space and where the panel's centre falls in the left eye, so a log shows
     /// whether the panel was in view (a headset not worn points anywhere).</summary>
-    private void LogVrHudPlacement(in VrEyeView eye, Matrix seatView, Matrix proj, RenderTarget2D target, RenderTarget2D? hud)
+    private void LogVrHudPlacement(in VrEyeView eye, Matrix seatView, Matrix proj, RenderTarget2D target, RenderTarget2D? hud,
+        bool zoned, in VrHudGeometry.Panel panel)
     {
         _vrHudLogged = true;
         var look = Vector3.Transform(Vector3.Forward, Quaternion.Normalize(eye.Orientation));
-        string panel = "no HUD image";
-        if (hud is not null)
+        string surface;
+        if (hud is null) surface = "no HUD image";
+        else if (zoned) surface = $"HUD in its zones, {_vrZoneQuads.Count} cut-outs";
+        else
         {
-            var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrPanel, hud.Width, hud.Height);
+            var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(panel, hud.Width, hud.Height);
             var centre = (tl + tr + bl + br) / 4f;
-            panel = VrHudGeometry.TryProject(centre, seatView, proj, target.Width, target.Height, out var px)
-                ? $"panel centre at pixel ({px.X:0},{px.Y:0}) of {target.Width}x{target.Height}"
-                : "panel centre behind the eye";
+            surface = (VrHudGeometry.TryProject(centre, seatView, proj, target.Width, target.Height, out var px)
+                    ? $"panel centre at pixel ({px.X:0},{px.Y:0}) of {target.Width}x{target.Height}"
+                    : "panel centre behind the eye")
+                + $"; panel {panel.DistanceMetres:0.##} m, {MathHelper.ToDegrees(panel.PitchDownRadians):0.#} deg below the nose, "
+                + $"{panel.WidthMetres:0.##} m wide";
         }
-        Console.WriteLine($"[vr] HUD in the eyes: head looks ({look.X:0.00},{look.Y:0.00},{look.Z:0.00}) in seat space; {panel}; "
-            + $"panel {VrPanel.DistanceMetres:0.##} m, {MathHelper.ToDegrees(VrPanel.PitchDownRadians):0.#} deg below the nose, {VrPanel.WidthMetres:0.##} m wide");
+        Console.WriteLine($"[vr] HUD in the eyes: head looks ({look.X:0.00},{look.Y:0.00},{look.Z:0.00}) in seat space; {surface}");
     }
 
     private static Texture2D CreateVrPixel(GraphicsDevice gd)
@@ -563,27 +572,37 @@ public sealed partial class Game1
 
     /// <summary>Whether the HUD image holds a modal screen, shown alone on
     /// <see cref="VrHudZones.ModalPanel"/> with the flight block hidden: no
-    /// in-flight HUD this frame, or the expanded starmap, the scoreboard and
-    /// the other full panes, the menus, command view, the hangar, death or the
-    /// lifepod, the ripcord countdown, the briefing or the game-over panel.
-    /// Their screens are laid out for the whole image, so they are not cut.</summary>
+    /// in-flight HUD this frame, or the expanded starmap, the scoreboard,
+    /// pilot info, the team pane, the game-state pane (F7), the player pings,
+    /// the spectator's sector map, the investment pane, the menus, command
+    /// view, the hangar, death or the lifepod, the ripcord countdown, the
+    /// briefing or the game-over panel. Their screens are laid out for the
+    /// whole image, so they are not cut.</summary>
     private bool VrHudModalOpen(HudModel? model) =>
         model is null || _minimapExpanded || _scoreboardVisible || _pilotInfoVisible || _teamPaneVisible
+        || _consolePanes.GameState || _playerPingsVisible || _spectatorMapOpen || _investActive
         || _helpVisible || _creditsVisible || _mainMenuVisible || _keyBindVisible || _graphicsSettingsVisible
         || _qcMenuOpen || CommandCameraActive || model.Context.Docked || model.Context.CommandView
         || model.DeathVisible || model.PodVisible || _session.World.RipcordActive
         || _session.World.GameOverResult is not null || IsBriefingVisible(out _);
 
-    /// <summary>Layer 4: each Classic cut-out of the HUD image on its own quad
-    /// in its zone, at the zone's depth (<see cref="VrHudZones"/>). The layout
-    /// is made again only when the image changes size.</summary>
-    private void DrawVrZones(Texture2D hud, Matrix seatView, Matrix proj)
+    /// <summary>Whether Classic's zones hold the layout of a HUD image this
+    /// size (<see cref="VrHudZones.ClassicLayout"/>), laying them out when the
+    /// size changes. When they do not, the game logs why, once per size.</summary>
+    private bool VrZonesFit(Texture2D hud)
     {
         if (_vrZoneImageSize != (hud.Width, hud.Height))
         {
             _vrZoneImageSize = (hud.Width, hud.Height);
             _vrZoneQuads.Clear();
-            var placements = VrHudZones.Place(VrHudZones.ClassicCutouts(hud.Width, hud.Height));
+            var placements = VrHudZones.ClassicLayout(hud.Width, hud.Height, out var reason);
+            _vrZonesFit = placements is not null;
+            if (placements is null)
+            {
+                Console.WriteLine($"[vr] HUD zones do not hold a {hud.Width}x{hud.Height} image ({reason}); "
+                    + "the whole HUD image is shown on one panel");
+                return false;
+            }
             foreach (var p in placements)
             {
                 var (tl, tr, bl, br) = VrHudZones.Quad(p.Where, VrHudZones.Get(p.Cutout.Zone).DistanceMetres);
@@ -598,6 +617,14 @@ public sealed partial class Game1
             }
             Console.WriteLine($"[vr] HUD zones: {placements.Count} cut-outs laid out for a {hud.Width}x{hud.Height} image");
         }
+        return _vrZonesFit;
+    }
+
+    /// <summary>Layer 4: each Classic cut-out of the HUD image on its own quad
+    /// in its zone, at the zone's depth (<see cref="VrHudZones"/>), as
+    /// <see cref="VrZonesFit"/> laid them out.</summary>
+    private void DrawVrZones(Texture2D hud, Matrix seatView, Matrix proj)
+    {
         foreach (var q in _vrZoneQuads)
             DrawVrQuad(hud, q.Tl, q.Tr, q.Bl, q.Br, q.Uv0, q.Uv1, seatView, proj);
     }
