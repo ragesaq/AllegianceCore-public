@@ -25,4 +25,9 @@ public interface IVrFrameSink : IDisposable
 
     /// <summary>True once the sink has given up; the game then runs flat.</summary>
     bool Failed { get; }
+
+    /// <summary>Asks the sink to make the head's current position and facing the
+    /// seated origin of the view, from the next headset frame on. Called on the
+    /// game thread; a sink with no tracked head ignores it.</summary>
+    void Recenter() { }
 }

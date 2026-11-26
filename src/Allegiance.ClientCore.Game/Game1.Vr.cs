@@ -32,6 +32,10 @@ public sealed partial class Game1
 
     private void KeepVrPacing() => _vrHost?.KeepPacing();
 
+    /// <summary>Recentres the seated VR view on the head (the joystick's
+    /// ViewRecenter button). Does nothing without a headset.</summary>
+    private void RecenterVr() => _vrHost?.Recenter();
+
     /// <summary>True while the scene is being drawn into an eye image.</summary>
     private bool VrEyePass => _vrPass >= 0;
 

@@ -11,6 +11,7 @@ Format: `- YYYY-MM-DD — owner — what was finished [node-id] (PR #n)` — or
 
 ---
 
+- 2026-11-25 — ragesaq — VR: the sky (starfield, planets, galaxies) drawn at infinity in each eye, so the eyes converge on it; seen in the headset [ragesaq-009] (commit 4330ed7)
 - 2026-11-25 — ragesaq — VR milestone 2: the scene drawn once per eye with the head pose and the HUD on a quad; seen in the headset, follow-ups ragesaq-009 to ragesaq-011 [ragesaq-007] (commit 2572cdd)
 - 2026-11-25 — ragesaq — VR milestone 1: the flat frame in an OpenXR headset on one quad layer, opt-in with --vr, flat fallback on any failure [ragesaq-002] (commit 1c521ad)
 - 2026-11-24 — ragesaq — Work before adoption is not itemized here; the repository's history through this commit is its record [ragesaq-000] (commit b76d6c0)

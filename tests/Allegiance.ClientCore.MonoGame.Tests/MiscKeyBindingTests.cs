@@ -12,14 +12,11 @@ namespace Allegiance.ClientCore.MonoGame.Tests;
 /// <summary>
 /// P417 — unit tests for the small leftover key-bindings batch:
 /// <list type="bullet">
-/// <item><b>TargetCenter</b> — the one with a real ranking requirement: select the
-/// candidate closest to the RETICLE/crosshair, not closest in raw distance. This
-/// port reuses the existing <see cref="Game1.SelectCandidates"/> nearest-to-
-/// crosshair ranking (the same screen-space DistSq ordering CollectTargetCandidates
-/// applies) — the native c_ttFront nearest-target analogue (WinTrek.cpp:10127-10151).
-/// These tests prove that ranking picks the on-reticle candidate even when a
-/// different candidate is physically closer, i.e. the "closest to view center"
-/// semantic the brief demands.</item>
+/// <item><b>Candidate ranking</b> — <see cref="Game1.SelectCandidates"/> orders
+/// in-view candidates nearest to the crosshair, not nearest in raw distance. Its
+/// remaining user is the autopilot's implicit pick (G key, touch Autopilot) through
+/// PickNearestTarget. TargetCenter no longer uses it: it follows native c_ttFront
+/// by angle off the nose (<see cref="TargetCenterFrontTests"/>).</item>
 /// <item><b>ScreenShot</b> — the standalone QoL capture: a timestamped PNG written
 /// to a sensible <c>screenshots/</c> path via the shared RGBA→PNG encoder. Tests
 /// pin the path format (sorted, collision-resistant, under the working dir) and
@@ -29,16 +26,15 @@ namespace Allegiance.ClientCore.MonoGame.Tests;
 /// </summary>
 public class MiscKeyBindingTests
 {
-    // ── TargetCenter: nearest to the reticle, not nearest in raw distance ──
+    // ── The autopilot implicit-pick list (SelectCandidates): nearest to the crosshair ──
 
     private static Game1.CandidateObject CamObj(short id, SimVec pos) =>
         new(pos, Game1.TargetKind.Ship, id, $"ship{id}");
 
-    /// <summary>⭐ TargetCenter's core: a candidate ON the reticle is selected even
-    /// though a different candidate is physically CLOSER in raw distance but sits
-    /// off to one side of the crosshair. This is the exact semantic the brief pins
-    /// ("closest to the reticle/crosshair, not closest in raw distance") and the
-    /// discriminator that makes TargetCenter ≠ the raw-distance family.</summary>
+    /// <summary>⭐ The implicit-pick list's core: a candidate ON the crosshair is
+    /// ranked first even though a different candidate is physically CLOSER in raw
+    /// distance but sits off to one side of it. (TargetCenter used this list
+    /// before it followed native c_ttFront; see TargetCenterFrontTests.)</summary>
     [Fact]
     public void Center_picks_on_reticle_candidate_over_a_physically_closer_off_reticle_one()
     {
@@ -65,8 +61,8 @@ public class MiscKeyBindingTests
     }
 
     /// <summary>⭐ An object physically nearest but OUTSIDE the frustum is never
-    /// offered, while the on-reticle in-view object is — the reticle metric is
-    /// screen-relative, so raw world distance is irrelevant to TargetCenter.</summary>
+    /// offered, while the on-crosshair in-view object is — the metric is
+    /// screen-relative, so raw world distance is irrelevant to this list.</summary>
     [Fact]
     public void Center_ignores_out_of_frustum_candidates_regardless_of_raw_distance()
     {
@@ -82,10 +78,9 @@ public class MiscKeyBindingTests
         Assert.Equal(new short[] { 2 }, ordered.Select(x => x.Id).ToArray());
     }
 
-    /// <summary>⭐ Priority tiers still apply under TargetCenter: with a ship and a
-    /// dense asteroid field both in view, the ship tier wins (the P256 tier rule),
-    /// so TargetCenter still surfaces the meaningful object — not a rock that
-    /// happens to sit dead-centre.</summary>
+    /// <summary>⭐ Priority tiers apply to this list: with a ship and a dense
+    /// asteroid field both in view, the ship tier wins (the P256 tier rule). This
+    /// is the rule TargetCenter no longer follows.</summary>
     [Fact]
     public void Center_respects_priority_tiers_ship_beats_asteroid()
     {
