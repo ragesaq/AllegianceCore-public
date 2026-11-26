@@ -211,6 +211,18 @@
       "updated": "2026-11-25"
     },
     {
+      "id": "ragesaq-013",
+      "title": "Target center picks by angle off the nose, as native",
+      "owner": "ragesaq",
+      "status": "review",
+      "needs": [],
+      "next": "Found in ragesaq's headset test 2026-11-25: the HOTAS select-target button (target center) picked objects away from the reticle, because the port preferred any ship in view over the object on the nose. Branch port/target-center-native ports native's c_ttFront rule (knowledge/target-center.md). Cross-family review rounds 1 to 3 done (round 3 PASS, its two low findings fixed). Next: ragesaq's headset test and merge approval of its pull request. Owner of the work: Port.",
+      "links": [
+        "knowledge/target-center.md"
+      ],
+      "updated": "2026-11-26"
+    },
+    {
       "id": "ragesaq-014",
       "title": "VR: a joystick button recenters the seated view",
       "owner": "ragesaq",

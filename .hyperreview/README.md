@@ -44,6 +44,50 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
   - Observation kept for the headset test: a recenter also re-places the flat panel in front of the head's facing at
     the press.
 
+## 2026-11-26: PR #16 target center by angle off the nose, round 3
+
+- Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-target-center-r3/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-target-center-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2384326..2165561`, head `2165561`, tree `68ee129`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. N1 to N4 fixed. Fixed after round 3:
+  1. L1, low: the candidate pool's comment names both consumers and says `PickFrontTarget` skips the carrier, which
+     stays in the pool.
+  2. L2, low: tests `ExcludingTheCarrier_KeepsAnotherKindWithTheSameId` and `CarrierAsTheCurrentTarget_IsNotKept`.
+     Each fails when its guard is broken (the kind check removed; the exclusion moved after the current-target test).
+
+## 2026-11-26: PR #16 target center by angle off the nose, round 2
+
+- Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `ece6de1..2384326`, head `2384326`, tree `1cfcf6e`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. F1 to F3 fixed, with residuals in N2 and N4. Fixed after round 2 in `3c03315`:
+  1. N1, medium: in a turret the carrier could be the first pick, while native's `FindTarget` never returns it.
+     `PickFrontTarget` takes the ship to leave out; test `GunnersCarrier_IsNeverPicked` fails without it. The carrier's
+     last update is the fallback when it has no render pose.
+  2. N2, low: the artwork-gated live test now ranks with `PickFrontTarget` from the own ship's real pose; it passes.
+  3. N3, low: the round 1 entry now says the parity citation was fixed.
+  4. N4, low: the unit tests of `SelectCandidates` are retitled as the autopilot implicit-pick list.
+  - Observations kept: a key press uses the previous frame's pose (one frame stale); native's rider without a turret
+    is not modelled apart from a gunner (existing behaviour).
+
+## 2026-11-26: PR #16 target center by angle off the nose, round 1
+
+- Record: [summary](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/summary.md), [receipt](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `3a3b6e1..ece6de1`, head `ece6de1`, tree `21598bb`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All three findings fixed in `efebff1`:
+  1. F1, medium: the record said the port reused the T key's list; it was the autopilot implicit pick's. The note and
+     the test comment now name it.
+  2. F2, medium: in a turret the pick used a frozen pilot pose. It now uses the carrier's interpolated pose and the
+     turret aim, as native ranks from the carrier along the turret's facing. Checked by reading only.
+  3. F3, low: the Controls label, a comment and the no-pick log line no longer say "reticle" or "in view".
+  - Observations kept: the scoring matches `CosForward2` by construction; probes and treasures are newly offered and
+    are valid order targets. The parity row's older `InputActionCatalog.cs:161` citation was fixed to `:199` in
+    `2384326`.
+
 ## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 5
 
 - Record: [summary](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/summary.md), [receipt](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/receipt.md)
