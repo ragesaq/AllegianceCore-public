@@ -220,7 +220,7 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
 - ragesaq later moved the afterburner to logical button 76, after adjusting buttons "with overlapping features"
   *(ragesaq, Port's working session 2026-11-26)*. With the lever past the detent the throttle now holds button 75
   (0-based) and reports 76 buttons *(observed: probe, 2026-11-26)*. The built-in profile binds button 75 to the
-  booster.
+  booster. No other bound button moved *(ragesaq, same session: "Only the afterburner")*.
 - ragesaq also inverted the left and right levers in the configurator *(ragesaq, same session: "i also inverted
   the axis of left/right throttle (bound together) so the numerical values make more sense")*. Lever axis 3 now
   reads +32,767 at 100% (ragesaq: "the throttle is also at 100% right now", with the probe reading +32,767 and
