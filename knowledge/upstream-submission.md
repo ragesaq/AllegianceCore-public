@@ -64,6 +64,14 @@ the eye images, so items 1 and 2 may describe the M2 build only *(derived, from 
   the HUD in the eye images (PR #15) and its follow-up (PR #17), the VR recenter button (PR #18), the HOTAS bindings
   (PR #8, PR #14) and the native target-center rule (PR #16, not VR). Mapping these onto the upstream author's
   M1, M2 and HOTAS pull requests is ragesaq's decision.
+- ragesaq proposes two upstream collections, one for inputs and one for VR, made after the fork's pull requests
+  merge *(proposed 2026-11-26 by ragesaq, Port's working session: "group our changes into two large collections. One
+  for inputs, and one for VR")*. Not decided. Inputs would hold the HOTAS bindings (PR #14) and the native
+  target-center rule (PR #16); VR would hold M1, M2, the HUD in the eyes (PR #15, PR #17) and the recenter (PR #18).
+  The recenter's joystick command joins the command list the HOTAS bindings add, so the VR collection builds on the
+  inputs one, or that command moves to inputs *(derived, PR #18 is stacked on PR #14)*. The upstream author asked for
+  smaller pull requests, one per milestone; a VR collection kept as one commit series per milestone would fit both
+  *(derived)*.
 - HyperBench files (`AGENTS.md`, `DAG.json`, `LEDGER.md`, `memory/`, `knowledge/`, `.hyperreview/`, `tools/`
   checks) stay out of any upstream pull request *(`AGENTS.md`, prime rule 3)*.
 - Upstream pull requests go out under ragesaq's GitHub identity, not an agent's *(operator rule for public
