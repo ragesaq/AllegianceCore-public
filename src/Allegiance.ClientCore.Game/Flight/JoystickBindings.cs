@@ -145,8 +145,11 @@ public sealed class JoystickBindingResolver
     /// buttonCommandMap). Native's button 1 = TK_FireMissile is not taken: on this
     /// stick button 1 is the trigger's second stage, which ragesaq does not want as
     /// missile fire. The three thumb face buttons, left to right (buttons 3, 4 and 5),
-    /// are missiles, chaff and ripcord (ragesaq's choice). The throttle device feeds the throttle role, inverted like native
-    /// (<c>WinTrek.cpp:10842</c>), and its index-finger thumb stick drives the side
+    /// are missiles, chaff and ripcord (ragesaq's choice). The throttle device feeds the
+    /// throttle role as the device sends it: ragesaq's Virpil configurator already inverts
+    /// the levers, so idle reads the minimum. A throttle at Virpil's own direction needs
+    /// <c>"invert": true</c> in <c>joystick.json</c>, as native negates its throttle
+    /// (<c>WinTrek.cpp:10842</c>). Its index-finger thumb stick drives the side
     /// thrusters (ragesaq's choice; native gives the thrusters keys only).
     /// </summary>
     public static IReadOnlyList<JoystickDeviceProfile> BuiltIn { get; } =

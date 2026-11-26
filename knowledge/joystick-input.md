@@ -173,7 +173,8 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   shows a hint (`Flight/RipcordKey.cs` `RequestFor`, `Game1.FlightInput.cs` TK_Ripcord block). The joystick
   button feeds the same press detection, so it behaves the same *(observed in the code)*. On entering flight every
   joystick button is disarmed, so a button held through launch acts only after it is released once *(review round
-  2, finding N1)*. Undocking from the hangar disarms them the same way *(review round 3, finding R3-1)*.
+  2, finding N1)*. Undocking from the hangar disarms them the same way *(review round 3, finding R3-1; completed after review
+  round 4, finding N1, which found the targeting keys' copy of the frame still held the button)*.
 - A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
   now include the four side thrusters, ripcord and chaff.
 - Targeting goes on the throttle grip *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i want
@@ -221,7 +222,9 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   reads +32,767 at 100% (ragesaq: "the throttle is also at 100% right now", with the probe reading +32,767 and
   button 79 held) and spans -32,768 to +32,767 *(observed)*, so idle is -32,768 *(derived)*. The built-in
   profile no longer inverts axis 3. The lever reads 100% already at the detent (ragesaq: "at the max of being
-  below the detent its still at 100%"), so only the button tells the afterburner zone apart. A throttle left at
+  below the detent its still at 100%"), so only the button tells the afterburner zone apart. That is how Virpil's
+  detent mapping is meant to work *(ragesaq, same session: "all axis positions past the detent continue to read
+  at 100% but with a virtual button pressed, so this is as expected")*. A throttle left at
   Virpil's own direction needs a `joystick.json` profile with `"invert": true` on axis 3.
 - A desktop app that shows which physical control is which button on both devices, and rebinds them, is a later
   goal *(ragesaq, Port's working session 2026-11-25: "an app is a future goal, for now we should just map out

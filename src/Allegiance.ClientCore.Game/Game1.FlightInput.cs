@@ -38,12 +38,14 @@ public sealed partial class Game1
         => _targetJoystickFrame.HoldsAction(action)
             && Rendering.KeyBindingStore.Instance.Map.ActionFilter?.Invoke(action) != false;
 
-    /// <summary>Every joystick button counts again only after it is seen released, and the
-    /// frame cached for this update is dropped so the next read already sees that.</summary>
+    /// <summary>Every joystick button counts again only after it is seen released. The frame
+    /// cached for this update is dropped so the next read already sees that, and so is the copy
+    /// the targeting keys read, which was taken earlier in the update.</summary>
     private void DisarmJoystick()
     {
         _joystickBindings?.Disarm();
         _joystickFrameTicks = -1;
+        _targetJoystickFrame = default;
     }
 
     /// <summary>

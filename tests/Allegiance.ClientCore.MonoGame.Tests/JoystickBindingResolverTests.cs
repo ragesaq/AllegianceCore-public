@@ -541,6 +541,16 @@ public class JoystickBindingResolverTests
         Assert.False(r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)])]).Booster);
     }
 
+    // Review r4 N1: the undock disarm resets the targeting keys' copy of the frame to the
+    // default, which must hold no command.
+    [Fact]
+    public void DefaultFrame_HoldsNoAction()
+    {
+        var empty = default(JoystickBindingFrame);
+        foreach (var name in JoystickKeyActions.Names) Assert.False(empty.HoldsAction(name));
+        Assert.Equal(0, empty.HeldMask);
+    }
+
     [Fact]
     public void ThrottleRestButtons_AreNotBound()
     {

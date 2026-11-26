@@ -4,6 +4,23 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 4
+
+- Record: [summary](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/summary.md), [receipt](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `8e225d2..c6df4d7`, head `c6df4d7`, tree `0baf052`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. R3-2 and R3-3 fixed. R3-1 only partly: round 3's entry below says the undock
+  disarm "drops the frame already resolved for that update", which held for the cached frame but not for the copy
+  the targeting keys read. Fixed after round 4:
+  1. N1, medium: the targeting keys' copy of the joystick frame is taken before the docked check, so on the undock
+     frame a held autopilot, clear-target or target-center button could still act. `DisarmJoystick` now also resets
+     that copy to an empty frame. Test `DefaultFrame_HoldsNoAction`; the call site is read only.
+  2. N2, low: the resolver's class comment still said the throttle is inverted like native. It now says the lever
+     is read as the device sends it, and how a throttle at Virpil's own direction is set up.
+  - Observations kept for the flight test: a lever left at the detent takes the throttle role only after it moves
+    (native's latch works the same way); the action filter branch and the `Game1` glue are covered by reading only.
+
 ## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 3
 
 - Record: [summary](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/summary.md), [receipt](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/receipt.md)
