@@ -1448,10 +1448,11 @@ public sealed partial class Game1
     ///
     /// <para>In a turret native ranks from the carrier's position along the
     /// turret's facing (the gunner's own orientation, with the parent ship
-    /// passed to FindTarget). The port's gunner pose is the carrier's
-    /// interpolated pose and the locally integrated turret aim; the own-ship
-    /// simulation is not stepped while boarded, so <see cref="TryOwnPose"/>
-    /// would give a frozen pose there.</para></summary>
+    /// passed to FindTarget, which never returns that ship). The port's gunner
+    /// pose is the carrier's render pose (its last update when it has none) and
+    /// the locally integrated turret aim; the own-ship simulation is not stepped
+    /// while boarded, so <see cref="TryOwnPose"/> would give a frozen pose
+    /// there. The carrier is left out of the candidates.</para></summary>
     private void SelectCentermostTarget()
     {
         if (!TryOwnPose(out var pos, out var orient, out _)) return;
@@ -1459,6 +1460,8 @@ public sealed partial class Game1
         var world = _session.World;
         var objs = new List<CandidateObject>();
         short parent = -1;
+        SimVec? carrierPos = null;
+        Orientation? carrierOrient = null;
         lock (_session.Gate)
         {
             if (world.MyShipId is { } me && world.Ships.TryGetValue(me, out var ownShip))
@@ -1468,14 +1471,27 @@ public sealed partial class Game1
                                               world.Asteroids, me, ownShip.SectorId,
                                               ShipRoleBits, StationRoleBits,
                                               world.Probes, world.Treasures);
+                if (parent != -1 && world.Ships.TryGetValue(parent, out var carrierShip) && carrierShip.Latest is { } cl)
+                {
+                    carrierPos = cl.Position;
+                    carrierOrient = cl.Orientation;
+                }
             }
         }
-        if (parent != -1 && _poses.TryGetValue(parent, out var carrier))
+        if (parent != -1)
         {
-            pos = carrier.Position;
-            forward = _turretSeeded ? _turretOrientation.GetForward() : carrier.Orientation.GetForward();
+            if (_poses.TryGetValue(parent, out var carrier))
+            {
+                carrierPos = carrier.Position;
+                carrierOrient = carrier.Orientation;
+            }
+            if (carrierPos is { } cp && carrierOrient is { } co)
+            {
+                pos = cp;
+                forward = _turretSeeded ? _turretOrientation.GetForward() : co.GetForward();
+            }
         }
-        var picked = PickFrontTarget(objs, pos, forward, _autoTarget);
+        var picked = PickFrontTarget(objs, pos, forward, _autoTarget, excludeShipId: parent);
         if (picked is { } p)
         {
             CommitTargetForPlayer(p);
@@ -1492,16 +1508,19 @@ public sealed partial class Game1
     /// <c>Orientation::CosForward2</c> (a signed squared cosine, so an object
     /// behind is chosen only when nothing is ahead). The current target is
     /// considered last and kept only when nothing else qualifies, so a repeat
-    /// press steps to the next best object, as native does.</summary>
+    /// press steps to the next best object, as native does. The ship
+    /// <paramref name="excludeShipId"/> (a gunner's carrier, native's
+    /// <c>pship</c>) is never picked; -1 excludes nothing.</summary>
     internal static AutopilotTarget? PickFrontTarget(
         IReadOnlyList<CandidateObject> objects, SimVec position, SimVec forward,
-        AutopilotTarget? current)
+        AutopilotTarget? current, short excludeShipId = -1)
     {
         CandidateObject? best = null;
         float bestScore = float.NegativeInfinity;
         bool currentSeen = false;
         foreach (var o in objects)
         {
+            if (excludeShipId != -1 && o.Kind == TargetKind.Ship && o.Id == excludeShipId) continue;
             if (current is { } c && c.Kind == o.Kind && c.Id == o.Id)
             {
                 currentSeen = true;

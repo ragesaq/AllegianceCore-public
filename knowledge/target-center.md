@@ -1,6 +1,6 @@
 # Target center: what the "target what I am aiming at" command picks
 
-**Owner:** ragesaq · **Started:** 2026-11-25 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-05-25
+**Owner:** ragesaq · **Started:** 2026-11-25 · **Last reviewed:** 2026-11-26 · **Review by:** 2027-05-26
 
 **Status:** in use
 
@@ -28,9 +28,11 @@ Which object the target-center command (native `TK_TargetCenter`; the `'` key, r
   flat camera's view. Any ship anywhere in view therefore beat a station or rock on the reticle *(read,
   `Game1.Targeting.cs`)*. The T key is a different path (`ChooseTarget`, by distance or list order) *(read,
   `Game1.TargetCommands.cs`; review round 1, finding F1)*.
-- In a turret native ranks from the carrier's position along the turret's facing (`WinTrek.cpp:10131-10147`). The
-  port uses the carrier's interpolated pose and the turret aim there, because the own-ship simulation is not stepped
-  while boarded *(read, `Game1.FlightInput.cs`; review round 1, finding F2)*. Not yet tried in game.
+- In a turret native ranks from the carrier's position along the turret's facing (`WinTrek.cpp:10131-10147`), and
+  `FindTarget` never returns the carrier itself *(read, upstream source)*. The port uses the carrier's render pose
+  (dead-reckoned by default; its last update when it has none) and the turret aim there, because the own-ship
+  simulation is not stepped while boarded, and it leaves the carrier out of the candidates *(read,
+  `Game1.FlightInput.cs`, `Game1.Targeting.cs`; review rounds 1 and 2, findings F2 and N1)*. Not yet tried in game.
 - In ragesaq's headset test the HOTAS select-target button "didnt seem to target only what was under the reticle"
   *(observed 2026-11-25, ragesaq, combined build of PR #15 and PR #14)*. The binding itself was right: ragesaq's
   1-based button 21 is the game's 0-based button 20 *(derived, from the capture table in the HOTAS note on
@@ -54,6 +56,8 @@ Which object the target-center command (native `TK_TargetCenter`; the `'` key, r
 - 2026-11-25 — Port finds the port's tiered rule differs from native and ports `c_ttFront` (read, upstream source).
 - 2026-11-26 — cross-family review round 1: PASS-WITH-CONDITIONS; the turret axis, the record of which list the
   port used, and the Controls label fixed after it.
+- 2026-11-26 — round 2: PASS-WITH-CONDITIONS; the gunner's carrier left out of the candidates, the live test and the
+  test comments made to match the new rule.
 
 ## Sources
 

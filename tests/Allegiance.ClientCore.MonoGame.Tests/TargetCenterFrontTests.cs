@@ -72,6 +72,20 @@ public class TargetCenterFrontTests
     }
 
     [Fact]
+    public void GunnersCarrier_IsNeverPicked()
+    {
+        var objs = new List<Game1.CandidateObject>
+        {
+            Obj(Game1.TargetKind.Ship, 5, 0, 0, -10),
+            Obj(Game1.TargetKind.Station, 6, 400, 0, -1000),
+        };
+        Assert.Equal((Game1.TargetKind.Station, (short)6),
+            (Game1.PickFrontTarget(objs, Origin, Forward, null, excludeShipId: 5)!.Value.Kind,
+             Game1.PickFrontTarget(objs, Origin, Forward, null, excludeShipId: 5)!.Value.Id));
+        Assert.Null(Game1.PickFrontTarget(new[] { objs[0] }, Origin, Forward, null, excludeShipId: 5));
+    }
+
+    [Fact]
     public void NoObjects_PicksNothing() =>
         Assert.Null(Game1.PickFrontTarget(new List<Game1.CandidateObject>(), Origin, Forward, null));
 }

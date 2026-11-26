@@ -17,7 +17,8 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
      turret aim, as native ranks from the carrier along the turret's facing. Checked by reading only.
   3. F3, low: the Controls label, a comment and the no-pick log line no longer say "reticle" or "in view".
   - Observations kept: the scoring matches `CosForward2` by construction; probes and treasures are newly offered and
-    are valid order targets; the parity row's older `InputActionCatalog.cs:161` citation is stale.
+    are valid order targets. The parity row's older `InputActionCatalog.cs:161` citation was fixed to `:199` in
+    `2384326`.
 
 ## 2026-11-25: PR #11 sky at infinity in each eye, round 1
 
