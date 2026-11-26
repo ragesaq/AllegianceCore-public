@@ -212,14 +212,14 @@ public static class VrHudGeometry
     /// frame. A target off the boresight, or behind, gives none (0). Otherwise
     /// the reticle takes the target's marker anchor
     /// (<see cref="MarkerAnchor"/>), held between 15 and 100 m.</summary>
-    public static float ReticleInverseDistance(Vector3 nose, Vector3 relative, float bracketRadians)
+    public static float ReticleInverseDistance(Vector3 nose, Vector3 relative, float bracketRadians, float wrapRadians = 0f)
     {
         float distance = relative.Length();
         if (!(distance > 1e-4f) || nose.LengthSquared() < 1e-8f) return 0f;
         float cosOff = Vector3.Dot(Vector3.Normalize(nose), relative / distance);
         float cone = MathF.Max(ReticleConeRadians, bracketRadians / 2f);
         if (cosOff < MathF.Cos(cone)) return 0f;
-        float depth = MarkerAnchor(relative, bracketRadians, ReticleFarthestMetres).Length();
+        float depth = MarkerAnchor(relative, MathF.Max(bracketRadians, wrapRadians), ReticleFarthestMetres).Length();
         return 1f / Math.Clamp(depth, ReticleNearestMetres, ReticleFarthestMetres);
     }
 
@@ -240,11 +240,17 @@ public static class VrHudGeometry
     /// <summary>The angle a bracket covers, across: wide enough to frame the
     /// object (1.05 times its radius, as Jet's designator), never under the
     /// floor, and capped so a near object does not fill the view.</summary>
-    public static float BracketAngle(float? worldRadius, float distance)
+    public static float BracketAngle(float? worldRadius, float distance) =>
+        MathF.Min(WrapAngle(worldRadius, distance), BracketCapRadians);
+
+    /// <summary>The angle that wraps an object of <paramref name="worldRadius"/>
+    /// at <paramref name="distance"/> with a 5% margin, at least the bracket
+    /// floor and not capped: what <see cref="MarkerAnchor"/> needs to stay in
+    /// front of the object when the drawn bracket is capped.</summary>
+    public static float WrapAngle(float? worldRadius, float distance)
     {
         if (worldRadius is not { } r || !(r > 0f) || !(distance > 0f)) return BracketFloorRadians;
-        float wrap = 2f * MathF.Atan(1.05f * r / distance);
-        return Math.Clamp(wrap, BracketFloorRadians, BracketCapRadians);
+        return MathF.Max(2f * MathF.Atan(1.05f * r / distance), BracketFloorRadians);
     }
 
     /// <summary>The bracket angle for an object whose flat-HUD screen radius is
@@ -254,5 +260,14 @@ public static class VrHudGeometry
         if (screenRadius is not { } r || !(r > 0f) || height <= 0 || !(projection.M22 > 0f)) return BracketFloorRadians;
         float radius = MathF.Atan(r / (projection.M22 * height / 2f));
         return Math.Clamp(2f * 1.05f * radius, BracketFloorRadians, BracketCapRadians);
+    }
+
+    /// <summary><see cref="BracketAngleFromScreenRadius"/> without the cap: the
+    /// object's own wrap angle, for <see cref="MarkerAnchor"/>.</summary>
+    public static float WrapAngleFromScreenRadius(float? screenRadius, Matrix projection, int height)
+    {
+        if (screenRadius is not { } r || !(r > 0f) || height <= 0 || !(projection.M22 > 0f)) return BracketFloorRadians;
+        float radius = MathF.Atan(r / (projection.M22 * height / 2f));
+        return MathF.Max(2f * 1.05f * radius, BracketFloorRadians);
     }
 }

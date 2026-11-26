@@ -277,13 +277,23 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 
 - **Brackets are tested against the scene's depth.** Each marker is placed on the line from the head (midway between
   the eyes) to its object, at the near side of the sphere its bracket frames, so the object does not hide its own
-  bracket, and never farther than 100 m. It is drawn with a read-only depth test at that point's depth, so a nearer
-  object that passes in front of it hides it. Beyond 100 m the clamp changes nothing that can be seen: vergence is
-  under 0.04° *(derived: 64 mm / 100 m)*. `VrHudGeometry.MarkerAnchor`, `BufferDepth`.
+  bracket, and never farther than 100 m. The sphere comes from the object's own wrap angle, not the drawn bracket,
+  which is capped at 20°: anchored from the capped angle, a marker near a large object fell inside its hull and was
+  hidden (review round 1, F1). It is drawn with a read-only depth test at that point's depth, so a nearer object that
+  passes in front of it hides it. Beyond 100 m the clamp changes nothing that can be seen: vergence is under 0.04°
+  *(derived: 64 mm / 100 m)*. The clamp also limits occlusion: an object between 100 m and a far target does not hide
+  its marker. `VrHudGeometry.MarkerAnchor`, `WrapAngle`, `BufferDepth`.
 - **The scene's depth is still in the eye images when the HUD is drawn.** Checked on the GPU *(measured: a temporary
   probe, removed before commit, drew a half-clear sheet over the whole left eye at depth 0.9999 with the same read-only
   depth test, in the battle replay with SteamVR)*: asteroids and ships stayed unpainted, while the sky and a planet,
   which are drawn without writing depth, were painted. So the depth the scene wrote is intact at compose time.
+  A second probe tested the value at mid distances *(measured, same setup)*: at each radar contact, a red square at
+  the depth of a point 2 radii behind the object's centre and a green one 2 radii in front. Asteroids 1.4 and 2.6 km
+  away hid the red square and showed the green one, a window of about 0.0003 in depth there, so the sprite path and
+  the scene write the same value; a remap such as `0.5 z + 0.5` would have hidden the green square. Warp swirls showed
+  both, as they write no depth. To repeat it after a MonoGame or backend change: draw those two squares per contact in
+  the left eye before the markers, and look at the window mirror. A unit test pins `BufferDepth` to
+  far (d - near) / (d (far - near)).
 - **Off-view arrows.** When the selection's or the lock's marker falls outside either eye's image, an arrow in its
   colour sits on a ring 30° off the view's centre, 3 m out, on the side the object lies, and points that way. An
   object straight behind gives an arrow pointing down. `VrHudGeometry.OffViewArrow`.
@@ -291,14 +301,16 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
   Its depth is eased as an inverse distance, which stereo disparity is proportional to, so it moves at an even rate
   and can return to infinity. `VrHudGeometry.ReticleInverseDistance`, `SmoothInverseDistance`.
 - **Draw order in each eye:** the aim reticle and the arrows over the scene, then the markers with the depth test,
-  then the panel, which at 1 m is nearer than every marker.
+  then the panel, which at 1 m is nearer than every marker. A panel tuned farther than a marker with
+  `ALLEGIANCE_VR_HUD_PANEL` still draws over it.
 - **Why the reticle stays at infinity in most cases** *(Port, 2026-11-25, answering a prompt from another assistant
   that ragesaq passed on)*: the stereo offset between a point at distance d and infinity is about 64 mm / d. That is
   0.01° at 300 m and 0.04° at 100 m. Only at about 20 m and nearer (0.18°) does it reach roughly where the eyes stop
   fusing two images at the centre of view *(read: Panum's fusional area, about 10 to 20 arcminutes at the fovea;
   textbook figure, not measured here)*. So infinity only fails for a close target under the reticle, which is the
   case the change covers.
-- Tests: `VrHudGeometryTests`, 90 VR tests. Each of 9 deliberate breaks of the new geometry made a test fail.
+- Tests: `VrHudGeometryTests`, 95 VR tests. Each of 11 deliberate breaks of the new geometry made a test fail.
+- Cross-family review round 1: PASS-WITH-CONDITIONS, F1 and F2 answered (`.hyperreview/README.md`).
 - Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
 
 ## Open questions

@@ -399,4 +399,39 @@ public sealed class VrHudGeometryTests
         for (int frame = 0; frame < 150; frame++) current = VrHudGeometry.SmoothInverseDistance(current, 0f, 1f / 75f);
         Assert.True(current < target * 1e-4f);
     }
+
+    [Fact]
+    public void A_capped_bracket_is_still_anchored_in_front_of_its_object()
+    {
+        // 40 m away with a 20 m radius: the object wraps about 55 degrees, the
+        // bracket is drawn at the 20 degree cap. The anchor must come from the
+        // wrap, or the object's own hull hides its marker in the depth test.
+        const float distance = 40f, radius = 20f;
+        var relative = new Vector3(0f, 0f, -distance);
+        float drawn = VrHudGeometry.BracketAngle(radius, distance);
+        float wrap = VrHudGeometry.WrapAngle(radius, distance);
+        Assert.Equal(VrHudGeometry.BracketCapRadians, drawn);
+        Assert.True(wrap > drawn);
+        float anchor = VrHudGeometry.MarkerAnchor(relative, MathF.Max(drawn, wrap)).Length();
+        Assert.InRange(anchor, distance - 1.05f * radius - 0.01f, distance - radius - 0.5f);
+        Assert.True(VrHudGeometry.MarkerAnchor(relative, drawn).Length() > distance - radius,
+            "the drawn angle alone would put the anchor inside the object");
+    }
+
+    [Theory]
+    [InlineData(0.5f)]
+    [InlineData(37f)]
+    [InlineData(800f)]
+    [InlineData(10000f)]
+    public void The_depth_buffer_value_is_the_perspective_depth_for_the_projections_planes(float distance)
+    {
+        // CreatePerspectiveFieldOfView maps view depth d to far (d - near) / (d (far - near)):
+        // 0 at the near plane, 1 at the far plane.
+        const float near = 0.5f, far = 10000f;
+        float expected = far * (distance - near) / (distance * (far - near));
+        var view = LookingAlong(new Vector3(-0.4f, 0.2f, -1f));
+        // A point off the view's axis: its depth is set by its view-space z alone.
+        var point = Vector3.TransformNormal(new Vector3(0.3f * distance, -0.2f * distance, -distance), Matrix.Invert(view));
+        Assert.InRange(VrHudGeometry.BufferDepth(point, view, GameProjection), expected - 1e-5f, expected + 1e-5f);
+    }
 }

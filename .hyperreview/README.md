@@ -4,6 +4,29 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #17 VR HUD bracket depth, round 1
+
+- Record: [summary](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/summary.md), [receipt](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `051f0cc..47133cb`, head `47133cb`, tree `189b079`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. The reviewer confirmed by reading that the eye pass keeps the scene's depth in the eye
+  target, that the marker depth never leaks into the panel or a flat frame, the off-view test and ring, and the
+  reticle's boresight, easing and reset. Findings:
+  1. High (F1): a bracket capped at 20 degrees was anchored from the capped angle, so near a large object (an Outpost
+     inside about 1.7 km, a 30 m ship locked inside about 85 m) the anchor fell inside the hull and the depth test hid
+     the marker. Accepted and fixed: each marker carries its object's uncapped wrap angle
+     (`VrHudGeometry.WrapAngle`, `WrapAngleFromScreenRadius`), and the anchor and the reticle's depth use it; the drawn
+     size and the reticle cone keep the cap. New test with the reviewer's capped case (40 m away, 20 m radius); it fails
+     when the wrap is capped again.
+  2. Low (F2): the depth convention rested on one far-tail probe, and no test pinned `BufferDepth`. Accepted: a test
+     pins it to the perspective formula at the near plane, two mid distances and the far plane (it fails under a
+     `0.5 z + 0.5` remap), and a second GPU probe tested depth at each radar contact (`knowledge/vr-hud-design.md`,
+     "The layer 2 follow-up as built").
+  - Observations: the 100 m clamp also limits occlusion (now said in the note); a tuned panel farther than a marker
+    still draws over it (noted); the reticle state is zeroed in `ReleaseVrHud`; two coincident arrows for a selection
+    that is also locked, and an arrow in both eyes when only one eye loses the marker, are left for the headset look.
+
 ## 2026-11-25: PR #15 VR HUD step 1, round 2
 
 - Record: [summary](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/summary.md), [receipt](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/receipt.md)
