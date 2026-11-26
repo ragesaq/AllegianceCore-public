@@ -1444,21 +1444,38 @@ public sealed partial class Game1
     /// object in the sector by angle alone, with no ship-first tier and no view
     /// frustum, so this does not reuse <see cref="PickNearestTarget"/>, whose
     /// ship tier let any ship in view win over the object under the reticle
-    /// (found in ragesaq's headset test, 2026-11-25).</summary>
+    /// (found in ragesaq's headset test, 2026-11-25).
+    ///
+    /// <para>In a turret native ranks from the carrier's position along the
+    /// turret's facing (the gunner's own orientation, with the parent ship
+    /// passed to FindTarget). The port's gunner pose is the carrier's
+    /// interpolated pose and the locally integrated turret aim; the own-ship
+    /// simulation is not stepped while boarded, so <see cref="TryOwnPose"/>
+    /// would give a frozen pose there.</para></summary>
     private void SelectCentermostTarget()
     {
         if (!TryOwnPose(out var pos, out var orient, out _)) return;
+        var forward = orient.GetForward();
         var world = _session.World;
         var objs = new List<CandidateObject>();
+        short parent = -1;
         lock (_session.Gate)
         {
             if (world.MyShipId is { } me && world.Ships.TryGetValue(me, out var ownShip))
+            {
+                parent = ownShip.ParentId;
                 objs = GatherSectorCandidates(world.Ships, world.Warps, world.Stations,
                                               world.Asteroids, me, ownShip.SectorId,
                                               ShipRoleBits, StationRoleBits,
                                               world.Probes, world.Treasures);
+            }
         }
-        var picked = PickFrontTarget(objs, pos, orient.GetForward(), _autoTarget);
+        if (parent != -1 && _poses.TryGetValue(parent, out var carrier))
+        {
+            pos = carrier.Position;
+            forward = _turretSeeded ? _turretOrientation.GetForward() : carrier.Orientation.GetForward();
+        }
+        var picked = PickFrontTarget(objs, pos, forward, _autoTarget);
         if (picked is { } p)
         {
             CommitTargetForPlayer(p);
@@ -1466,7 +1483,7 @@ public sealed partial class Game1
             RefreshWindowTitle();
         }
         else
-            Console.WriteLine("[monogame] target center: nothing in view");
+            Console.WriteLine("[monogame] target center: nothing in the sector");
     }
 
     /// <summary>Native's <c>c_ttFront</c> ranking (common.cpp:509-640): the

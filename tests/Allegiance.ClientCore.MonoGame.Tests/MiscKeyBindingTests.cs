@@ -13,9 +13,10 @@ namespace Allegiance.ClientCore.MonoGame.Tests;
 /// P417 — unit tests for the small leftover key-bindings batch:
 /// <list type="bullet">
 /// <item><b>Candidate ranking</b> — <see cref="Game1.SelectCandidates"/> orders
-/// in-view candidates nearest to the crosshair, not nearest in raw distance. The
-/// T key cycles this list. TargetCenter no longer uses it: it follows native
-/// c_ttFront by angle off the nose (<see cref="TargetCenterFrontTests"/>).</item>
+/// in-view candidates nearest to the crosshair, not nearest in raw distance. Its
+/// remaining user is the autopilot's implicit pick (G key, touch Autopilot) through
+/// PickNearestTarget. TargetCenter no longer uses it: it follows native c_ttFront
+/// by angle off the nose (<see cref="TargetCenterFrontTests"/>).</item>
 /// <item><b>ScreenShot</b> — the standalone QoL capture: a timestamped PNG written
 /// to a sensible <c>screenshots/</c> path via the shared RGBA→PNG encoder. Tests
 /// pin the path format (sorted, collision-resistant, under the working dir) and
