@@ -151,14 +151,131 @@ public static class VrHudGeometry
         return Vector2.Distance(a, b);
     }
 
+    /// <summary>The farthest a marker is placed, in metres. Past it the eyes
+    /// cannot tell depth from infinity (vergence under 0.04°), and a marker
+    /// placed there would be hidden by every object between it and the eye.</summary>
+    public const float MarkerDepthClampMetres = 100f;
+
+    /// <summary>Where a marker is placed, relative to the head: on the line to
+    /// its object, at the near side of the sphere its bracket frames (so the
+    /// object does not hide its own bracket), and never farther than
+    /// <paramref name="clampMetres"/>. A marker covering
+    /// <paramref name="angleRadians"/> at the object's distance frames a sphere
+    /// of radius distance · tan(angle / 2).</summary>
+    public static Vector3 MarkerAnchor(Vector3 relative, float angleRadians, float clampMetres = MarkerDepthClampMetres)
+    {
+        float distance = relative.Length();
+        if (!(distance > 1e-4f)) return relative;
+        float nearSide = distance * MathF.Max(0.05f, 1f - MathF.Tan(angleRadians / 2f));
+        return relative * (MathF.Min(nearSide, clampMetres) / distance);
+    }
+
+    /// <summary>The depth a point has in the depth buffer of a view drawn with
+    /// <paramref name="projection"/>: 0 at the near plane, 1 at the far plane
+    /// (MonoGame's convention on every backend). Below 0 when the point is
+    /// nearer than the near plane or behind the eye.</summary>
+    public static float BufferDepth(Vector3 relative, Matrix view, Matrix projection)
+    {
+        var clip = Vector4.Transform(new Vector4(relative, 1f), view * projection);
+        return clip.W > 1e-6f ? clip.Z / clip.W : -1f;
+    }
+
+    /// <summary>The off-view arrow for an object in <paramref name="directionInView"/>
+    /// (view space, -Z ahead): a point on a ring <paramref name="ringRadians"/>
+    /// off the view's centre at <paramref name="distance"/> metres, on the side
+    /// the object lies, and the arrow's direction on the image (+Y down). An
+    /// object straight behind points down.</summary>
+    public static (Vector3 PointInView, Vector2 ImageDirection) OffViewArrow(Vector3 directionInView, float ringRadians,
+        float distance)
+    {
+        var side = new Vector2(directionInView.X, directionInView.Y);
+        side = side.LengthSquared() < 1e-8f ? new Vector2(0f, -1f) : Vector2.Normalize(side);
+        float sin = MathF.Sin(ringRadians), cos = MathF.Cos(ringRadians);
+        return (distance * new Vector3(sin * side.X, sin * side.Y, -cos), new Vector2(side.X, -side.Y));
+    }
+
+    /// <summary>The aim reticle's depth limits, in metres, when a target under
+    /// it gives it one. Nearer than 15 m the eyes would cross hard on a fly-by;
+    /// beyond 100 m depth looks the same as infinity (under 0.04° of
+    /// vergence).</summary>
+    public const float ReticleNearestMetres = 15f, ReticleFarthestMetres = 100f;
+
+    /// <summary>How far off the boresight a target's centre may lie and still
+    /// give the reticle its depth: 3°, or half its anchor angle
+    /// (<see cref="AnchorAngle"/>) when that is wider, so a near object gives it
+    /// while its hull is under the reticle.</summary>
+    public static readonly float ReticleConeRadians = MathHelper.ToRadians(3f);
+
+    /// <summary>The aim reticle's depth from one target, as an inverse
+    /// distance (1/m; 0 is infinity), which stereo disparity is proportional
+    /// to. <paramref name="nose"/> is the boresight's direction and
+    /// <paramref name="relative"/> the target relative to the head, in one
+    /// frame. A target off the boresight, or behind, gives none (0). Otherwise
+    /// the reticle takes the target's marker anchor
+    /// (<see cref="MarkerAnchor"/>), held between 15 and 100 m.</summary>
+    public static float ReticleInverseDistance(Vector3 nose, Vector3 relative, float bracketRadians, float wrapRadians = 0f,
+        float? radiusMetres = null)
+    {
+        float distance = relative.Length();
+        if (!(distance > 1e-4f) || nose.LengthSquared() < 1e-8f) return 0f;
+        float cosOff = Vector3.Dot(Vector3.Normalize(nose), relative / distance);
+        float angle = AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres);
+        float cone = MathF.Max(ReticleConeRadians, angle / 2f);
+        if (cosOff < MathF.Cos(cone)) return 0f;
+        float depth = MarkerAnchor(relative, angle, ReticleFarthestMetres).Length();
+        return 1f / Math.Clamp(depth, ReticleNearestMetres, ReticleFarthestMetres);
+    }
+
+    /// <summary>The angle a marker's anchor is set from: the widest of the drawn
+    /// bracket, a wrap angle measured where the marker was made, and the wrap of
+    /// <paramref name="radiusMetres"/> measured along <paramref name="relative"/>
+    /// itself. Pass the radius whenever it is known: the head (the cockpit eye
+    /// is 14 m ahead of the ship's centre) sees a near object wider than the
+    /// ship's centre does, and a wrap measured from the ship would put the
+    /// anchor inside the hull.</summary>
+    public static float AnchorAngle(Vector3 relative, float bracketRadians, float wrapRadians, float? radiusMetres) =>
+        MathF.Max(MathF.Max(bracketRadians, wrapRadians),
+            radiusMetres is { } r && r > 0f ? WrapAngle(r, relative.Length()) : 0f);
+
+    /// <summary>A marker's anchor in the world, for an object at
+    /// <paramref name="world"/> seen from <paramref name="head"/> (midway between
+    /// the eyes): <see cref="MarkerAnchor"/> along the head-relative vector, with
+    /// the angle from <see cref="AnchorAngle"/> measured along that same vector.</summary>
+    public static Vector3 MarkerAnchorInWorld(Vector3 world, Vector3 head, float bracketRadians, float wrapRadians,
+        float? radiusMetres)
+    {
+        var relative = world - head;
+        return head + MarkerAnchor(relative, AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres));
+    }
+
+    /// <summary>How fast the reticle's depth follows its target: an
+    /// exponential approach with this time constant, in seconds.</summary>
+    public const float ReticleDepthSeconds = 0.2f;
+
+    /// <summary>One step of the reticle's depth toward <paramref name="target"/>,
+    /// both inverse distances, over <paramref name="seconds"/>. Smoothing the
+    /// inverse distance moves the stereo disparity at an even rate, and lets the
+    /// depth go to and from infinity (0).</summary>
+    public static float SmoothInverseDistance(float current, float target, float seconds)
+    {
+        if (!(seconds > 0f)) return current;
+        return target + (current - target) * MathF.Exp(-seconds / ReticleDepthSeconds);
+    }
+
     /// <summary>The angle a bracket covers, across: wide enough to frame the
     /// object (1.05 times its radius, as Jet's designator), never under the
     /// floor, and capped so a near object does not fill the view.</summary>
-    public static float BracketAngle(float? worldRadius, float distance)
+    public static float BracketAngle(float? worldRadius, float distance) =>
+        MathF.Min(WrapAngle(worldRadius, distance), BracketCapRadians);
+
+    /// <summary>The angle that wraps an object of <paramref name="worldRadius"/>
+    /// at <paramref name="distance"/> with a 5% margin, at least the bracket
+    /// floor and not capped: what <see cref="MarkerAnchor"/> needs to stay in
+    /// front of the object when the drawn bracket is capped.</summary>
+    public static float WrapAngle(float? worldRadius, float distance)
     {
         if (worldRadius is not { } r || !(r > 0f) || !(distance > 0f)) return BracketFloorRadians;
-        float wrap = 2f * MathF.Atan(1.05f * r / distance);
-        return Math.Clamp(wrap, BracketFloorRadians, BracketCapRadians);
+        return MathF.Max(2f * MathF.Atan(1.05f * r / distance), BracketFloorRadians);
     }
 
     /// <summary>The bracket angle for an object whose flat-HUD screen radius is
@@ -168,5 +285,14 @@ public static class VrHudGeometry
         if (screenRadius is not { } r || !(r > 0f) || height <= 0 || !(projection.M22 > 0f)) return BracketFloorRadians;
         float radius = MathF.Atan(r / (projection.M22 * height / 2f));
         return Math.Clamp(2f * 1.05f * radius, BracketFloorRadians, BracketCapRadians);
+    }
+
+    /// <summary><see cref="BracketAngleFromScreenRadius"/> without the cap: the
+    /// object's own wrap angle, for <see cref="MarkerAnchor"/>.</summary>
+    public static float WrapAngleFromScreenRadius(float? screenRadius, Matrix projection, int height)
+    {
+        if (screenRadius is not { } r || !(r > 0f) || height <= 0 || !(projection.M22 > 0f)) return BracketFloorRadians;
+        float radius = MathF.Atan(r / (projection.M22 * height / 2f));
+        return MathF.Max(2f * 1.05f * radius, BracketFloorRadians);
     }
 }

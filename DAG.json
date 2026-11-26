@@ -176,13 +176,14 @@
       "owner": "ragesaq",
       "status": "review",
       "needs": [],
-      "next": "Build step 1 of knowledge/vr-hud-design.md is on branch port/vr-hud-in-eyes, in PR #15 (knowledge/vr-hud-design.md, \"Step 1 as built\"): the HUD is drawn into each eye image and the quad layer is gone; contact, selection, lock and lead markers sit at their objects' depth with a 2 degree bracket and 0.6 degree text floor; the aim reticle is at infinity and the flat centre crosshair left the panel (ragesaq asked 2026-11-25, after a first headset look, that targeting reticles be farther than 1 m); the rest of the flat HUD is on one interim panel 1 m away, 25 degrees below the nose (ALLEGIANCE_VR_HUD_PANEL tunes it). Flat replay frames unchanged. Cross-family review: round 1 PASS-WITH-CONDITIONS, answered in d1b87f9; round 2 PASS with no findings (.hyperreview/README.md). Step-1 limit to decide: the panel shows no radar contacts in VR, so the Jet scope is empty. ragesaq tested it in the headset 2026-11-25: it worked; the HUD is still flat (expected), the boresight is right and stays at infinity, and the brackets' depth was confusing (knowledge/vr-hud-design.md, \"Step 1 in the headset\"). Waits on: ragesaq's approval to merge PR #15. Then a layer 2 follow-up (depth-test the brackets against the scene with a near clamp; off-screen arrows), and build step 2 (layers 1 and 3). Owner of the work: Port.",
+      "next": "Build step 1 of knowledge/vr-hud-design.md merged in PR #15 (merge commit 130fb36, 2026-11-26, approved by ragesaq in Port's session at head 053fef7, a sync merge of master into the reviewed code): the HUD is in each eye image, the targeting markers sit at their objects' depth, the aim reticle is at infinity, and the rest of the flat HUD is on one interim panel (knowledge/vr-hud-design.md, \"Step 1 as built\" and \"Step 1 in the headset\"). Step-1 limit still to decide: the panel shows no radar contacts in VR, so the Jet scope is empty. The layer 2 follow-up is built on branch port/vr-hud-bracket-depth, in PR #17, now against master (knowledge/vr-hud-design.md, \"The layer 2 follow-up as built\"): brackets depth-tested against the scene with a 100 m clamp, off-view arrows for the selection and lock, and the aim reticle takes the depth of a target under it (ragesaq accepted 2026-11-25). Cross-family review: round 1 PASS-WITH-CONDITIONS (F1 capped bracket anchored inside its object, F2 depth convention evidence); round 2 WARN (the F1 fix measured the wrap from the ship's centre, not the head); round 3 WARN (the lock passed a radius only for ships); round 4 PASS-WITH-CONDITIONS with no source defect and two Low items, answered; round 5 PASS with no findings (.hyperreview/README.md). The lookup's test stays deferred, recorded in the note. Waits on: PR #17's first Linux build-and-test against master (memory/mem-010), then ragesaq's headset look and approval to merge PR #17. Then build step 2 (layers 1 and 3). Owner of the work: Port.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/15",
+        "https://github.com/ragesaq/AllegianceCore-public/pull/17",
         "knowledge/vr-client-survey.md",
         "knowledge/vr-hud-design.md"
       ],
-      "updated": "2026-11-25"
+      "updated": "2026-11-26"
     },
     {
       "id": "ragesaq-011",
@@ -192,12 +193,12 @@
       "needs": [
         "ragesaq-010"
       ],
-      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submitted as its own quad layer. Decided by ragesaq 2026-11-25: the HUD moves into the eye images (ragesaq-010), so capture records it with no change to the capture tool. Built in ragesaq-010's step 1 (PR #15): a stereo frame now submits only the projection layer. Waits on: that PR, then a capture check by ragesaq.",
+      "next": "Found in ragesaq's headset test of milestone 2 (knowledge/vr-client-survey.md, \"Milestone 2 in the headset\"): ragesaq's OpenXR capture tool showed the stereo view but not the HUD, which the game submitted as its own quad layer. Decided by ragesaq 2026-11-25: the HUD moves into the eye images (ragesaq-010), so capture records it with no change to the capture tool. Built in ragesaq-010's step 1, merged in PR #15 (merge commit 130fb36, 2026-11-26): a stereo frame now submits only the projection layer. Waits on: a capture check by ragesaq with a build from master.",
       "links": [
         "https://github.com/ragesaq/AllegianceCore-public/pull/15",
         "knowledge/vr-client-survey.md"
       ],
-      "updated": "2026-11-25"
+      "updated": "2026-11-26"
     },
     {
       "id": "ragesaq-012",

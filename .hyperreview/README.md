@@ -181,6 +181,98 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
      only while no profile has ever matched. Test `AfterAProfileMatched_LeftoverPedalsAreNotReadAsAStick` fails
      without the fix.
   5. Low: untested paths. Fixed: tests for the button-count change, the swap, the throttle loss and the pedals.
+## 2026-11-25: PR #17 VR HUD bracket depth, round 5
+
+- Record: [summary](patch-review-2026-11-26T04-30-00Z-allegiancecore-vr-hud-bracket-depth-r5/summary.md), [receipt](patch-review-2026-11-26T04-30-00Z-allegiancecore-vr-hud-bracket-depth-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `1a3adf7..dec2b47`, head `dec2b47`, tree `be9f663`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. R4-F1 is closed: the lock's lookup gives the same radius per type as the removed switch,
+  in the same lock. Its test stays deferred, which the reviewer accepted as honestly stated residual risk. R4-F2 is
+  closed. Observations 1 and 2 were wording points about the design note, taken in the commit that records this
+  review (prose only): "in front of the near side" holds while the head is outside the object, and a test of the
+  lookup also needs a game instance with its hull and station catalogues.
+- Across five rounds the findings went from one High and one Low, to one High, to one Medium and two Low, to two Low,
+  to none.
+
+## 2026-11-25: PR #17 VR HUD bracket depth, round 4
+
+- Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `78e9be3..1a3adf7`, head `1a3adf7`, tree `badfd07`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, no source defect. Round 3's N1, N2 and N3 are closed, and the reviewer confirmed the
+  author's correction to round 3's example (the 100 m clamp). Findings:
+  1. Low (R4-F1): the lock repeated the selection's radius switch, and no test reaches the lookup from a lock or
+     selection to the marker's radius. Partly taken: the lock now uses the selection's lookup (`TargetWorldRadius`), so
+     there is one switch. The test is deferred, by reading only: it needs a game world holding one object of each
+     type, and the design note records the gap.
+  2. Low (R4-F2, records): corrected. The round 3 entry now says the test uses radii standing for a ship, a hull and a
+     station, not the type lookup; the note says only a marker with no radius can be hidden, within 100 m.
+
+## 2026-11-25: PR #17 VR HUD bracket depth, round 3
+
+- Record: [summary](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/summary.md), [receipt](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `e2825d5..78e9be3`, head `78e9be3`, tree `2b087f3`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. The round 2 fix closed the defect for ships. Findings, all accepted and fixed:
+  1. Medium (N1): the lock passed a radius only for ships, so a locked station, asteroid or warp kept the defect.
+     Fixed: the lock takes the radius for every lockable type, as the flat lock flower does. One correction to the
+     reviewer's example: an Outpost locked 1.2 km away is not hidden, because the anchor's 100 m clamp keeps it in
+     front of a near surface 700 m away. The defect needs the near surface within 100 m, such as a 500 m radius
+     station about 590 m from the head; the new test uses that case.
+  2. Low (N2): the round 2 test did not run the world-space path. Fixed: `VrHudGeometry.MarkerAnchorInWorld` is the
+     whole anchor calculation, `VrMarkerAnchor` only calls it, and a new test runs it with the ship's centre and a head
+     14 m ahead for radii of 20, 15 and 500 m (sizes standing for a ship, a locked hull and a station; the test does not
+     run the lock's type lookup), and checks that without the radius each would be inside.
+  3. Low (N3): the reticle cone's comment named the bracket. Fixed: it names the anchor angle.
+  - Observation 1 taken: a marker with no radius is anchored from its drawn angle alone, so the lead marker is exactly
+    as before (new test).
+
+## 2026-11-25: PR #17 VR HUD bracket depth, round 2
+
+- Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `47133cb..e2825d5`, head `e2825d5`, tree `c9fe1ba`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. F2 closed. Findings:
+  1. High (N1, round 1 F1 still open): the selection and lock measured their wrap angle from the ship's centre and the
+     anchor applied it from the head, which the cockpit camera puts 14 m ahead. A target dead ahead inside about
+     300 m was still anchored inside its hull (a 30 m hull locked 85 m away: 1.8 m inside), and the round 1 test used
+     one vector for both, so it could not see it. Accepted and fixed for ships (round 3 found the lock passed a radius
+     only for ships): the selection and lock carry the object's world radius, and `VrHudGeometry.AnchorAngle` measures its wrap along the head-relative vector the anchor uses. New
+     test at that seam, with the reviewer's numbers (40 m from the ship, 26 m from the head, 20 m radius; and the
+     locked 30 m hull); it fails when the radius term is dropped.
+  - F2 wording: the note now says the probe bounds any difference between the sprite path's and the scene's depth to
+    the probe's window, not that they are equal, and that the contacts it lands on vary from run to run.
+  - Observations taken: the reticle's cone now uses the same anchor angle, so a large object's hull under the reticle
+    gives it depth even when its bracket is capped (new test); the contact anchor's limit near very close asteroids
+    (the radar caps the screen radius) is recorded in the note.
+
+## 2026-11-25: PR #17 VR HUD bracket depth, round 1
+
+- Record: [summary](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/summary.md), [receipt](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `051f0cc..47133cb`, head `47133cb`, tree `189b079`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. The reviewer confirmed by reading that the eye pass keeps the scene's depth in the eye
+  target, that the marker depth never leaks into the panel or a flat frame, the off-view test and ring, and the
+  reticle's boresight, easing and reset. Findings:
+  1. High (F1): a bracket capped at 20 degrees was anchored from the capped angle, so near a large object (an Outpost
+     inside about 1.7 km, a 30 m ship locked inside about 85 m) the anchor fell inside the hull and the depth test hid
+     the marker. Accepted; this first fix was incomplete (round 2, N1): each marker carries its object's uncapped wrap angle
+     (`VrHudGeometry.WrapAngle`, `WrapAngleFromScreenRadius`), and the anchor and the reticle's depth use it; the drawn
+     size and the reticle cone keep the cap. New test with the reviewer's capped case (40 m away, 20 m radius); it fails
+     when the wrap is capped again.
+  2. Low (F2): the depth convention rested on one far-tail probe, and no test pinned `BufferDepth`. Accepted: a test
+     pins it to the perspective formula at the near plane, two mid distances and the far plane (it fails under a
+     `0.5 z + 0.5` remap), and a second GPU probe tested depth at each radar contact (`knowledge/vr-hud-design.md`,
+     "The layer 2 follow-up as built").
+  - Observations: the 100 m clamp also limits occlusion (now said in the note); a tuned panel farther than a marker
+    still draws over it (noted); the reticle state is zeroed in `ReleaseVrHud`; two coincident arrows for a selection
+    that is also locked, and an arrow in both eyes when only one eye loses the marker, are left for the headset look.
+
 ## 2026-11-25: PR #15 VR HUD step 1, round 2
 
 - Record: [summary](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/summary.md), [receipt](patch-review-2026-11-26T00-45-00Z-allegiancecore-vr-hud-in-eyes-r2/receipt.md)
