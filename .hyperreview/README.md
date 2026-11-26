@@ -4,6 +4,24 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #18 VR recenter button, round 1
+
+- Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-recenter-r1/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-recenter-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `7c6632b..90979ec`, head `90979ec`, tree `c4fe700`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. The reviewer found the space swap valid within the frame, the yaw-only math right and both calls on
+  the game thread. Fixed after round 1, all low:
+  1. F1: a runtime error while recentring, or a head pose that is not finite, is logged and leaves the view as it
+     was; it no longer ends the VR session.
+  2. F2: a press made while the head is not tracked waits up to 90 headset frames (about a second) for tracking
+     instead of being lost (`VrRecenterRequest`, tests `PressWhileUntracked_WaitsThenRunsOut` and
+     `TrackingReturns_TheWaitingPressIsCarriedOutOnce`).
+  3. F3: test `HeadTurnedLeft90_FacesTheSpaceAlongMinusX` states the expected turn without the implementation's
+     formula. A mirrored yaw fails it and the older tests; removing the countdown fails the wait test.
+  - Observation kept for the headset test: a recenter also re-places the flat panel in front of the head's facing at
+    the press.
+
 ## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 5
 
 - Record: [summary](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/summary.md), [receipt](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/receipt.md)
