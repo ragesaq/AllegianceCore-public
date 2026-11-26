@@ -282,10 +282,12 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
   (review round 1, F1). For the selection and the lock the size is the object's world radius, for every type that
   can be selected or locked, measured from the head (`VrHudGeometry.AnchorAngle`, `MarkerAnchorInWorld`): the cockpit
   eye is 14 m ahead of the ship's centre, and a wrap angle measured from the ship still put close targets inside their
-  hulls (review rounds 2 and 3). With a radius, the anchor is in front of the near side at any distance. A marker with
+  hulls (review rounds 2 and 3). With a radius, the anchor is in front of the near side whenever the head is outside
+  the object. A marker with
   no radius (a failed lookup) can be hidden by its own object only when the object's near side is within 100 m,
-  because of the clamp. No test runs the lookup from a lock or selection to the marker's radius: it needs a game world
-  with one object of each type, and is checked by reading (review round 4, R4-F1). A radar contact's size comes from its
+  because of the clamp. No test runs the lookup from a lock or selection to the marker's radius: it is a private
+  member of the game, so a test needs a game instance with its hull and station catalogues and a world with one object
+  of each type, or the lookup moved to a static helper. It is checked by reading (review rounds 4 and 5). A radar contact's size comes from its
   screen radius, which the radar caps, so an asteroid nearer than about 1.6 radii can still hide its own contact
   bracket *(derived: review round 2, observation 4)*. It is drawn with a read-only depth test at that point's depth, so a nearer object that
   passes in front of it hides it. Beyond 100 m the clamp changes nothing that can be seen: vergence is under 0.04°
@@ -323,7 +325,9 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 - Tests: `VrHudGeometryTests`, 99 VR tests. Each of 15 deliberate breaks of the new geometry made a test fail.
 - Cross-family review: round 1 PASS-WITH-CONDITIONS; round 2 WARN, because the round 1 fix measured the wrap from the
   ship's centre; round 3 WARN, because the lock passed a radius only for ships; round 4 PASS-WITH-CONDITIONS with two
-  Low items; each answered (`.hyperreview/README.md`).
+  Low items; round 5 PASS with no findings (`.hyperreview/README.md`).
+- Final VR smoke run of the reviewed code in the battle replay under SteamVR: renders at about 6.7 ms a frame, no
+  exceptions.
 - Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
 
 ## Open questions

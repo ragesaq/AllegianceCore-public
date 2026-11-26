@@ -4,6 +4,20 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #17 VR HUD bracket depth, round 5
+
+- Record: [summary](patch-review-2026-11-26T04-30-00Z-allegiancecore-vr-hud-bracket-depth-r5/summary.md), [receipt](patch-review-2026-11-26T04-30-00Z-allegiancecore-vr-hud-bracket-depth-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `1a3adf7..dec2b47`, head `dec2b47`, tree `be9f663`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. R4-F1 is closed: the lock's lookup gives the same radius per type as the removed switch,
+  in the same lock. Its test stays deferred, which the reviewer accepted as honestly stated residual risk. R4-F2 is
+  closed. Observations 1 and 2 were wording points about the design note, taken in the commit that records this
+  review (prose only): "in front of the near side" holds while the head is outside the object, and a test of the
+  lookup also needs a game instance with its hull and station catalogues.
+- Across five rounds the findings went from one High and one Low, to one High, to one Medium and two Low, to two Low,
+  to none.
+
 ## 2026-11-25: PR #17 VR HUD bracket depth, round 4
 
 - Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/receipt.md)
