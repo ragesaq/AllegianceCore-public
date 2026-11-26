@@ -2245,7 +2245,7 @@ public sealed partial class Game1
             // (native TK_TargetNothing/Center). Edge-triggered and composing-
             // gated like U/Z/T above.
             //   ;      → target nothing (clear target + disengage autopilot)
-            //   '      → target center (nearest to the reticle/crosshair)
+            //   '      → target center (smallest angle off the nose)
             //   (Target self — TK_TargetSelf — is deliberately NOT bound here:
             //   native's defaultinputmap.mdl leaves TK_TargetSelf UNBOUND by
             //   default, and binding it to Y conflicted with the P282 ready key
