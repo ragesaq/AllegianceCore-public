@@ -260,7 +260,8 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   ragesaq: "it should be button 42 0-based / 43 logical in vpc")*. A capture that day saw it pressed, with 43 not held
   at rest *(observed 2026-11-25, a 120 s probe)*. Another device can bind it in `joystick.json` as
   `{ "command": "ViewRecenter", "button": <n> }`.
-- A press made while the headset is not tracked waits about a second (90 headset frames) for tracking; a runtime
+- A press made while the headset is not tracked waits about a second (90 headset frames of a running session) for
+  tracking, and the session stopping drops it *(review round 2, finding F4)*; a runtime
   error during the recenter is logged and leaves the view as it was, and VR keeps running *(read, same code; review
   round 1 findings F1 and F2)*. A recenter also moves the flat panel in front of where the head faces at the press
   *(read, review round 1)*.

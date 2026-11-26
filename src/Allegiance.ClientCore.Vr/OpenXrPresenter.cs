@@ -290,6 +290,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
                     break;
                 case VrSessionAction.End:
                     _sessionRunning = false;
+                    _recenter.Cancel();
                     Check(xr.EndSession(_session), "xrEndSession");
                     break;
                 case VrSessionAction.TearDown:

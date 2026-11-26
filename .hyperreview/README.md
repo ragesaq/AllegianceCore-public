@@ -4,6 +4,19 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #18 VR recenter button, round 2
+
+- Record: [summary](patch-review-2026-11-26T06-00-00Z-allegiancecore-vr-recenter-r2/summary.md), [receipt](patch-review-2026-11-26T06-00-00Z-allegiancecore-vr-recenter-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `90979ec..7d3b45f`, head `7d3b45f`, tree `b93ffbb`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. F1 to F3 fixed. Fixed after round 2:
+  1. F4, low: the wait counts only frames of a running session, so a press made just before the session stopped
+     could fire when it resumed, much later. The session's end now cancels a waiting press; a press made while it
+     is stopped still applies when it begins. Test `SessionStop_DropsAWaitingPress_AndALaterPressWaitsAgain` fails
+     when `Cancel` does nothing; the call at the session's end is read only. The class comment and the note say
+     "frames of a running session".
+
 ## 2026-11-26: PR #18 VR recenter button, round 1
 
 - Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-recenter-r1/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-recenter-r1/receipt.md)

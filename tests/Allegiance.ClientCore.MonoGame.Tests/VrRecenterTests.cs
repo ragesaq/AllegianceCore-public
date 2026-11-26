@@ -92,6 +92,19 @@ public sealed class VrRecenterTests
     }
 
     [Fact]
+    public void SessionStop_DropsAWaitingPress_AndALaterPressWaitsAgain()
+    {
+        var request = new VrRecenterRequest();
+        request.Press();
+        request.Missed();
+        request.Cancel();
+        Assert.False(request.Pending);
+        Assert.False(request.Missed());
+        request.Press();
+        Assert.True(request.Pending);
+    }
+
+    [Fact]
     public void HeadLookingStraightUp_GivesNoTurn()
     {
         var head = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.PiOver2);
