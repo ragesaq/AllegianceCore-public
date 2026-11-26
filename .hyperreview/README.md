@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #16 target center by angle off the nose, round 1
+
+- Record: [summary](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/summary.md), [receipt](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `3a3b6e1..ece6de1`, head `ece6de1`, tree `21598bb`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. All three findings fixed in `efebff1`:
+  1. F1, medium: the record said the port reused the T key's list; it was the autopilot implicit pick's. The note and
+     the test comment now name it.
+  2. F2, medium: in a turret the pick used a frozen pilot pose. It now uses the carrier's interpolated pose and the
+     turret aim, as native ranks from the carrier along the turret's facing. Checked by reading only.
+  3. F3, low: the Controls label, a comment and the no-pick log line no longer say "reticle" or "in view".
+  - Observations kept: the scoring matches `CosForward2` by construction; probes and treasures are newly offered and
+    are valid order targets; the parity row's older `InputActionCatalog.cs:161` citation is stale.
+
 ## 2026-11-25: PR #11 sky at infinity in each eye, round 1
 
 - Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)
