@@ -44,4 +44,24 @@ public sealed class VrCentreGroupTests
     private static HudFrame Frame() => new(
         .8f, .6f, .4f, .3f, .2f, 1f, 260f, .6f, false, false, true, 0,
         false, 0f, false, false, 0f, 0f, Array.Empty<WeaponStatusRow>(), false, 0);
+
+    [Fact]
+    public void A_vr_eye_frame_enlarges_the_target_preview_half_again_and_a_flat_frame_keeps_its_size()
+    {
+        Assert.Equal(1f, HudRenderer.TargetPreviewEnlargement(Model(inWorld: false, centreHud: true)));
+        Assert.Equal(1.5f, HudRenderer.TargetPreviewEnlargement(Model(inWorld: true, centreHud: true)));
+    }
+
+    [Fact]
+    public void An_enlarged_target_preview_grows_upward_about_its_centre_column()
+    {
+        var native = TargetModelPreview.PaneRect(400f, 700f, 1f);
+        var big = TargetModelPreview.PaneRect(400f, 700f, 1f, 1.5f);
+        Assert.Equal(native.Width * 3 / 2, big.Width);
+        Assert.Equal(big.Width, big.Height);
+        Assert.Equal(native.Bottom, big.Bottom);
+        Assert.Equal(native.Center.X, big.Center.X, 1f);
+        Assert.True(big.Top < native.Top);
+        Assert.Equal(native, TargetModelPreview.PaneRect(400f, 700f, 1f, 1f));
+    }
 }

@@ -441,6 +441,41 @@ was done on `port/vr-hud-step2`:
 - "a lo fo the UI elements flicker a little bit". Not yet found beyond the bracket depth above; asked of ragesaq which
   elements.
 
+## Step 2 in the headset (2026-11-26, second look)
+
+ragesaq's look at the build at `6737eaa` *(Port's working session, 2026-11-26)*, with its cause and what was done on
+`port/vr-hud-step2`:
+
+- "the classic ring looks good, no roll dial needed" and "flickering is gone". Native Allegiance has no lasting roll
+  instrument, only a training text *(read: the `DrawRoll` comment in `HudRenderer.cs`, citing
+  `WinTrek/indicator.cpp:634-641`)*; the ROLL dial is the port's own.
+- No lead marker on enemy ships: the hull flown did not have the lead capability, which native requires
+  (`c_habmLeadIndicator`, or a friendly relay that sees the target: `LeadGranted`). Not a VR defect.
+- "the flight path marker ... its green, its supposed to be grey". **Cause:** VR drew its own green shape. **Fix:**
+  VR draws the original game's velocity marker (`directionbmp`, 32 by 32 pixels, untinted as in the flat game) at
+  the flight block's angle per pixel, about 3.2° across. A grey shape stands in when the art is missing.
+- "the left hand side of targeting boxes seems to not be in focus ... and the boxes dont seem to be billboarding
+  towards the camera orientation". **Cause** *(derived from `Game1.VrHud.cs`, not measured in the headset)*: each eye
+  drew the box as pixel offsets around its anchor's pixel, sized by that eye's stretch at that pixel. The two eyes'
+  images stretch differently there (they are turned and off-centre, and this headset's are wide), so a box's edges
+  got a disparity other than its anchor's, and one side sat at another depth. **Fix:** a marker is a flat shape in
+  the world at its anchor, at right angles to the line from the head and upright to the head
+  (`VrHudGeometry.MarkerBillboard`); each eye projects its corners. On the flat mirror window a box off the centre
+  now shows in perspective, as such a shape does on a flat image; the headset's lenses undo that.
+- "parts of a log are overlapping the target indicator that shows a PIP of the object, and the PIP needs to be a
+  little higher and increased in size by 150%". **Cause** *(observed in a dump of the VR panel image, 1280 by 720,
+  with a target selected)*: the port's own weapons and cargo text lines (`DrawFlightPartsHud`, `DrawCargoHud`; not
+  in native) run across the target pane at the image's foot. **Fix, VR only:** the two lines move up to the image's
+  middle, which VR leaves empty since the centre group went to infinity (`VrHudGeometry.PortTextLift`); the target
+  preview is drawn 1.5 times its native size with its bottom edge kept, so it also sits higher
+  (`HudRenderer.TargetPreviewEnlargement`, `TargetModelPreview.PaneRect`). "Increased by 150%" was read as 1.5
+  times the size; the flat game is unchanged.
+- dominusbelial's review notes of a recording (`dominusbelial/AllegianceCore-public`,
+  `docs/reports/VR_TEST1_REVIEW_2026-11-26.md`) describe the Classic panel of an earlier build, with the ROLL dial and
+  the centre group still on it: doubled ARMOR and SHIELD labels and KB lines. Step 2 takes the centre group and the
+  dial off the panel. A cyan separator still runs through one "NOT READY" weapons row in the panel dump; not
+  changed here.
+
 ## Open questions
 
 - Which skin the VR HUD is built from. *(Answered 2026-11-26 by ragesaq: Classic's ring, decision table.)*
@@ -450,7 +485,8 @@ was done on `port/vr-hud-step2`:
 - Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
   the upstream author (node `ragesaq-012`).
 - What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
-  headset look with Classic, then Modern, would tell.
+  headset look with Classic, then Modern, would tell. *(Partly answered 2026-11-26: on the Classic panel they were
+  the centre group and the target pane over each other, "Step 2 in the headset". Modern in VR is not looked at.)*
 - What the desktop window shows in VR mode. *(Answered in step 1: a mirror of the left eye.)*
 - How HUD pixels should be written to depth, if depth is ever submitted for reprojection *(read: SteamVR names
   `XR_KHR_composition_layer_depth`, [Steam partner docs](https://partner.steamgames.com/doc/steamframe/compat/perf_criteria);
@@ -471,6 +507,8 @@ was done on `port/vr-hud-step2`:
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-26: ragesaq's headset look at step 2 (above): the ring kept; the flight-path marker, the targeting
+  boxes, the port's text lines and the target preview changed for VR.
 - 2026-11-26: PR #17 merged; ragesaq's headset look at it "looked good".
 - 2026-11-25: Port built the layer 2 follow-up on `port/vr-hud-bracket-depth` (above). ragesaq accepted Port's
   smaller version of a reticle-depth prompt from another assistant: a target under the reticle gives it depth.

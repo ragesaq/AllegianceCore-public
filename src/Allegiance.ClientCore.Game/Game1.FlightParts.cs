@@ -294,11 +294,16 @@ public sealed partial class Game1
         return text;
     }
 
+    // The weapons line's and the cargo line's tops, in pixels above the image's foot.
+    private const float FlightPartsLineFromFoot = 158f, CargoLineFromFoot = 132f;
+
     private void DrawFlightPartsHud(Rendering.HudModel model)
     {
         if (!model.Visible || model.Context.FlightPartsLine is not { } text) return;
         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-        try { _spriteBatch.DrawString(_hudSmall, text, new Vector2(20, GraphicsDevice.Viewport.Height - 158), Color.LightCyan); }
+        float h = GraphicsDevice.Viewport.Height;
+        float lift = Vr.VrHudGeometry.PortTextLift(model.Context.FlightReferenceInWorld, h, h - FlightPartsLineFromFoot);
+        try { _spriteBatch.DrawString(_hudSmall, text, new Vector2(20, h - FlightPartsLineFromFoot - lift), Color.LightCyan); }
         finally { _spriteBatch.End(); }
     }
 }

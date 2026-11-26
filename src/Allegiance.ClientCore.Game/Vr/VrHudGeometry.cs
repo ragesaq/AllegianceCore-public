@@ -158,6 +158,14 @@ public static class VrHudGeometry
             new Vector2((cx + box.Right) / pixelWidth, (cy + box.Bottom) / pixelHeight));
     }
 
+    /// <summary>How far VR lifts the port's weapons and cargo text lines on the
+    /// HUD panel, in pixels: up to the image's middle, which VR leaves empty
+    /// (the centre group is at infinity), so they no longer run across the
+    /// target pane at the foot of the image. A flat frame does not move them.
+    /// <paramref name="flatTop"/> is the upper line's flat top edge.</summary>
+    public static float PortTextLift(bool vrEyeFrame, float imageHeight, float flatTop) =>
+        vrEyeFrame ? MathF.Max(0f, flatTop - imageHeight / 2f) : 0f;
+
     /// <summary>A view with its translation removed, so only the eye's turn is
     /// left. Both eyes see what is drawn with it in the same direction: it is at
     /// infinity, with no disparity, and does not move when the head moves.</summary>
@@ -165,6 +173,29 @@ public static class VrHudGeometry
     {
         view.Translation = Vector3.Zero;
         return view;
+    }
+
+    /// <summary>A targeting marker's plane in the world: two vectors from its
+    /// anchor, at right angles to the line from the head to the anchor, upright
+    /// to the head (<paramref name="headUp"/>), each half the marker's width
+    /// (<paramref name="angleRadians"/> as seen from the head). A marker drawn
+    /// from points anchor + Right·x − Up·y (x right, y down, ±1 at its edges)
+    /// is a flat shape at the anchor's depth, facing the head: each eye projects
+    /// the same points, so every edge has the anchor's disparity. A shape drawn
+    /// as pixel offsets in each eye's image does not, because the eyes' images
+    /// stretch differently at the anchor's pixel.</summary>
+    public static (Vector3 Right, Vector3 Up) MarkerBillboard(Vector3 headToAnchor, Vector3 headUp, float angleRadians)
+    {
+        float distance = headToAnchor.Length();
+        if (!(distance > 0f)) return (Vector3.Zero, Vector3.Zero);
+        var forward = headToAnchor / distance;
+        var right = Vector3.Cross(forward, headUp);
+        // Straight up or down the head's up: any right angle to the line will do.
+        if (right.LengthSquared() < 1e-8f) right = Vector3.Cross(forward, MathF.Abs(forward.X) < 0.9f ? Vector3.UnitX : Vector3.UnitZ);
+        right = Vector3.Normalize(right);
+        var up = Vector3.Cross(right, forward);
+        float half = distance * MathF.Tan(angleRadians / 2f);
+        return (right * half, up * half);
     }
 
     /// <summary>The flight-path marker's direction (layer 1): the unit velocity,

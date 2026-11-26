@@ -188,6 +188,7 @@ public class HudRenderer
         _viewportWidth = viewport.Width;
         _viewportHeight = viewport.Height;
         Layout.Reset(viewport.Width, viewport.Height);
+        _targetPreviewEnlargement = TargetPreviewEnlargement(model);
         PrepareLayout(model, viewport);
         if (!model.Visible) return;
         var frame = model.InstrumentsVisible ? model.Telemetry : null;
@@ -544,6 +545,15 @@ public class HudRenderer
     /// frame, which shows no horizon cues (knowledge/vr-hud-design.md, decision
     /// table).</summary>
     public static bool RollOnMainPass(HudModel model) => !model.Context.FlightReferenceInWorld;
+
+    /// <summary>How many times its native size the target pane's model preview
+    /// is drawn: 1.5 in a VR eye frame, where the HUD is a panel at arm's length
+    /// and the native square is too small to read (ragesaq's headset test of
+    /// 2026-11-26); 1 in the flat game.</summary>
+    public static float TargetPreviewEnlargement(HudModel model) => model.Context.FlightReferenceInWorld ? 1.5f : 1f;
+
+    // Set from the model at the start of each Draw.
+    private float _targetPreviewEnlargement = 1f;
 
     /// <summary>Where VR puts the speed readout: this many pixels below the
     /// gauge ring's centre, under the own-ship status, as native draws it inside
@@ -2675,7 +2685,7 @@ public class HudRenderer
     protected virtual void DrawTargetModelPreview(float x0, float y0, float s)
     {
         if (TargetModelPreview is null) return;
-        var dst = global::Allegiance.ClientCore.MonoGame.Rendering.TargetModelPreview.PaneRect(x0, y0, s);
+        var dst = global::Allegiance.ClientCore.MonoGame.Rendering.TargetModelPreview.PaneRect(x0, y0, s, _targetPreviewEnlargement);
         _sb.Draw(TargetModelPreview, dst, Color.White);
         ElementDrawn("Target model preview");
     }

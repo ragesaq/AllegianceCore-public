@@ -752,4 +752,89 @@ public sealed class VrHudGeometryTests
         Assert.Equal(VrHudGeometry.BufferDepth(farAnchor, view, GameProjection),
             VrHudGeometry.MarkerTestDepth(farAnchor, far, farSphere, view, GameProjection), 5);
     }
+
+    // Headset test of 2026-11-26: the targeting markers are flat shapes at
+    // their anchor's depth, facing the head, so both eyes see every edge at
+    // that depth; the port's text lines leave the target pane.
+
+    [Theory]
+    [InlineData(0f, 0f, -8f, 0f)]
+    [InlineData(3f, -1f, -8f, 0f)]
+    [InlineData(-40f, 25f, -60f, 30f)]
+    public void A_marker_plane_faces_the_head_at_the_anchor_and_spans_the_marker_angle(float x, float y, float z, float rollDegrees)
+    {
+        var toAnchor = new Vector3(x, y, z);
+        var headUp = Vector3.Transform(Vector3.Up, Quaternion.CreateFromAxisAngle(Vector3.Forward, MathHelper.ToRadians(rollDegrees)));
+        float angle = MathHelper.ToRadians(4f);
+        var (right, up) = VrHudGeometry.MarkerBillboard(toAnchor, headUp, angle);
+        var forward = Vector3.Normalize(toAnchor);
+        // In the plane at right angles to the line from the head, so its edges
+        // are where the anchor is, not nearer or farther on one side.
+        Assert.Equal(0f, Vector3.Dot(right, forward), 4);
+        Assert.Equal(0f, Vector3.Dot(up, forward), 4);
+        Assert.Equal(0f, Vector3.Dot(right, up), 3);
+        // Each half spans half the marker's angle from the head.
+        Assert.Equal(2f, Degrees(toAnchor, toAnchor + right), 3);
+        Assert.Equal(2f, Degrees(toAnchor, toAnchor + up), 3);
+        // Upright to the head: up leans with the head's up, right lies across it.
+        Assert.True(Vector3.Dot(Vector3.Normalize(up), headUp) > 0.7f);
+        Assert.Equal(0f, Vector3.Dot(Vector3.Normalize(right), headUp), 3);
+        Assert.True(Vector3.Dot(Vector3.Cross(right, up), forward) < 0f, "right, up and the line from the head make a right-handed frame seen from the head");
+    }
+
+    [Fact]
+    public void A_marker_straight_above_the_head_still_gets_a_plane()
+    {
+        var (right, up) = VrHudGeometry.MarkerBillboard(new Vector3(0, 20, 0), Vector3.Up, MathHelper.ToRadians(4f));
+        Assert.True(right.Length() > 0.1f && up.Length() > 0.1f);
+        Assert.Equal(0f, right.Y, 4);
+        Assert.Equal(0f, up.Y, 4);
+    }
+
+    [Fact]
+    public void A_marker_plane_seen_by_canted_eyes_puts_each_corner_at_one_point()
+    {
+        // Eyes 64 mm apart, each turned 10 degrees outward with its own
+        // off-centre view: the same corner, projected into each eye and cast
+        // back out, meets itself at the corner's depth.
+        var toAnchor = new Vector3(2.5f, -0.8f, -6f);
+        var (right, up) = VrHudGeometry.MarkerBillboard(toAnchor, Vector3.Up, MathHelper.ToRadians(6f));
+        var corner = toAnchor + right - up;
+        var eyes = new[] { new Vector3(-0.032f, 0, 0), new Vector3(0.032f, 0, 0) };
+        var turns = new[] { MathHelper.ToRadians(10f), MathHelper.ToRadians(-10f) };
+        var rays = new Vector3[2];
+        for (int i = 0; i < 2; i++)
+        {
+            // Eye-relative, as the VR client projects: the view holds the turn only.
+            var view = Matrix.Invert(Matrix.CreateRotationY(turns[i]));
+            var proj = Matrix.CreatePerspectiveOffCenter(-0.9f + i * 0.2f, 0.7f + i * 0.2f, -0.9f, 0.85f, 0.1f, 1000f);
+            Assert.True(VrHudGeometry.TryProject(corner - eyes[i], view, proj, 3708, 3564, out var pixel));
+            rays[i] = VrHudGeometry.RayThroughPixel(pixel, 3708, 3564, view, proj);
+        }
+        // The nearest points of the two rays: both at the corner.
+        var w0 = eyes[0] - eyes[1];
+        float a = Vector3.Dot(rays[0], rays[0]), b = Vector3.Dot(rays[0], rays[1]), c = Vector3.Dot(rays[1], rays[1]);
+        float d = Vector3.Dot(rays[0], w0), e = Vector3.Dot(rays[1], w0), den = a * c - b * b;
+        var p0 = eyes[0] + rays[0] * ((b * e - c * d) / den);
+        var p1 = eyes[1] + rays[1] * ((a * e - b * d) / den);
+        Near3(corner, p0, 0.05f);
+        Near3(corner, p1, 0.05f);
+    }
+
+    [Theory]
+    [InlineData(720f)]
+    [InlineData(1080f)]
+    [InlineData(1440f)]
+    public void The_port_text_lines_rise_to_the_middle_in_vr_and_stay_put_in_the_flat_game(float height)
+    {
+        float flatTop = height - 158f;
+        Assert.Equal(0f, VrHudGeometry.PortTextLift(false, height, flatTop));
+        Assert.Equal(height / 2f, flatTop - VrHudGeometry.PortTextLift(true, height, flatTop), 3);
+    }
+
+    [Fact]
+    public void The_port_text_lines_never_move_down()
+    {
+        Assert.Equal(0f, VrHudGeometry.PortTextLift(true, 300f, 142f));
+    }
 }

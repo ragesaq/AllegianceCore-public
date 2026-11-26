@@ -166,7 +166,8 @@ public sealed partial class Game1
         if (!model.Visible || model.Context.CargoLine is not { } line) return;
         float h = GraphicsDevice.Viewport.Height;
         var sz = _hudSmall.MeasureString(line);
-        float x = 20f, y = h - 132f;
+        float x = 20f, y = h - CargoLineFromFoot
+            - Vr.VrHudGeometry.PortTextLift(model.Context.FlightReferenceInWorld, h, h - FlightPartsLineFromFoot);
         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
         try
         {
