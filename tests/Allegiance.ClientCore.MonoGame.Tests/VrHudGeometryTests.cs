@@ -498,4 +498,116 @@ public sealed class VrHudGeometryTests
         float lead = MathHelper.ToRadians(1.2f);
         Assert.Equal(lead, VrHudGeometry.AnchorAngle(relative, lead, 0f, null));
     }
+
+    // Build step 2: the flight reference block (layer 3) and the flight-path
+    // marker (layer 1) at infinity.
+
+    private static float Degrees(Vector3 a, Vector3 b) =>
+        MathHelper.ToDegrees(MathF.Acos(Math.Clamp(Vector3.Dot(Vector3.Normalize(a), Vector3.Normalize(b)), -1f, 1f)));
+
+    [Fact]
+    public void The_flight_block_is_36_degrees_across_and_centred_on_the_nose_by_default()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        Assert.Equal(36f, MathHelper.ToDegrees(block.WidthRadians), 3);
+        Assert.Equal(0f, block.PitchDownRadians);
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(12f)]
+    public void The_flight_block_rectangle_covers_its_angle_across_at_its_pitch(float pitchDegrees)
+    {
+        var block = new VrHudGeometry.FlightBlock(MathHelper.ToRadians(36f), MathHelper.ToRadians(pitchDegrees));
+        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrHudGeometry.FlightBlockPanel(block), Width, Height);
+        var left = (tl + bl) / 2f;
+        var right = (tr + br) / 2f;
+        Assert.Equal(36f, Degrees(left, right), 2);
+        // 16:9: about 20.25° tall at the centre column.
+        Assert.Equal(2f * MathHelper.ToDegrees(MathF.Atan(MathF.Tan(MathHelper.ToRadians(18f)) * 9f / 16f)),
+            Degrees((tl + tr) / 2f, (bl + br) / 2f), 2);
+        var centre = (tl + tr + bl + br) / 4f;
+        Assert.Equal(pitchDegrees, Degrees(centre, Vector3.Forward), 2);
+        Assert.True(centre.Y <= 1e-4f);
+        Assert.Equal(VrHudGeometry.FlightBlockDistanceMetres, centre.Length(), 3);
+    }
+
+    [Fact]
+    public void A_view_at_infinity_shows_the_same_pixel_to_both_eyes_and_to_a_moved_head()
+    {
+        var turn = Quaternion.CreateFromYawPitchRoll(0.3f, -0.1f, 0.05f);
+        var proj = VrHudGeometry.SeatProjection(GameProjection);
+        var (tl, _, _, br) = VrHudGeometry.PanelCorners(VrHudGeometry.FlightBlockPanel(VrHudGeometry.FlightBlock.Default),
+            Width, Height);
+        var leftEye = VrHudGeometry.SeatView(Eye(turn, -0.032f));
+        var rightEye = VrHudGeometry.SeatView(Eye(turn, 0.032f));
+        var movedHead = VrHudGeometry.SeatView(new VrEyeView(turn, new Vector3(0.2f, -0.1f, 0.3f), -0.9f, 0.85f, 0.9f, -0.95f));
+        foreach (var corner in new[] { tl, br })
+        {
+            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(leftEye), proj, Width, Height, out var l));
+            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(rightEye), proj, Width, Height, out var r));
+            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(movedHead), proj, Width, Height, out var m));
+            Assert.True(Vector2.Distance(l, r) < 0.01f, $"disparity {l} against {r}");
+            Assert.True(Vector2.Distance(l, m) < 0.01f, $"moved with the head: {l} against {m}");
+            // Control: the same corner through the full seat view has disparity.
+            Assert.True(VrHudGeometry.TryProject(corner, leftEye, proj, Width, Height, out var fl));
+            Assert.True(VrHudGeometry.TryProject(corner, rightEye, proj, Width, Height, out var fr));
+            Assert.True(Vector2.Distance(fl, fr) > 1f, $"no disparity without AtInfinity: {fl} against {fr}");
+        }
+    }
+
+    [Fact]
+    public void A_view_at_infinity_keeps_the_eyes_turn()
+    {
+        var turn = Quaternion.CreateFromYawPitchRoll(0.4f, 0.2f, -0.1f);
+        var view = VrHudGeometry.SeatView(Eye(turn, 0.032f));
+        var atInfinity = VrHudGeometry.AtInfinity(view);
+        Assert.Equal(Vector3.Zero, atInfinity.Translation);
+        var direction = Vector3.Normalize(new Vector3(0.3f, -0.2f, -1f));
+        Near3(Vector3.TransformNormal(direction, view), Vector3.TransformNormal(direction, atInfinity), 1e-5f);
+    }
+
+    [Theory]
+    [InlineData("40,5", 40f, 5f)]
+    [InlineData(" 30 , -10 ", 30f, -10f)]
+    [InlineData("90,45", 90f, 45f)]
+    [InlineData("10,-30", 10f, -30f)]
+    public void The_flight_block_can_be_tuned_from_the_environment(string text, float width, float pitch)
+    {
+        var block = VrHudGeometry.FlightBlock.Parse(text);
+        Assert.Equal(width, MathHelper.ToDegrees(block.WidthRadians), 3);
+        Assert.Equal(pitch, MathHelper.ToDegrees(block.PitchDownRadians), 3);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("36")]
+    [InlineData("36,0,1")]
+    [InlineData("wide,0")]
+    [InlineData("9,0")]
+    [InlineData("91,0")]
+    [InlineData("36,-31")]
+    [InlineData("36,46")]
+    [InlineData("NaN,0")]
+    public void An_unusable_flight_block_setting_is_the_default(string? text)
+    {
+        Assert.Equal(VrHudGeometry.FlightBlock.Default, VrHudGeometry.FlightBlock.Parse(text));
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.49f)]
+    public void The_flight_path_marker_hides_when_the_rounded_speed_is_zero(float speed)
+    {
+        Assert.Null(VrHudGeometry.FlightPathDirection(new Vector3(0f, speed, 0f)));
+    }
+
+    [Fact]
+    public void The_flight_path_marker_points_along_the_velocity()
+    {
+        Assert.Equal(Vector3.UnitY, VrHudGeometry.FlightPathDirection(new Vector3(0f, 0.5f, 0f)));
+        var velocity = new Vector3(120f, -30f, -260f);
+        Near3(Vector3.Normalize(velocity), VrHudGeometry.FlightPathDirection(velocity)!.Value, 1e-6f);
+    }
 }

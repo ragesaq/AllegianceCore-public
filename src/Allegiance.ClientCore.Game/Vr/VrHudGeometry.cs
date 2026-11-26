@@ -65,6 +65,64 @@ public static class VrHudGeometry
         return (centre - right + upHalf, centre + right + upHalf, centre - right - upHalf, centre + right - upHalf);
     }
 
+    /// <summary>The flight reference block (layer 3), seen at infinity: the angle
+    /// it covers across, and how far its centre is below the nose.</summary>
+    public readonly record struct FlightBlock(float WidthRadians, float PitchDownRadians)
+    {
+        /// <summary>36° across, so about 20° tall for a 16:9 image: the spec's
+        /// 30° by 20° field, with room for the tapes Jet puts at the image's
+        /// edges. Centred on the nose, because Jet centres its pitch ladder on
+        /// the boresight.</summary>
+        public static FlightBlock Default => new(MathHelper.ToRadians(36f), 0f);
+
+        /// <summary>Reads "widthDegrees,pitchDegrees" (for example "36,0"), as set
+        /// in ALLEGIANCE_VR_FLIGHT_BLOCK for headset tuning. Anything that does not
+        /// parse to a width of 10° to 90° and a pitch of -30° to 45° is the
+        /// default.</summary>
+        public static FlightBlock Parse(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return Default;
+            var parts = text.Split(',');
+            if (parts.Length != 2) return Default;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            const System.Globalization.NumberStyles style = System.Globalization.NumberStyles.Float;
+            if (!float.TryParse(parts[0], style, inv, out float w) || !float.TryParse(parts[1], style, inv, out float p))
+                return Default;
+            if (!(w >= 10f && w <= 90f) || !(p >= -30f && p <= 45f)) return Default;
+            return new FlightBlock(MathHelper.ToRadians(w), MathHelper.ToRadians(p));
+        }
+    }
+
+    /// <summary>How far out the flight block's rectangle is placed. Drawn with
+    /// <see cref="AtInfinity"/>, this only has to sit inside the seat depth
+    /// planes; it sets no disparity.</summary>
+    public const float FlightBlockDistanceMetres = 10f;
+
+    /// <summary>The rectangle that shows a flight block: at
+    /// <see cref="FlightBlockDistanceMetres"/>, as wide as its angle needs.</summary>
+    public static Panel FlightBlockPanel(in FlightBlock block) =>
+        new(FlightBlockDistanceMetres, block.PitchDownRadians,
+            2f * FlightBlockDistanceMetres * MathF.Tan(block.WidthRadians / 2f));
+
+    /// <summary>A view with its translation removed, so only the eye's turn is
+    /// left. Both eyes see what is drawn with it in the same direction: it is at
+    /// infinity, with no disparity, and does not move when the head moves.</summary>
+    public static Matrix AtInfinity(Matrix view)
+    {
+        view.Translation = Vector3.Zero;
+        return view;
+    }
+
+    /// <summary>The flight-path marker's direction (layer 1): the unit velocity,
+    /// or null when the rounded speed is zero, the rule the flat velocity marker
+    /// follows (native <c>(int)(length + 0.5f)</c>).</summary>
+    public static Vector3? FlightPathDirection(Vector3 velocity)
+    {
+        float speed = velocity.Length();
+        if ((int)(speed + 0.5f) == 0) return null;
+        return velocity / speed;
+    }
+
     /// <summary>A seat-space view for one eye: the eye's pose in the local
     /// space, with no game camera in it. The panel and the aim reticle are drawn
     /// with it, so they stay fixed to the seat while the head moves.</summary>

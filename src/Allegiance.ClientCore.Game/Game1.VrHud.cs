@@ -38,6 +38,8 @@ public sealed partial class Game1
 
     private static readonly VrHudGeometry.Panel VrPanel =
         VrHudGeometry.Panel.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_HUD_PANEL"));
+    private static readonly VrHudGeometry.FlightBlock VrFlightBlock =
+        VrHudGeometry.FlightBlock.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_FLIGHT_BLOCK"));
 
     private static readonly (float X, float Y)[] VrCorners = { (-1f, -1f), (1f, -1f), (-1f, 1f), (1f, 1f) };
 
@@ -50,6 +52,11 @@ public sealed partial class Game1
     private static readonly Color VrReticleColour = new(120, 255, 140);
 
     private RenderTarget2D? _vrHudImage;
+    // The flight reference block (layer 3) and the HUD model of the stereo
+    // frame it is drawn from; the flight-path marker's world direction (layer 1).
+    private RenderTarget2D? _vrFlightImage;
+    private HudModel? _vrHudModel;
+    private Vector3? _vrFlightPath;
     private Texture2D? _vrPixel;
     private BasicEffect? _vrPanelEffect;
     private readonly VertexPositionTexture[] _vrPanelVertices = new VertexPositionTexture[4];
@@ -99,6 +106,10 @@ public sealed partial class Game1
         bool indicators = flight && !CommandCameraActive
             && _cameraMode is CameraMode.Cockpit or CameraMode.Chase or CameraMode.ExternalMissile;
         _vrAimReticle = indicators && _cameraMode == CameraMode.Cockpit;
+        // The flight-path marker follows the flat velocity marker's gate: the
+        // cockpit, and a rounded source speed that is not zero.
+        _vrFlightPath = _vrAimReticle && TrySourcePose(out _, out _, out var velocity)
+            ? VrHudGeometry.FlightPathDirection(PoseConverter.ToXna(velocity)) : null;
 
         if (flight)
         {
@@ -125,6 +136,33 @@ public sealed partial class Game1
         _orderArrows = null;
         _drawRadarContacts.Clear();
         _drawShipTags.Clear();
+    }
+
+    /// <summary>Called right after the skin's HUD pass. In a stereo frame it keeps
+    /// the model, so <see cref="ComposeVrHud"/> can draw the flight reference
+    /// block from the same data; a flat frame keeps none.</summary>
+    private void KeepVrHudModel(HudModel model) => _vrHudModel = _vrEyesDrawn ? model : null;
+
+    /// <summary>The flight reference block (layer 3) drawn into its own image,
+    /// the size of the HUD image, so the skin lays it out as in the flat game.
+    /// Null when the active skin has no flight reference renderer or the
+    /// instruments are hidden.</summary>
+    private RenderTarget2D? DrawVrFlightImage(GraphicsDevice gd, int width, int height)
+    {
+        if (_vrHudModel is not { InstrumentsVisible: true } model || ActiveHud is not Rendering.Skins.IHudFlightReferenceRenderer flight)
+            return null;
+        if (_vrFlightImage is null || _vrFlightImage.Width != width || _vrFlightImage.Height != height)
+        {
+            _vrFlightImage?.Dispose();
+            // Preserve, as the HUD image: an excursion to another target that
+            // comes back must not find it cleared.
+            _vrFlightImage = new RenderTarget2D(gd, width, height, false, SurfaceFormat.Color,
+                DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+        }
+        gd.SetRenderTarget(_vrFlightImage);
+        gd.Clear(Color.Transparent);
+        flight.DrawFlightReference(model, new(gd.Viewport, _hudTargetModelPreview, _hudSettings.SelectionBracketOn));
+        return _vrFlightImage;
     }
 
     private bool OwnShipInFlight()
@@ -289,6 +327,8 @@ public sealed partial class Game1
         GatherVrArrows(head, left.Width, left.Height);
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
+        var flightImage = _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
+        var flightPanel = VrHudGeometry.FlightBlockPanel(VrFlightBlock);
         for (int pass = 0; pass < 2; pass++)
         {
             var target = pass == 0 ? left : right;
@@ -297,6 +337,11 @@ public sealed partial class Game1
             var seatView = VrHudGeometry.SeatView(eye);
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
             if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
+
+            // The flight reference block first: it is at infinity, so everything
+            // else in the HUD is nearer and draws over it.
+            if (flightImage is not null)
+                DrawVrPanel(flightImage, flightPanel, VrHudGeometry.AtInfinity(seatView), VrHudGeometry.SeatProjection(proj));
 
             // The aim reticle (at infinity, or at the depth of a target under it)
             // and the off-view arrows (on a ring 3 m out) draw over the scene.
@@ -308,6 +353,11 @@ public sealed partial class Game1
                         out var aim))
                     DrawVrReticle(aim, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(1.5f), proj, target.Height),
                         VrLineWidth(proj, target.Height));
+                // The flight-path marker, at infinity along the velocity.
+                if (_vrFlightPath is { } path
+                    && VrHudGeometry.TryProjectDirection(path, view, proj, target.Width, target.Height, out var fpm))
+                    DrawVrFlightPathMarker(fpm, VrHudGeometry.PixelsForAngleAt(VrFlightPathRadiusRadians, fpm, proj,
+                        target.Width, target.Height), VrLineWidth(proj, target.Height));
                 foreach (var arrow in _vrArrows)
                 {
                     if (!VrHudGeometry.TryProject(arrow.World - eyeWorld, view, proj, target.Width, target.Height, out var at)) continue;
@@ -339,9 +389,11 @@ public sealed partial class Game1
             }
 
             // The panel last: at 1 m it is nearer than every marker.
-            if (_vrHudImage is { } hud) DrawVrPanel(hud, seatView, VrHudGeometry.SeatProjection(proj));
+            if (_vrHudImage is { } hud) DrawVrPanel(hud, VrPanel, seatView, VrHudGeometry.SeatProjection(proj));
         }
 
+        // Each frame keeps its own model; one that skips the HUD pass draws no block.
+        _vrHudModel = null;
         gd.SetRenderTarget(null);
         gd.Clear(Color.Black);
         var pp = gd.PresentationParameters;
@@ -468,9 +520,9 @@ public sealed partial class Game1
         return pixel;
     }
 
-    private void DrawVrPanel(Texture2D hud, Matrix seatView, Matrix proj)
+    private void DrawVrPanel(Texture2D hud, in VrHudGeometry.Panel panel, Matrix seatView, Matrix proj)
     {
-        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrPanel, hud.Width, hud.Height);
+        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(panel, hud.Width, hud.Height);
         _vrPanelVertices[0] = new VertexPositionTexture(tl, new Vector2(0, 0));
         _vrPanelVertices[1] = new VertexPositionTexture(tr, new Vector2(1, 0));
         _vrPanelVertices[2] = new VertexPositionTexture(bl, new Vector2(0, 1));
@@ -562,6 +614,20 @@ public sealed partial class Game1
         VrLine(at + new Vector2(0, gap), at + new Vector2(0, half), line, VrReticleColour);
     }
 
+    // The flight-path marker's circle: about the size of Jet's (7 px at scale 1).
+    private static readonly float VrFlightPathRadiusRadians = MathHelper.ToRadians(0.6f);
+
+    /// <summary>The flight-path marker, drawn as Jet draws it: a circle with two
+    /// side wings and a tail above, so it reads apart from the gun cross.</summary>
+    private void DrawVrFlightPathMarker(Vector2 at, float radius, float line)
+    {
+        float wing = radius * 12f / 7f, tail = radius * 9f / 7f;
+        VrPolygon(at, radius, 16, 0f, line, VrReticleColour);
+        VrLine(at - new Vector2(radius + wing, 0), at - new Vector2(radius, 0), line, VrReticleColour);
+        VrLine(at + new Vector2(radius, 0), at + new Vector2(radius + wing, 0), line, VrReticleColour);
+        VrLine(at - new Vector2(0, radius + tail), at - new Vector2(0, radius), line, VrReticleColour);
+    }
+
     private void VrPolygon(Vector2 centre, float radius, int sides, float phase, float line, Color colour)
     {
         for (int i = 0; i < sides; i++)
@@ -585,6 +651,10 @@ public sealed partial class Game1
     {
         _vrHudImage?.Dispose();
         _vrHudImage = null;
+        _vrFlightImage?.Dispose();
+        _vrFlightImage = null;
+        _vrHudModel = null;
+        _vrFlightPath = null;
         _vrPanelEffect?.Dispose();
         _vrPanelEffect = null;
         _vrPixel?.Dispose();

@@ -3338,6 +3338,7 @@ public sealed partial class Game1
             targetPaneSlide: _paneSlides.Progress(SlidingPane.TargetPane, _nowSeconds),
             selectionBracket: _hudSettings.SelectionBracketOn,
             centreReticleInWorld: _vrEyesDrawn,   // VR (Game1.VrHud.cs)
+            flightReferenceInWorld: _vrEyesDrawn,
             diagnostics: Environment.GetEnvironmentVariable("ALLEGIANCE_LOD_OVERLAY") == "1"
                 ? $"LOD full:{_lodFullCount} far:{_lodFarCount}" : null,
             hidden: _hideHud || _directorActive || _hudHidden,
@@ -3372,6 +3373,7 @@ public sealed partial class Game1
                 && Rendering.MissionClock.IsCountdownGame(clockMission.GameLengthSeconds),
             buffers: _hudSnapshotBuffers);
         ActiveHud.Draw(model, new(GraphicsDevice.Viewport, _hudTargetModelPreview, _hudSettings.SelectionBracketOn));
+        KeepVrHudModel(model);
         DrawTargetNoMatchFeedback();
         if (model.Visible && _hudSkinNotice is not null && _nowSeconds < _hudSkinNoticeUntil)
         {

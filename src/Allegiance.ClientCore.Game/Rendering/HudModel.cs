@@ -232,6 +232,11 @@ public sealed record HudContext
     /// (Game1.VrHud.cs), so the flat centre reticle stays off the near HUD panel.
     /// False everywhere else.</summary>
     public bool CentreReticleInWorld { get; init; }
+    /// <summary>The VR client shows the skin's flight reference (heading, pitch
+    /// ladder, roll, speed and throttle) at infinity, drawn on its own through
+    /// <see cref="Skins.IHudFlightReferenceRenderer"/>, so a skin that has one leaves
+    /// those readouts off its main pass. False everywhere else.</summary>
+    public bool FlightReferenceInWorld { get; init; }
     /// <summary>P1038 — true when the incoming-missile warning is armed: an
     /// in-sector enemy missile is tracking the own ship (native
     /// <c>MISSILE_TRACK_WARNING(208)</c>, <see cref="MissileTrackState"/>). Null when the

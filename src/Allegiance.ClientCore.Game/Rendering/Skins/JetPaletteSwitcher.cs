@@ -93,7 +93,7 @@ public sealed class JetPaletteSwitcher : IDisposable
 /// while the palette swaps behind it, so a palette switch cannot disturb the
 /// skin's persistence, cycle position or the frame's active-skin reference.
 /// </summary>
-public sealed class JetPaletteRenderer(JetPaletteSwitcher palettes) : IHudSkinRenderer
+public sealed class JetPaletteRenderer(JetPaletteSwitcher palettes) : IHudSkinRenderer, IHudFlightReferenceRenderer
 {
     private readonly JetPaletteSwitcher _palettes = palettes;
 
@@ -104,6 +104,8 @@ public sealed class JetPaletteRenderer(JetPaletteSwitcher palettes) : IHudSkinRe
     public string Palette => _palettes.Active.Id;
 
     public void Draw(HudModel model, in HudDrawFrame frame) => _palettes.Active.Renderer.Draw(model, frame);
+    public void DrawFlightReference(HudModel model, in HudDrawFrame frame)
+        => (_palettes.Active.Renderer as IHudFlightReferenceRenderer)?.DrawFlightReference(model, frame);
     public void DrawCommand(HudModel model) => _palettes.Active.Renderer.DrawCommand(model);
     public void DrawConsole(HudModel model) => _palettes.Active.Renderer.DrawConsole(model);
     public void SetRadarIcons(RadarIconTextures? icons) => _palettes.Active.Renderer.SetRadarIcons(icons);

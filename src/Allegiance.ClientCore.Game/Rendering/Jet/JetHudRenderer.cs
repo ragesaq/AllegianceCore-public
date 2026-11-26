@@ -30,7 +30,7 @@ namespace Allegiance.ClientCore.MonoGame.Rendering.Jet;
 /// keeps the tapes (pod speed) and shows the ladder/heading only as its data
 /// allows.</para>
 /// </summary>
-public sealed partial class JetHudRenderer : IHudSkinRenderer
+public sealed partial class JetHudRenderer : IHudSkinRenderer, IHudFlightReferenceRenderer
 {
     /// <summary>The green variant's WIP tag (P1035's shipped text). HUD fonts are
     /// ASCII (<see cref="HudFormat.Printable"/>), so the P972 em dash is a hyphen.
@@ -400,8 +400,11 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                     // not move, so Jet's own ladder furniture yields to it (see DrawPitchLadder).
                     _trainingBox = TryTrainingCallout(model, w, h, scale,
                         out TrainingCalloutGeometry callout, out _) ? callout.Box : default;
-                    DrawHeadingTape(w, h, scale);
-                    DrawPitchLadder(w, h, scale);
+                    if (!model.Context.FlightReferenceInWorld)
+                    {
+                        DrawHeadingTape(w, h, scale);
+                        DrawPitchLadder(w, h, scale);
+                    }
                 }
 
                 if (model.ReticleVisible)
@@ -415,7 +418,7 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                 // Native hides the centre instrument group in the command view
                 // (HudModel.InstrumentsVisible = flight && !docked/dead/command), so
                 // the tapes follow that same gate rather than widening it.
-                if (model.InstrumentsVisible && model.Telemetry is { } own)
+                if (model.InstrumentsVisible && !model.Context.FlightReferenceInWorld && model.Telemetry is { } own)
                 {
                     DrawSpeedTape(own.Speed, w, h, scale);
                     DrawThrottleTape(own.Throttle, w, h, scale);
@@ -484,7 +487,8 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                 DrawTrainingCallout(model, w, h, scale);
                 // The F4 inventory pane is the modal overlay and owns the band the roll
                 // pointer sits in, so the pointer yields to it (like the WIP tag).
-                if (!model.Context.InventoryVisible && model.Context.InventorySlide <= 0f)
+                if (!model.Context.InventoryVisible && model.Context.InventorySlide <= 0f
+                    && !model.Context.FlightReferenceInWorld)
                     DrawRollPointer(w, h, scale);
                 DrawConsoleColumn(model, w, h, scale);
                 DrawVote(model, w, scale);
@@ -499,6 +503,40 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
         }
 
         _resources.PodDeath(model);
+    }
+
+    /// <summary>VR: only the flight reference (heading tape, pitch ladder, roll
+    /// pointer, speed and throttle tapes), laid out for the frame's viewport, which
+    /// the VR client shows at infinity. The main pass leaves these out while
+    /// <see cref="HudContext.FlightReferenceInWorld"/> is set, and reads the
+    /// attitude it resolved. The viewport fields <see cref="DrawConsole"/> reads
+    /// are left as the main pass set them.</summary>
+    public void DrawFlightReference(HudModel model, in HudDrawFrame frame)
+    {
+        if (!model.InstrumentsVisible) return;
+        float w = frame.Viewport.Width;
+        float h = frame.Viewport.Height;
+        if (w <= 0f || h <= 0f) return;
+        float scale = ModernHudScale.Core(_displayScale, _settings.Size, h);
+        _painter.Scale = scale;
+        _trainingBox = default;
+        ClearFurniture();
+        _surface.Begin();
+        try
+        {
+            DrawHeadingTape(w, h, scale);
+            DrawPitchLadder(w, h, scale);
+            if (model.Telemetry is { } own)
+            {
+                DrawSpeedTape(own.Speed, w, h, scale);
+                DrawThrottleTape(own.Throttle, w, h, scale);
+            }
+            DrawRollPointer(w, h, scale);
+        }
+        finally
+        {
+            _surface.End();
+        }
     }
 
     /// <summary>P1040 — the Jet command composition: the native command-camera chrome

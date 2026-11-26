@@ -38,10 +38,12 @@ public static class HudModelAdapter
         int commandVerb = 0,
         int? missionClockSeconds = null,
         bool missionCountdown = false,
-        bool centreReticleInWorld = false)
+        bool centreReticleInWorld = false,
+        bool flightReferenceInWorld = false)
         => HudModel.Create(frame, new HudContext
         {
             CentreReticleInWorld = centreReticleInWorld,
+            FlightReferenceInWorld = flightReferenceInWorld,
             PodReturnInstruction = podReturnInstruction, HitConfirmation = hitConfirmation, Camera = mode, CameraLabel = cameraLabel, Hidden = hidden,
             Docked = docked, Dead = dead, CommandView = commandView, Ghost = ghost, Turret = turret, RoundRadar = roundRadar,
             ShowJoystickIndicator = showJoystickIndicator,
