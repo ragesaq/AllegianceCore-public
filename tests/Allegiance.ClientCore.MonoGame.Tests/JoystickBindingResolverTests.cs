@@ -30,7 +30,7 @@ public class JoystickBindingResolverTests
         Device(index, Stick, 8, 128, axes, pressed);
 
     private static JoystickDeviceSample ThrottleAt(int index, (int, int)[]? axes = null, int[]? pressed = null) =>
-        Device(index, Throttle, 6, 79, axes, pressed);
+        Device(index, Throttle, 6, 80, axes, pressed);
 
     private static JoystickDeviceSample PedalsAt(int index, (int, int)[]? axes = null) =>
         Device(index, Pedals, 3, 0, axes);
@@ -62,7 +62,7 @@ public class JoystickBindingResolverTests
         var r = new JoystickBindingResolver();
         var f = r.Resolve([
             StickAt(0, [(0, 16384), (1, -32767), (2, 32767), (3, 32767)]),
-            ThrottleAt(1, [(0, 32767), (1, 32767), (3, 32767)]),
+            ThrottleAt(1, [(0, 32767), (1, 32767), (3, -32767)]),
             PedalsAt(2, [(0, 32767)]),
         ]);
 
@@ -70,7 +70,7 @@ public class JoystickBindingResolverTests
         Assert.Equal(16384 / 32767f, f.Axes.Yaw, 5);
         Assert.Equal(-1f, f.Axes.Pitch, 5);
         Assert.Equal(1f, f.Axes.Roll, 5);
-        // Throttle lever 3 at its rest end (+32767) reads idle after the inversion;
+        // Throttle lever 3 at its idle end (-32767) reads idle;
         // the stick's axis 3 and the throttle's own axes 0 and 1 feed nothing.
         Assert.Equal(-1f, f.Axes.Throttle, 5);
     }
@@ -79,7 +79,7 @@ public class JoystickBindingResolverTests
     public void ThrottleLeverFullForward_ReadsFull()
     {
         var r = new JoystickBindingResolver();
-        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(3, -32767)])]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)])]);
         Assert.Equal(1f, f.Axes.Throttle, 5);
     }
 
@@ -89,7 +89,7 @@ public class JoystickBindingResolverTests
         var r = new JoystickBindingResolver();
         var f = r.Resolve([
             PedalsAt(0, [(0, 32767)]),
-            ThrottleAt(1, [(3, -32767)]),
+            ThrottleAt(1, [(3, 32767)]),
             StickAt(2, [(0, 32767)]),
         ]);
         Assert.Equal(1f, f.Axes.Yaw, 5);
@@ -328,7 +328,7 @@ public class JoystickBindingResolverTests
     public void ThrottleThumbStick_DrivesTheSideThrusters(int axis, int value, JoystickCommand expected)
     {
         var r = new JoystickBindingResolver();
-        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(axis, value), (3, 32767)])]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(axis, value), (3, -32767)])]);
         Assert.True(f.Holds(expected));
         foreach (var other in new[] { JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight, JoystickCommand.StrafeUp, JoystickCommand.StrafeDown })
             if (other != expected) Assert.False(f.Holds(other));
@@ -526,6 +526,19 @@ public class JoystickBindingResolverTests
         r.Disarm();
         var again = r.Resolve([StickAt(0, pressed: [5]), ThrottleAt(1, pressed: [20])]);
         Assert.Equal(0, again.HeldMask);
+    }
+
+    // Capture 2026-11-25: with the lever past the afterburner detent the throttle holds
+    // button 79 (the Virpil configurator's logical button 80).
+    [Fact]
+    public void ThrottlePastTheAfterburnerDetent_HoldsTheBooster()
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)], pressed: [79])]);
+        Assert.True(f.Booster);
+        Assert.Equal(1f, f.Axes.Throttle, 5);
+        Assert.False(r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)])]).Booster);
     }
 
     [Fact]

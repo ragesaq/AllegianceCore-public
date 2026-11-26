@@ -89,8 +89,9 @@ pressed in quick succession above)*. A binding treats each pulse as one step, ac
 held button.
 
 Still open: which button pair is which rotary encoder, and which button of a pair is which turning direction.
-- Both throttle levers move from the maximum (+32,767) towards the minimum, so the throttle role is inverted, as
-  native's `NativeHotas` layout already marks *(derived)*.
+- Both throttle levers moved from the maximum (+32,767) towards the minimum, so the throttle role was inverted, as
+  native's `NativeHotas` layout already marks *(derived)*. Later the same day ragesaq inverted both levers in the
+  Virpil configurator; see "First PR as built".
 
 ## How it applies here
 
@@ -148,7 +149,7 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   and Booster commands to buttons. Hats are not bound yet.
 - Built-in profiles: the VKB Gunfighter stick (X yaw, Y pitch, twist roll, as native's role order gives; the
   trigger's first stage, button 0, fires, as `defaultinputmap.mdl` gives) and the VPC throttle (left lever, axis 3,
-  inverted). Native's default puts missile fire on button 1, which on this stick is the trigger's second stage;
+  read as the device sends it, see below). Native's default puts missile fire on button 1, which on this stick is the trigger's second stage;
   the second stage is left unbound *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont want trigger stage 2 for missiles")*. A player profile can still bind it. Stick X as yaw follows native; whether ragesaq wants X as
   roll is for the flight test.
 - The game's Controls screen (F6) rebinds keyboard keys only; mouse buttons are fixed and joystick inputs are not
@@ -207,6 +208,21 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   TargetNothing, TargetCenter and autopilot checks in `Game1.FlightInput.cs`) *(observed in the code)*. A test
   checks every such command is a catalog action the game dispatches. A joystick targeting press respects the
   same action filter a training lesson puts on the keys *(review round 3)*.
+- The afterburner is the booster command (`FireBooster`, "Afterburner boost (hold)"). ragesaq set it on the left
+  lever's afterburner detent in the Virpil configurator *(ragesaq, Port's working session 2026-11-25: "when i push
+  it past the throttle level of the detent it will hold down button 73 representing hte afterburner")*. The
+  configurator's physical button 73 had no logical button until ragesaq mapped it to logical button 80 (ragesaq,
+  same session: "the logical mapping doesnt have button physical button 73 bound. i just bound it. it shows up as
+  logical button 80"); before that the game never saw it. After the mapping the throttle reports 80 buttons,
+  and with the lever past the detent it holds button 79 (0-based) *(observed: probe, 2026-11-25)*. The built-in
+  throttle profile binds button 79 to the booster, held while the lever is past the detent.
+- ragesaq also inverted the left and right levers in the configurator *(ragesaq, same session: "i also inverted
+  the axis of left/right throttle (bound together) so the numerical values make more sense")*. Lever axis 3 now
+  reads +32,767 at 100% (ragesaq: "the throttle is also at 100% right now", with the probe reading +32,767 and
+  button 79 held) and spans -32,768 to +32,767 *(observed)*, so idle is -32,768 *(derived)*. The built-in
+  profile no longer inverts axis 3. The lever reads 100% already at the detent (ragesaq: "at the max of being
+  below the detent its still at 100%"), so only the button tells the afterburner zone apart. A throttle left at
+  Virpil's own direction needs a `joystick.json` profile with `"invert": true` on axis 3.
 - A desktop app that shows which physical control is which button on both devices, and rebinds them, is a later
   goal *(ragesaq, Port's working session 2026-11-25: "an app is a future goal, for now we should just map out
   some bindings")*. ragesaq's HOTAS is on a sim rig with no monitor, viewed through VR, which is why the app

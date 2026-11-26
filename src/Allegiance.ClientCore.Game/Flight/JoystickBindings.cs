@@ -163,14 +163,17 @@ public sealed class JoystickBindingResolver
                 new(JoystickCommand.Ripcord, 5),
             ]),
         // Virpil MT-50CM2 (SDL name "LEFT VPC Throttle MT-50CM2"): axis 3 is the left
-        // lever; it reads +32767 at idle and falls towards full forward. Axes 0 and 1
+        // lever, set in the Virpil configurator to read -32767 at idle and +32767 at
+        // full; it is full already at the afterburner detent, and past the detent the
+        // configurator holds logical button 80 (79 here) for the afterburner. Axes 0 and 1
         // are the index-finger thumb stick: left/right and up/down thrust. The grip's
         // targeting controls, by Virpil's diagram numbers: push buttons 15, 16 and 21,
         // and the 5-way castle switches 20 (enemies) and 19 (friendlies and navigation),
         // each read as up, right, down, left and centre.
         new("VPC Throttle",
-            [new(JoystickRole.Throttle, 3, Invert: true)],
+            [new(JoystickRole.Throttle, 3)],
             [
+                new(JoystickCommand.Booster, 79),                   // past the afterburner detent
                 new(JoystickCommand.TargetNothing, 32),             // 15
                 new(JoystickCommand.TargetCenter, 20),              // 16
                 new(JoystickCommand.ToggleAutopilot, 31),           // 21
