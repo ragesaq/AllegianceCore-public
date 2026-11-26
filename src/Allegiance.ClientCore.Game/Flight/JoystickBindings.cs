@@ -190,6 +190,7 @@ public sealed class JoystickBindingResolver
                 new(JoystickCommand.TargetFriendlyPrev, 22),        // 19 down
                 new(JoystickCommand.TargetFriendlyBaseNearest, 23), // 19 left
                 new(JoystickCommand.TargetFriendlyNearest, 21),     // 19 centre
+                new(JoystickCommand.ViewRecenter, 42),              // logical 43 in VPC (ragesaq, 2026-11-25)
             ],
             [
                 new(0, JoystickCommand.StrafeLeft, JoystickCommand.StrafeRight),

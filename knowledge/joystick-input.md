@@ -252,12 +252,13 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
 - It is done in the presenter by replacing the OpenXR `LOCAL` space the frame is placed in with one offset to the
   head, located against a second `LOCAL` space and a `VIEW` space kept for that purpose *(read, same code)*. The
   eye views, the HUD layer and the flat quad all follow it.
-- The built-in throttle profile does not bind it yet: ragesaq picks the button. Until then a player can bind it in
-  `joystick.json` as `{ "command": "ViewRecenter", "button": <n> }`.
+- The built-in throttle profile binds it to throttle button 42, logical button 43 in VPC *(decided 2026-11-25 by
+  ragesaq: "it should be button 42 0-based / 43 logical in vpc")*. A capture that day saw it pressed, with 43 not held
+  at rest *(observed 2026-11-25, a 120 s probe)*. Another device can bind it in `joystick.json` as
+  `{ "command": "ViewRecenter", "button": <n> }`.
 
 ## Open questions
 
-- Which throttle or stick button recenters the VR view (ragesaq to choose; the button then needs a capture).
 - Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
 
@@ -276,7 +277,7 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
 - 2026-11-25 — the first binding PR: per-device profiles by name, built-in stick and throttle profiles, a player
   file, the earlier layout as the fallback, held buttons ignored until released.
 - 2026-11-25 — ragesaq asked for a VR recenter button after the combined headset test; Port added the
-  `ViewRecenter` command on branch `port/vr-recenter`, not yet bound to a button.
+  `ViewRecenter` command on branch `port/vr-recenter`; ragesaq chose throttle button 42 (logical 43) after a capture.
 
 ## Boundary
 

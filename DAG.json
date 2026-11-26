@@ -214,11 +214,11 @@
       "id": "ragesaq-014",
       "title": "VR: a joystick button recenters the seated view",
       "owner": "ragesaq",
-      "status": "waiting",
+      "status": "review",
       "needs": [
         "ragesaq-006"
       ],
-      "next": "Asked by ragesaq 2026-11-25 after the combined headset test of PR #15 and PR #14: the view was not perfectly aligned. Branch port/vr-recenter, stacked on port/hotas-bindings (PR #14), adds the joystick command ViewRecenter and the presenter's recenter (knowledge/joystick-input.md, \"VR recenter button\"). Waits on ragesaq choosing the button, which then needs a capture and a binding in the built-in profile; then a cross-family review and a headset test. Owner of the work: Port.",
+      "next": "Asked by ragesaq 2026-11-25 after the combined headset test of PR #15 and PR #14: the view was not perfectly aligned. Branch port/vr-recenter, stacked on port/hotas-bindings (PR #14), adds the joystick command ViewRecenter and the presenter's recenter (knowledge/joystick-input.md, \"VR recenter button\"). Bound to throttle button 42 (logical 43 in VPC), ragesaq's choice after a capture. Next: the cross-family review of the pull request, then a headset test by ragesaq and merge approval. Owner of the work: Port.",
       "links": [
         "knowledge/joystick-input.md"
       ],
