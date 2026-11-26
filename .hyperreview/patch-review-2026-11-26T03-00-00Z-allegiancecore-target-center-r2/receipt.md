@@ -6,10 +6,11 @@ reviewer wrote only `summary.md`.
 
 | Field | Value |
 |---|---|
-| Mode | HyperReview patch-review, round 2 (delta) |
+| Mode | HyperReview patch-review, delta round 2 |
 | Target | ragesaq/AllegianceCore-public PR #16, branch `port/target-center-native`, base `master` `3a3b6e1b` |
-| Reviewed head | `ece6de19562f39c5fbe75d88bb4380911bbcdcd8` |
-| Reviewed tree | `21598bba6aa2e2d523325bbc19c1cd08dcb93ab0` (unchanged after the run) |
+| Reviewed head | `238432666d45818266d1b4175d26113e4ac95a1f` |
+| Reviewed tree | `1cfcf6e7e8f9cd8d6a762373e5c561276447d2fb` (unchanged after the run) |
+| Range | `ece6de19..23843266`: the round 1 fixes and record |
 | Author | Port (Claude Code, Claude Opus 5.5), family anthropic |
 | Reviewer | `deepseek-v4.1-flash`, provider `opencode-go`, effort `high`, family deepseek |
 | Route | `codex:5aa43f19840ce08ad126b5b3`, binding `exact`, route lock on |
@@ -18,7 +19,7 @@ reviewer wrote only `summary.md`.
 | Runtime | HyperCodex `codex-cli 0.169.0+hc.1`, review run in a standalone clone with no remote, no branches and no tags |
 | Effective model | session banner `model: deepseek-v4.1-flash`, `provider: opencode-go`; wrapper route `opencode-go deepseek-v4.1-flash high` |
 | Wrapper result | launcher `rc=0`, no forced kill |
-| Started / finished | 2026-11-26T01:03:10Z / 2026-11-26T01:15:54Z |
+| Started / finished | 2026-11-26T01:21:58Z / 2026-11-26T01:31:39Z |
 | Clone refs | the review clone held no refs, only a detached head at the reviewed commit |
-| Summary | sha256 `2f284334650673c94d3147eda38a3d9b41996a7d6793f9d6712a83fdd8c9379b`, committed unchanged |
-| Verdict | PASS-WITH-CONDITIONS: F1 medium (record names the wrong consumer of the tiered list), F2 medium (turret axis), F3 low (stale wording) |
+| Summary | sha256 `7204aa7db8675ffc80106d3a5cb2b06139ddc3bb1e2498d5bc3cfff43abfe65d`, committed unchanged |
+| Verdict | PASS-WITH-CONDITIONS: F1 to F3 fixed with residuals; N1 medium (a gunner's carrier can be picked), N2 to N4 low (the live test, the review index, test comments) |

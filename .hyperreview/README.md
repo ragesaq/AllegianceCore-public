@@ -4,6 +4,22 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #16 target center by angle off the nose, round 2
+
+- Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-target-center-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `ece6de1..2384326`, head `2384326`, tree `1cfcf6e`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. F1 to F3 fixed, with residuals in N2 and N4. Fixed after round 2 in `3c03315`:
+  1. N1, medium: in a turret the carrier could be the first pick, while native's `FindTarget` never returns it.
+     `PickFrontTarget` takes the ship to leave out; test `GunnersCarrier_IsNeverPicked` fails without it. The carrier's
+     last update is the fallback when it has no render pose.
+  2. N2, low: the artwork-gated live test now ranks with `PickFrontTarget` from the own ship's real pose; it passes.
+  3. N3, low: the round 1 entry now says the parity citation was fixed.
+  4. N4, low: the unit tests of `SelectCandidates` are retitled as the autopilot implicit-pick list.
+  - Observations kept: a key press uses the previous frame's pose (one frame stale); native's rider without a turret
+    is not modelled apart from a gunner (existing behaviour).
+
 ## 2026-11-26: PR #16 target center by angle off the nose, round 1
 
 - Record: [summary](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/summary.md), [receipt](patch-review-2026-11-26T02-00-00Z-allegiancecore-target-center-r1/receipt.md)
