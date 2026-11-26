@@ -1,0 +1,166 @@
+# Joystick input and a split HOTAS
+
+**Owner:** ragesaq · **Started:** 2026-11-24 · **Last reviewed:** 2026-11-25 · **Review by:** 2027-02-24
+
+**Status:** in progress (findings and a device readout recorded; the VR milestone 1 headset test it waited on is
+done; `DAG.json` node `ragesaq-006`)
+
+## What this answers
+
+Whether a player can fly AllegianceCore with a HOTAS whose stick and throttle are separate USB devices, what native
+Allegiance did for that setup, and what porting it involves.
+
+## Current state
+
+- A split HOTAS does not work: the client reads one joystick, maps its axes for a drone remote controller, and has
+  fixed fire and booster buttons *(read from the code at `master` `47e720b`, see below)*.
+- Native Allegiance bound each axis and command to a chosen device through its input map *(read from the native
+  source, see below)*.
+- The port is proposed and deferred until after the VR milestone 1 headset test *(decided 2026-11 by ragesaq)*.
+- ragesaq's devices are read out below *(observed 2026-11-25)*. ragesaq will not bind their own pedals, which are
+  racing pedals without a useful range of motion here; pedals must still be bindable for any player who wants
+  them *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i dont want to say that pedals shouldnt be viable if anyone wants to use them, i just dont plan on using mine as they dont have the range of motion that makes sense")*.
+
+## Device readout (2026-11-25)
+
+Read with a probe on the game's own input stack (MonoGame DesktopGL 3.8.5.1 on SDL2), `Joystick.GetCapabilities`
+and `Joystick.GetState` for indexes 0 to 15, with all devices plugged in *(observed)*:
+
+| SDL index | Device (SDL name) | Axes | Buttons | Hats | Role |
+|---|---|---|---|---|---|
+| 0 | VKB-Sim Gunfighter Modern Combat Pro Twist | 8 | 128 | 2 | stick |
+| 1 | LEFT VPC Throttle MT-50CM2 | 6 | 79 | 0 | throttle |
+| 2 | Heusinkveld Sim Pedals Sprint | 3 | 0 | 0 | not bound by ragesaq (bindable for others) |
+
+- With this order the game today reads the stick and ignores the throttle *(derived: `CurrentJoystickState`
+  reads index 0 only, above)*. The order is SDL's and can change between runs, so bindings follow the device name
+  and identifier, not the index (proposed first PR, step 1).
+- At rest the stick reports axis 0 at about -6,300 and axis 7 at -32,768, and the pedals all three axes at -32,768
+  *(observed, one sample)*. Which physical control each axis and button is has not been mapped yet; that needs a
+  capture while ragesaq moves each control.
+- Every device and axis is bindable, pedals included. A device with nothing bound, such as ragesaq's pedals, is
+  ignored: never read as a stick or a throttle just because of its index *(derived from ragesaq's decision above)*.
+
+### Control capture (2026-11-25)
+
+ragesaq moved the controls in a set order while the probe logged the first time each axis left its rest value (by
+more than 6,000 of 32,768) or each button or hat was pressed, and each axis's range over 90 s *(observed)*. The
+roles below are read from that order and are *(derived)* where noted:
+
+| Device | Input | Range seen | What it is |
+|---|---|---|---|
+| stick | axis 0 | full | roll, stick left and right (moved first) |
+| stick | axis 1 | full | pitch, stick forward and back (second) |
+| stick | axis 2 | full | yaw, twist (third) |
+| stick | axes 5 and 6 | full | a two-axis thumb control: both moved at the same instant *(derived)* |
+| stick | axis 7 | full, rest at the minimum | a lever or slider, likely the brake lever *(derived)* |
+| stick | axes 3 and 4 | none | not used by this stick |
+| stick | buttons 0 and 1 | | the trigger's two stages: pressed at the same instant *(derived)* |
+| stick | hat 0 | up, right, down, left | the main hat |
+| stick | buttons 2 to 9, 11, 13, 15, 20, 21, 23 | | other stick buttons ragesaq pressed |
+| throttle | axis 3 | full | left throttle lever (second capture) |
+| throttle | axis 4 | full | right throttle lever (second capture) |
+| throttle | axis 5 | full | flaps lever (second capture) |
+| throttle | axis 2 | full | middle-finger slider (second capture) |
+| throttle | axes 0 and 1 | full | index-finger joystick (second capture) |
+| throttle | button pairs 1 and 2, 13 and 14, 50 and 51, 53 and 54 | | the left lever's rotary encoder and the right lever's thumb rotary encoder, which send button pulses; which pair is which encoder is not known |
+| throttle | buttons 0 to 8, 10, 12 to 28, 31 to 33, 43 to 46, 48 to 54, 73 to 78 | | throttle buttons ragesaq pressed |
+| pedals | axis 0 | full | pedal axis, rest at the minimum (pressed once to check) |
+
+A second capture, 60 s, started with the hands off and moved one throttle control at a time. ragesaq gave the
+order afterwards *(Port's working session 2026-11-25: "left throttle, right throttle, flaps, middle finger slider, index finger joystick, left throttle rotary encoder, right throttle thumb rotary encoder")*. The probe logged axis 0 at 22.1 s, then axes 3,
+4, 5, 2 and 1 at 24.2, 26.5, 29.4, 35.0 and 36.5 s, then the button pairs between 41 and 46.5 s *(observed)*. The
+throttle rows above are read from that order *(derived)*. Axis 0 moving first, before the left lever, is most likely
+the hand catching the index-finger joystick on the grip *(derived, not checked)*.
+
+Settled with the hands off *(observed, second capture)*:
+- Stick axis 0 rests at about 1,000, so the -6,300 of the first capture was a hand on the stick.
+- Stick hat 1 reads "up" with the hands off: the stick reports it when idle. A binding must treat a hat or button
+  already held when the game starts as its rest state, not as a press.
+- Throttle buttons 35 and 36 read pressed at rest in both captures; button 34 was held in the first and not in the
+  second, when the levers rested at the other end. 34 is likely a switch tied to the lever position, 35 and 36
+  latched switches *(derived, not checked)*.
+- The throttle levers' rest value is wherever they were left, so the throttle role reads the lever's position, with
+  no centre.
+
+The rotary encoders are buttons that fire in sequence as the encoder turns *(ragesaq, Port's working session
+2026-11-25: "the rotary encoders are probably buttons that just fire in sequence"; consistent with the pairs
+pressed in quick succession above)*. A binding treats each pulse as one step, acting on the press edge, never as a
+held button.
+
+Still open: which button pair is which rotary encoder, and which button of a pair is which turning direction.
+- Both throttle levers move from the maximum (+32,767) towards the minimum, so the throttle role is inverted, as
+  native's `NativeHotas` layout already marks *(derived)*.
+
+## How it applies here
+
+- `CurrentJoystickState` reads only the first connected joystick (`src/Allegiance.ClientCore.Game/Game1.FlightInput.cs:53-62`)
+  *(read)*. A throttle on a second device is therefore ignored *(derived, from that line range)*.
+- The read path hard-codes `JoystickAxisLayout.DjiFpvRc3`, a drone remote controller's "Mode 2" layout
+  (`Game1.FlightInput.cs:2058`) *(read)*. `JoystickAxisLayout.NativeHotas` (yaw 0, pitch 1, roll 2, throttle 3,
+  throttle inverted) exists but nothing uses it (`src/Allegiance.ClientCore.Game/Flight/JoystickFlightController.cs:81`)
+  *(read)*. On a HOTAS the axes would likely land on the wrong roles *(derived, from the two layouts)*.
+- Fire and booster are fixed button constants, `FireButton = 1` and `BoosterButton = 2`
+  (`JoystickFlightController.cs:156-158`) *(read)*. Joystick buttons are not part of the key map, and there is no
+  binding screen *(read, a search of `src/` for an input-map port found only comments citing `defaultinputmap.mdl`)*.
+- Native Allegiance (`FreeAllegiance/Allegiance`) *(read)*:
+  - `engine/dinput.cpp:1549-1700` enumerates every joystick device (`GetJoystickCount`, `GetJoystick(index)`).
+  - `WinTrek/trekinput.cpp:675-800` binds each command to a (joystick index, button index) pair, negative indexes
+    being hat directions, and each axis role to a (joystick index, axis index) pair.
+  - The map loads from `inputmap1` and falls back to `defaultinputmap` (`WinTrek/trekinput.h:48-49`);
+    `defaultinputmap.mdl` is in the FreeAllegiance Artwork set. `InputMapPopup` (`trekinput.cpp:1631`) is the in-game
+    binding screen.
+- In VR the player cannot see the keyboard, so joystick bindings matter more there *(derived)*.
+
+## What we decided
+
+| Decision | Chosen | Rejected | Why *(derived — what it rests on)* | Decided by | Decided | Last reconciled |
+|---|---|---|---|---|---|---|
+| When to do the HOTAS work | After the VR milestone 1 headset test | Start it now, beside PR #7 | The headset test is the pending acceptance step for PR #7 | ragesaq (Port's working session) | 2026-11 | 2026-11-24 |
+
+## Proposed first PR
+
+Not decided; a proposal for ragesaq to accept or change when the work starts.
+
+1. Read every connected joystick. Tie each binding to the device's identity (MonoGame `JoystickCapabilities.Identifier`
+   and `DisplayName`) rather than its index, because the SDL index can change between runs *(derived)*.
+2. Bind each axis role (yaw, pitch, roll, throttle) to a device, an axis and an invert flag; bind joystick buttons and
+   hat directions to commands, at least fire and booster, preferably what native's default map binds.
+3. Defaults from native's `defaultinputmap.mdl` where it gives them, else `NativeHotas`; keep `DjiFpvRc3` selectable;
+   a user map file the player can edit.
+4. Unit tests with synthetic states for two devices (stick on one, throttle on the other) and a device that is
+   missing or unplugged; the deadzone and throttle-latch behaviour unchanged; parity rows in `docs/parity/`.
+5. A readout of ragesaq's devices (names, axis, button and hat counts; no serial numbers) to set the defaults;
+   ragesaq's flight test as the acceptance step.
+
+The in-game binding screen is a later step, scoped with ragesaq.
+
+## Open questions
+
+- Which button pair is which rotary encoder on the throttle.
+- Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
+
+## Timeline
+
+- 2026-11-24 — ragesaq asked whether the game can bind their HOTAS and said the stick and throttle are separate
+  devices; Port read the client and native input code (findings above) and found no joystick connected to the host at
+  that time (observed, a MonoGame joystick enumeration).
+- 2026-11-24 — ragesaq deferred the work until after the VR milestone 1 headset test (decided).
+- 2026-11-25 — with the HOTAS plugged in, Port read out the three devices the game sees (table above). ragesaq
+  will not bind their own racing pedals, but pedals stay bindable for other players (decided).
+- 2026-11-25 — a 90 s control capture mapped the stick's axes, trigger and hat and the throttle's levers and buttons
+  (table above); a few throttle axes and rest states remain open.
+- 2026-11-25 — a second capture, one throttle control at a time with ragesaq naming the order, mapped every throttle
+  axis and settled the rest states; only the encoders' button pairs remain open.
+
+## Boundary
+
+No device serial numbers, host names or machine paths. A future hardware readout records device names and counts
+only.
+
+## Sources
+
+- Native source: <https://github.com/FreeAllegiance/Allegiance> (`src/engine/dinput.cpp`, `src/WinTrek/trekinput.cpp`,
+  `src/WinTrek/trekinput.h`)
+- Artwork set with `defaultinputmap.mdl`: <https://github.com/FreeAllegiance/Artwork>
+- MonoGame joystick API: <https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Joystick.html>
