@@ -562,6 +562,20 @@ public class JoystickBindingResolverTests
         Assert.Equal(0, empty.HeldMask);
     }
 
+    // Review r5 R5-1: the reset itself, on the game's own field, with every command held.
+    [Fact]
+    public void DisarmJoystick_EmptiesTheTargetingCopy()
+    {
+        const System.Reflection.BindingFlags Private = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var game = (Game1)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(Game1));
+        GC.SuppressFinalize(game);
+        var copy = typeof(Game1).GetField("_targetJoystickFrame", Private)!;
+        copy.SetValue(game, new JoystickBindingFrame(true, default, true, -1));
+        Assert.True(((JoystickBindingFrame)copy.GetValue(game)!).Holds(JoystickCommand.TargetCenter));
+        typeof(Game1).GetMethod("DisarmJoystick", Private)!.Invoke(game, null);
+        Assert.Equal(0, ((JoystickBindingFrame)copy.GetValue(game)!).HeldMask);
+    }
+
     [Fact]
     public void ThrottleRestButtons_AreNotBound()
     {

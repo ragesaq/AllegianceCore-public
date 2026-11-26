@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 5
+
+- Record: [summary](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/summary.md), [receipt](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `c6df4d7..3f99264`, head `3f99264`, tree `9223fac`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. N1 and N2 fixed; the reviewer found every reader of the targeting copy after the
+  undock disarm sees an empty frame. Fixed after round 5, all low:
+  1. R5-1: test `DisarmJoystick_EmptiesTheTargetingCopy` calls the game's own reset with every command held; it
+     fails when the reset line is removed.
+  2. R5-2: the note's sentence about button 79 is marked as the binding before the move.
+  3. R5-3: `DAG.json` node `ragesaq-006` `updated` is 2026-11-26.
+  - Observation kept for a separate issue: a keyboard G held through the ready screen can toggle the autopilot on
+    the first flight frame (`_gKeyWasDown` is not primed). Pre-existing, outside this pull request.
+
 ## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 4
 
 - Record: [summary](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/summary.md), [receipt](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/receipt.md)
