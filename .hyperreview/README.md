@@ -4,6 +4,27 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #22 VR HUD step 2, round 4
+
+- Record: [summary](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/summary.md), [receipt](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `0314c5e..d0e8b1c`, head `d0e8b1c`, tree `b5ac652`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, three low findings, none blocking. The fixes from ragesaq's third headset look:
+  the 1.4° box floor, the flight block at 10 m, markers upright to the seat, the flight block at twice the density,
+  the port's lines wrapped higher, the thrust bar from the HOTAS throttle, and missiles drawn once per frame.
+  1. F1 (a comment in `Game1.Rendering.cs` still said missiles are not extrapolated): fixed in the commit that
+     records this review. Prose only.
+  2. F2 ("at infinity" left in current-state prose): fixed in `HudRenderer.cs`, `HudModel.cs` and the note's
+     decision-table row "What the VR HUD is built from". The "Step 2 as built" section is left as it is: it records
+     what was built then, and the third-look section says what changed. Prose only.
+  3. F3 (the 10 m flight block is drawn with no depth test, so its ring paints over a hull nearer than 10 m):
+     answered, no change. The flight block is an instrument that must stay readable, as a real HUD's symbols are,
+     so it stays drawn over the scene; the markers keep their depth test because they mark objects in the world.
+     Whether a near hull under the ring is uncomfortable is for ragesaq's next headset look.
+- The fixes for F1 and F2 change only comments and prose, which the review gates in `AGENTS.md` exempt, so they
+  are not re-reviewed.
+
 ## 2026-11-26: PR #22 VR HUD step 2, round 3
 
 - Record: [summary](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/summary.md), [receipt](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/receipt.md)

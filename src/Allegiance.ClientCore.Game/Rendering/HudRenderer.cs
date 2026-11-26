@@ -537,7 +537,7 @@ public class HudRenderer
 
     /// <summary>Whether the main pass draws the centre group's gauges, speed and
     /// own-ship status: when the centre HUD is shown, except in a VR eye frame,
-    /// which draws them on their own at infinity (<see cref="DrawFlightReference"/>).</summary>
+    /// which draws them on their own, 10 m out in the seat (<see cref="DrawFlightReference"/>).</summary>
     public static bool CentreGroupOnMainPass(HudModel model) =>
         model.CentreHudVisible && !model.Context.FlightReferenceInWorld;
 

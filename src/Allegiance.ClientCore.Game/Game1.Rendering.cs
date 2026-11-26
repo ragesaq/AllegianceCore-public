@@ -1203,10 +1203,10 @@ public sealed partial class Game1
                 // MISSILE_UPDATE(205) regardless of sector, so the draw loop
                 // filters to the local player's OWN sector: missile.ClusterId ==
                 // mySector (the same cluster concept set from SET_CLUSTER/
-                // SHIP_STATUS). Each instance is drawn at the server-authoritative
-                // Position from the per-tick 205 stream (no extrapolation — the
-                // client can't simulate homing and doesn't need to, at 20 Hz the
-                // server re-positions it every tick), oriented nose-along its
+                // SHIP_STATUS). Each instance starts from the server-authoritative
+                // Position of the per-tick 205 stream and is drawn moved on from it
+                // by MissileMotionSmoother (a short, capped lead from its recent
+                // velocity; it does not simulate homing), oriented nose-along its
                 // Forward via the single-arg Set (the warp precedent: the wire
                 // carries no Up, so the roll is chosen deterministically). The
                 // real .mdl mesh is shared by every missile; only the world
