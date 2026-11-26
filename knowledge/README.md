@@ -91,5 +91,6 @@ removed.
 
 | [VR client survey](vr-client-survey.md) | Why the VR client is built here, how the MonoGame client renders, where OpenXR attaches, and the proposed first milestone | ragesaq | 2026-11-24 |
 | [VR HUD design](vr-hud-design.md) | Where each VR HUD element goes: what it is fixed to, its depth and size, and the build order | ragesaq | 2026-11-25 |
+| [Target center](target-center.md) | Which object the target-center command picks, and why it follows native's angle-off-the-nose rule | ragesaq | 2026-11-25 |
 
 Copy [`TEMPLATE.md`](TEMPLATE.md) to `knowledge/<subject>.md` for a new subject, and add its row here in the same change.

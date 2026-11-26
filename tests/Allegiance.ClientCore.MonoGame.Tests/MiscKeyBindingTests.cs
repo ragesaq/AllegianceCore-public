@@ -12,14 +12,10 @@ namespace Allegiance.ClientCore.MonoGame.Tests;
 /// <summary>
 /// P417 — unit tests for the small leftover key-bindings batch:
 /// <list type="bullet">
-/// <item><b>TargetCenter</b> — the one with a real ranking requirement: select the
-/// candidate closest to the RETICLE/crosshair, not closest in raw distance. This
-/// port reuses the existing <see cref="Game1.SelectCandidates"/> nearest-to-
-/// crosshair ranking (the same screen-space DistSq ordering CollectTargetCandidates
-/// applies) — the native c_ttFront nearest-target analogue (WinTrek.cpp:10127-10151).
-/// These tests prove that ranking picks the on-reticle candidate even when a
-/// different candidate is physically closer, i.e. the "closest to view center"
-/// semantic the brief demands.</item>
+/// <item><b>Candidate ranking</b> — <see cref="Game1.SelectCandidates"/> orders
+/// in-view candidates nearest to the crosshair, not nearest in raw distance. The
+/// T key cycles this list. TargetCenter no longer uses it: it follows native
+/// c_ttFront by angle off the nose (<see cref="TargetCenterFrontTests"/>).</item>
 /// <item><b>ScreenShot</b> — the standalone QoL capture: a timestamped PNG written
 /// to a sensible <c>screenshots/</c> path via the shared RGBA→PNG encoder. Tests
 /// pin the path format (sorted, collision-resistant, under the working dir) and

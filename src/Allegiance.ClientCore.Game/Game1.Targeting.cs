@@ -1378,11 +1378,10 @@ public sealed partial class Game1
     //                             target (and implicitly the autopilot, since
     //                             this port's DisengageAutopilot clears both).
     //   TK_TargetCenter (10127) FindTarget(c_ttFront|AllTypes|AllSides,
-    //                             orientation) → SetTarget — the candidate
-    //                             nearest the reticle/fwd vector. This port's
-    //                             PickNearestTarget already ranks candidates
-    //                             nearest-to-crosshair (screen-space DistSq),
-    //                             so it is the direct reuse (no new ranking).
+    //                             orientation) → SetTarget — the object at
+    //                             the smallest angle off the nose, any kind and
+    //                             side (PickFrontTarget; not the ship-first
+    //                             PickNearestTarget tiers).
     //   TK_TargetCommand (10408) selects the independent accepted slot;
     //   production key handling is in Game1.Orders.cs (P675).
     //
@@ -1439,15 +1438,27 @@ public sealed partial class Game1
         SendCurrentCommandToServer(null);
     }
 
-    /// <summary>P417 — TK_TargetCenter: select the candidate nearest the
-    /// reticle/crosshair. Reuses the existing nearest-to-crosshair ranking
-    /// (PickNearestTarget — the same screen-space DistSq ordering CollectTargetCandidates
-    /// already applies), which is this port's analogue of native's
-    /// c_ttFront nearest-target (WinTrek.cpp:10127-10151).</summary>
+    /// <summary>P417 — TK_TargetCenter: select the object at the smallest angle
+    /// off the ship's nose, native's <c>FindTarget(c_ttFront | c_ttAllTypes |
+    /// c_ttAllSides)</c> (WinTrek.cpp:10127-10151). Native ranks every findable
+    /// object in the sector by angle alone, with no ship-first tier and no view
+    /// frustum, so this does not reuse <see cref="PickNearestTarget"/>, whose
+    /// ship tier let any ship in view win over the object under the reticle
+    /// (found in ragesaq's headset test, 2026-11-25).</summary>
     private void SelectCentermostTarget()
     {
         if (!TryOwnPose(out var pos, out var orient, out _)) return;
-        var picked = PickNearestTarget(pos, orient);
+        var world = _session.World;
+        var objs = new List<CandidateObject>();
+        lock (_session.Gate)
+        {
+            if (world.MyShipId is { } me && world.Ships.TryGetValue(me, out var ownShip))
+                objs = GatherSectorCandidates(world.Ships, world.Warps, world.Stations,
+                                              world.Asteroids, me, ownShip.SectorId,
+                                              ShipRoleBits, StationRoleBits,
+                                              world.Probes, world.Treasures);
+        }
+        var picked = PickFrontTarget(objs, pos, orient.GetForward(), _autoTarget);
         if (picked is { } p)
         {
             CommitTargetForPlayer(p);
@@ -1456,6 +1467,41 @@ public sealed partial class Game1
         }
         else
             Console.WriteLine("[monogame] target center: nothing in view");
+    }
+
+    /// <summary>Native's <c>c_ttFront</c> ranking (common.cpp:509-640): the
+    /// object whose direction from <paramref name="position"/> makes the
+    /// smallest angle with <paramref name="forward"/>, scored like
+    /// <c>Orientation::CosForward2</c> (a signed squared cosine, so an object
+    /// behind is chosen only when nothing is ahead). The current target is
+    /// considered last and kept only when nothing else qualifies, so a repeat
+    /// press steps to the next best object, as native does.</summary>
+    internal static AutopilotTarget? PickFrontTarget(
+        IReadOnlyList<CandidateObject> objects, SimVec position, SimVec forward,
+        AutopilotTarget? current)
+    {
+        CandidateObject? best = null;
+        float bestScore = float.NegativeInfinity;
+        bool currentSeen = false;
+        foreach (var o in objects)
+        {
+            if (current is { } c && c.Kind == o.Kind && c.Id == o.Id)
+            {
+                currentSeen = true;
+                continue;
+            }
+            var d = o.Position - position;
+            float l2 = d.LengthSquared();
+            float dot = forward.X * d.X + forward.Y * d.Y + forward.Z * d.Z;
+            float score = l2 > 0f ? (dot >= 0f ? dot * dot / l2 : -dot * dot / l2) : 0f;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = o;
+            }
+        }
+        if (best is { } b) return new AutopilotTarget(b.Kind, b.Id, b.Name);
+        return currentSeen && current is { } kept ? new AutopilotTarget(kept.Kind, kept.Id, kept.Name) : null;
     }
 
     // ═══════════════════════════════════════════════════════════════════
