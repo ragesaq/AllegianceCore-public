@@ -305,7 +305,7 @@ public sealed partial class Game1
         {
             if (model.Context.FlightReferenceInWorld)
             {
-                float y = Vr.VrHudGeometry.PortTextTopPixels;
+                float y = Vr.VrHudGeometry.PortTextTop(GraphicsDevice.Viewport.Height);
                 foreach (var line in VrPortTextLines(text))
                 {
                     _spriteBatch.DrawString(_hudSmall, line, new Vector2(20, y), Color.LightCyan);
@@ -320,8 +320,8 @@ public sealed partial class Game1
     }
 
     /// <summary>VR: a port text line wrapped to the panel
-    /// (<see cref="Vr.VrHudGeometry.PortTextWrapWidth"/>).</summary>
+    /// (<see cref="Vr.VrHudGeometry.PortTextWrapPixels"/>).</summary>
     private IReadOnlyList<string> VrPortTextLines(string text) =>
-        Vr.VrHudGeometry.WrapLine(text, Vr.VrHudGeometry.PortTextWrapWidth(GraphicsDevice.Viewport.Width),
+        Vr.VrHudGeometry.WrapLine(text, Vr.VrHudGeometry.PortTextWrapPixels,
             s => _hudSmall.MeasureString(s).X);
 }

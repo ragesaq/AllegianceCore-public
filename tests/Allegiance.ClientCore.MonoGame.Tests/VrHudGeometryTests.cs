@@ -833,11 +833,12 @@ public sealed class VrHudGeometryTests
     }
 
     [Fact]
-    public void Vr_puts_the_port_text_under_the_chat_pane_and_short_of_the_weapons_pane()
+    public void Vr_puts_the_port_text_in_the_lower_left_clear_of_the_target_pane()
     {
-        // The chat pane's foot is at about 125 px, the keys hint's at about 146.
-        Assert.InRange(VrHudGeometry.PortTextTopPixels, 146f, 200f);
-        // At 1280 the weapons pane starts at about 882.
-        Assert.InRange(VrHudGeometry.PortTextWrapWidth(1280f) + 20f, 500f, 870f);
+        // Below the top-left orders and badges (to about 196 px) and the middle,
+        // above the camera label (from h - 34).
+        Assert.InRange(VrHudGeometry.PortTextTop(720f), 400f, 720f - 34f - 9f * 26f);
+        // Left of the target pane, which reaches about 180 px left of the centre.
+        Assert.True(20f + VrHudGeometry.PortTextWrapPixels + 20f < 640f - 180f);
     }
 }

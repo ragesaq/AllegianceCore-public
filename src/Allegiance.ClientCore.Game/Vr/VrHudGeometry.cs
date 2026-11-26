@@ -162,15 +162,16 @@ public static class VrHudGeometry
     }
 
     /// <summary>Where VR puts the top of the port's weapons and cargo text
-    /// lines on the HUD panel, in pixels from the image's top: under the chat
-    /// pane (top centre, its foot at about 125) and the keys hint below it, at
-    /// the left. At the foot they ran across the target pane, and in the
-    /// middle across the panel's centre (ragesaq, 2026-11-26).</summary>
-    public const float PortTextTopPixels = 152f;
+    /// lines in the HUD image, in pixels from the image's top: in the lower
+    /// left, which the flat layout leaves empty, so the lines can be cut out on
+    /// their own and shown in the target zone beside the target pane
+    /// (<see cref="VrHudZones.ClassicCutouts"/>). Room for nine wrapped lines
+    /// above the camera label.</summary>
+    public static float PortTextTop(float imageHeight) => imageHeight - 294f;
 
-    /// <summary>How wide VR lets the port's text lines run before they wrap:
-    /// about two thirds of the image, short of the weapons pane at the right.</summary>
-    public static float PortTextWrapWidth(float imageWidth) => imageWidth * 0.65f;
+    /// <summary>How wide VR lets the port's text lines run before they wrap, in
+    /// pixels: what the target zone has left beside the target pane.</summary>
+    public const float PortTextWrapPixels = 216f;
 
     /// <summary>A line broken at its spaces into lines no wider than
     /// <paramref name="maxWidth"/> by <paramref name="measure"/>. A word wider

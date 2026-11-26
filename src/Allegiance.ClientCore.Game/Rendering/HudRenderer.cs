@@ -331,7 +331,9 @@ public class HudRenderer
             // INCLUDING when the target itself is off-screen (that is exactly when
             // it matters most — the bracket above is null out of view). Applies to
             // every target kind (ship/station/asteroid/warp): pure directional math.
-            if (model.IndicatorsVisible && context.TargetBearing is { } tb)
+            // Left out in VR, where the off-view arrows point at the target in the
+            // world (knowledge/vr-hud-design.md, "The zones").
+            if (model.IndicatorsVisible && context.TargetBearing is { } tb && !context.FlightReferenceInWorld)
                 DrawTargetBearingArrow(new(tb.X, tb.Y), viewport);
 
             // HUD-5 — radar overlays/labels (native radarimage.cpp:1199-1416);
@@ -403,8 +405,10 @@ public class HudRenderer
             {
                 var hintFont = NativeFontAt(NativeFont.MedVerdana);
                 float measured = hintFont.MeasureString(hintLine).X;
+                // VR keeps it within the comms strip it is cut out with.
+                float hintRoom = context.FlightReferenceInWorld ? 2f * Vr.VrHudZones.CommsHalfWidthPixels : w - 32f;
                 float hintScale = MathF.Min(TextScale,
-                    MathF.Max(0.65f, (w - 32f) / MathF.Max(1f, measured)));
+                    MathF.Max(0.65f, hintRoom / MathF.Max(1f, measured)));
                 DrawMeasuredText(hintFont, hintLine,
                     new Vector2(w / 2f - measured * hintScale / 2f, ChatPaneLayout.BottomFromTop + 6f),
                     TextMain, drawScale: hintScale);
