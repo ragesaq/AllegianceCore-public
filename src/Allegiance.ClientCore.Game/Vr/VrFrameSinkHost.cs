@@ -81,7 +81,6 @@ internal sealed class VrFrameSinkHost(IVrPacingTarget pacing, Action<string> log
         if (_sink.Failed) Drop();
     }
 
-    /// <summary>The game cannot hand the sink its frame; run flat from now on.</summary>
     /// <summary>Passes a recenter request to the attached sink. A sink that throws
     /// is dropped, as for a frame.</summary>
     public void Recenter()
@@ -98,6 +97,7 @@ internal sealed class VrFrameSinkHost(IVrPacingTarget pacing, Action<string> log
         }
     }
 
+    /// <summary>The game cannot hand the sink its frame; run flat from now on.</summary>
     public void Abandon(string reason)
     {
         if (_sink is null) return;
