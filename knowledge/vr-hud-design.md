@@ -177,7 +177,7 @@ service with upstream, not two.
 | Item | Choice | Rejected | Who and when decided | Last reconciled |
 |---|---|---|---|---|
 | Where the HUD is composited | into each eye image | its own composition layer (milestone 2), fixing capture in the capture tool | ragesaq, 2026-11 | 2026-11-25 |
-| Aiming reticle depth | infinity | at the depth of the object behind it (Meta guidance, Star Wars Squadrons) | ragesaq, 2026-11 | 2026-11-25 |
+| Aiming reticle depth | infinity (kept after the step 1 headset test: "lets have the aim reticle sit at infinity for now") | at the depth of the object behind it (Meta guidance, Star Wars Squadrons); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; reconfirmed 2026-11-25 | 2026-11-25 |
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
@@ -247,6 +247,30 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 - The flat game is unchanged: replay frames 300, 1500, 3600, 6000 and 9000 of `battle.alr` hash the same as
   before *(observed 2026-11-25)*.
 
+## Step 1 in the headset (2026-11-25)
+
+ragesaq tested PR #15 together with the HOTAS bindings (PR #14) *(ragesaq, relayed by Port's other working session
+and answered in this one, 2026-11-25)*:
+
+- "i noticed the HUD was still very 2d, but it worked". Expected: the flat panel is step 1's stopgap, which layer 4
+  replaces.
+- "the depth of rendering on the targeting window is a little confusing, i think the bore sight is accurate". The
+  "targeting window" is the brackets around objects *(ragesaq, Port's working session 2026-11-25)*. Likely cause, not
+  yet confirmed in the headset: the brackets draw over everything with no depth test, so a nearer object that passes
+  in front of a far target sits "behind" a bracket that stereo places farther away *(derived from
+  `Game1.VrHud.cs`)*.
+- ragesaq pointed at how Elite Dangerous places its targeting, from a note by another assistant, and said "it makes a
+  lot of sense to me". Its points against this spec *(read: that note only, not checked against the game)*:
+  - Brackets and the lead pip at the target's world position with a constant angular size: built in step 1.
+  - Their depth clamped at about 50 to 100 m, so far objects do not shimmer: matters only with a depth test, so it
+    goes with that follow-up. Beyond 100 m vergence is under 0.04°, the same as infinity.
+  - The boresight collimated 15 to 30 m ahead: rejected for now; the reticle stays at infinity (table above).
+  - The cockpit depth-tests over world brackets: no cockpit model exists yet; the scene's own depth is the
+    follow-up's test.
+  - Off-screen target arrows on a ring 2 to 5 m out near the canopy edge: the edge arrows step 1 lacks.
+- Next (a layer 2 follow-up, proposal): test bracket depth against the scene's depth buffer, with the near clamp; off-screen arrows
+  on a ring a few metres out. Then a headset look to confirm the bracket confusion is gone.
+
 ## Open questions
 
 - Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
@@ -268,6 +292,8 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
 - 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
+- 2026-11-25: ragesaq tested step 1 in the headset (above): the brackets' depth confused, the boresight was right;
+  the aim reticle stays at infinity.
 - 2026-11-25: Port built step 1 on `port/vr-hud-in-eyes` (above). From a first look in the headset, ragesaq asked
   that targeting reticles be farther than 1 m; the flat crosshair left the near panel.
 
