@@ -188,7 +188,7 @@ public sealed partial class Game1
     private bool RemainderTargetEdgeDown(KeyboardState keys, string action)
         => _targetPressEdges.Observe(action, RemainderTargetKeyDown(
             Rendering.KeyBindingStore.Instance.Map, keys, action,
-            Allegiance.ClientCore.Training.TrainingController.IsTraining));
+            Allegiance.ClientCore.Training.TrainingController.IsTraining) || JoystickHoldsAction(action));
 
     /// <summary>Pure, testable predicate for <see cref="RemainderTargetEdgeDown"/>: true when the
     /// action's current binding is down, or — only while a training mission is active — its

@@ -31,43 +31,98 @@ namespace Allegiance.ClientCore.MonoGame;
 /// </summary>
 public sealed partial class Game1
 {
+    /// <summary>A joystick button bound to the key action <paramref name="action"/> is held in
+    /// this flight frame (<see cref="_targetJoystickFrame"/>, set before the targeting keys run),
+    /// and the action is not filtered out, as a training lesson does for its keys.</summary>
+    private bool JoystickHoldsAction(string action)
+        => _targetJoystickFrame.HoldsAction(action)
+            && Rendering.KeyBindingStore.Instance.Map.ActionFilter?.Invoke(action) != false;
 
-
-    /// <summary>
-    /// P380 — the live MonoGame joystick state for the first connected joystick,
-    /// or <c>null</c> when no joystick is connected (or the platform reports the
-    /// joystick API unsupported). The connected index is cached so the cheap
-    /// path is a single <c>GetState</c>; if it stops reporting connected
-    /// (hot-unplug), the cache is dropped and the list re-scanned so a
-    /// reconnect is picked up next frame. When it returns <c>null</c> the
-    /// keyboard-only flight path is untouched.
-    /// </summary>
-    private JoystickState? CurrentJoystickState()
+    /// <summary>Every joystick button counts again only after it is seen released. The frame
+    /// cached for this update is dropped so the next read already sees that, and so is the copy
+    /// the targeting keys read, which was taken earlier in the update.</summary>
+    private void DisarmJoystick()
     {
-        if (!Joystick.IsSupported)
-        {
-            _joystickIndex = null;
-            return null;
-        }
-
-        if (_joystickIndex is int cached && Joystick.GetCapabilities(cached).IsConnected)
-            return Joystick.GetState(cached);
-
-        _joystickIndex = null;
-        for (int i = 0; i <= Math.Max(Joystick.LastConnectedIndex, 0); i++)
-        {
-            if (Joystick.GetCapabilities(i).IsConnected)
-            {
-                _joystickIndex = i;
-                return Joystick.GetState(i);
-            }
-        }
-        return null;
+        _joystickBindings?.Disarm();
+        _joystickFrameTicks = -1;
+        _targetJoystickFrame = default;
     }
 
-    /// <summary>P380 — whether the given joystick button is currently pressed.</summary>
-    private static bool IsJoystickButtonPressed(ButtonState[] buttons, int index) =>
-        index >= 0 && index < buttons.Length && buttons[index] == ButtonState.Pressed;
+    /// <summary>
+    /// The bound joystick input for this update: every connected joystick is
+    /// sampled and resolved against the device profiles (<see cref="JoystickBindingResolver"/>),
+    /// once per update however many callers ask. <c>AnyBound</c> is false when no
+    /// joystick is connected (or the platform reports the joystick API unsupported);
+    /// the keyboard-only flight path is then untouched. Hot-plug is picked up on the
+    /// next update because the device list is re-read each time.
+    /// </summary>
+    private JoystickBindingFrame CurrentJoystickFrame(GameTime gameTime)
+    {
+        long ticks = gameTime.TotalGameTime.Ticks;
+        if (ticks == _joystickFrameTicks) return _joystickFrame;
+        _joystickFrameTicks = ticks;
+        _joystickBindings ??= new JoystickBindingResolver(LoadJoystickProfiles());
+
+        _joystickSamples.Clear();
+        if (Joystick.IsSupported)
+        {
+            for (int i = 0; i <= Math.Max(Joystick.LastConnectedIndex, 0); i++)
+            {
+                var caps = Joystick.GetCapabilities(i);
+                if (!caps.IsConnected) continue;
+                var st = Joystick.GetState(i);
+                if (!st.IsConnected) continue;
+                if (!_joystickButtonBuffers.TryGetValue(i, out var pressed) || pressed.Length != st.Buttons.Length)
+                    _joystickButtonBuffers[i] = pressed = new bool[st.Buttons.Length];
+                for (int b = 0; b < pressed.Length; b++)
+                    pressed[b] = st.Buttons[b] == ButtonState.Pressed;
+                _joystickSamples.Add(new JoystickDeviceSample(i, caps.DisplayName ?? "", st.Axes, pressed));
+            }
+        }
+        LogJoystickDevicesIfChanged();
+        _joystickFrame = _joystickBindings.Resolve(_joystickSamples);
+        return _joystickFrame;
+    }
+
+    /// <summary>The player's device profiles from <see cref="JoystickBindingFile.FileName"/>
+    /// beside the other client settings, or none when the file is absent or unreadable.</summary>
+    private static IReadOnlyList<JoystickDeviceProfile> LoadJoystickProfiles()
+    {
+        string path = System.IO.Path.Combine(PlayerConfig.DirectoryPath, JoystickBindingFile.FileName);
+        try
+        {
+            if (!System.IO.File.Exists(path)) return [];
+            var (profiles, error) = JoystickBindingFile.Parse(System.IO.File.ReadAllText(path));
+            if (error is not null)
+                Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} ignored: {error}");
+            return profiles;
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException or System.Security.SecurityException)
+        {
+            Console.WriteLine($"[monogame] {JoystickBindingFile.FileName} not read: {e.Message}");
+            return [];
+        }
+    }
+
+    private void LogJoystickDevicesIfChanged()
+    {
+        if (_joystickSamples.Count == 0 && _joystickDevicesLogged.Length == 0) return;
+        var sb = new StringBuilder();
+        foreach (var s in _joystickSamples)
+            sb.Append(s.Index).Append(':').Append(s.Name).Append(';');
+        string now = sb.ToString();
+        if (now == _joystickDevicesLogged) return;
+        _joystickDevicesLogged = now;
+        bool anyMatched = _joystickSamples.Any(s => _joystickBindings!.ProfileFor(s.Name) is not null);
+        foreach (var s in _joystickSamples)
+        {
+            string use = _joystickBindings!.ProfileFor(s.Name) is { } p ? $"profile \"{p.Match}\""
+                : anyMatched || !_joystickBindings.LegacyAllowed ? "no profile, ignored"
+                : s.Index == _joystickSamples[0].Index ? "no profile, legacy layout" : "no profile, ignored";
+            Console.WriteLine($"[monogame] joystick {s.Index} \"{s.Name}\": {use}");
+        }
+    }
 
     // ── P499 — Bluetooth gamepad input (Android head + any desktop pad) ──────
     //
@@ -835,6 +890,9 @@ public sealed partial class Game1
         _cKeyWasDown                = ActionDown(ks, "DropChaff");
         _fCloakWasDown              = ActionDown(ks, "ToggleCloak");
         _lKeyWasDown                = ActionDown(ks, "Ripcord");
+        // Joystick buttons held through launch count only after a release, which
+        // primes the joystick halves of the latches above without a stale frame.
+        DisarmJoystick();
         _nKeyWasDown                = ActionDown(ks, "DropMine");
         _gfireKeyWasDown            = ActionDown(ks, "ToggleGroupFire");
         _prevWKeyWasDown            = ActionDown(ks, "PrevWeapon");
@@ -1378,6 +1436,12 @@ public sealed partial class Game1
         // accept). Runs after the (modal) investment pane so the two verb sets
         // can never double-fire.
         HandleTeamPaneControls(ks, composing);
+        _targetJoystickFrame = CurrentJoystickFrame(gameTime);
+        // The VR recenter works docked and in flight, and while typing: a joystick
+        // button types no text.
+        bool recenter = _targetJoystickFrame.Holds(JoystickCommand.ViewRecenter);
+        if (recenter && !_vrRecenterWasDown) RecenterVr();
+        _vrRecenterWasDown = recenter;
         HandleRemainderTargetKeys(ks, composing);
         HandleCommandActionKeys(ks, composing);
         HandleP623TargetingKeys(ks, composing);
@@ -1448,7 +1512,15 @@ public sealed partial class Game1
             // The space scene is not heard from the hangar: stop every space ambient
             // loop (they are otherwise only updated by the flight path skipped here).
             SilenceWorldAmbientLoops();
+            _joystickDockedLastFrame = true;
             return;
+        }
+        // Undocking keeps the Flying state, so the launch prime above never runs: a
+        // joystick button held through the undock acts only after a release.
+        if (_joystickDockedLastFrame)
+        {
+            _joystickDockedLastFrame = false;
+            DisarmJoystick();
         }
 
 
@@ -1623,7 +1695,7 @@ public sealed partial class Game1
         // sector — a plain instant command like native's TK_DropChaff. Bound to C —
         // free in flight (W/S/Q/E/Arrows/A/D/Shift/R/M/V/T/G/Enter/Back/Escape/Space/
         // K all taken) and the natural mnemonic for "chaff".
-        bool cChaff = ActionDown(ks, "DropChaff");
+        bool cChaff = ActionDown(ks, "DropChaff") || CurrentJoystickFrame(gameTime).DropChaff;
         if (!composing && cChaff && !_cKeyWasDown)
         {
             _session.SendFireExpendable(EquipmentType.ChaffLauncher);
@@ -1669,7 +1741,7 @@ public sealed partial class Game1
         // taken elsewhere; L is only the docked-shop "Launch" key, a separate
         // screen, the same dual-use pattern R/F already accept) and a loose
         // mnemonic for "ripcorLd".
-        bool lRipcord = ActionDown(ks, "Ripcord");
+        bool lRipcord = ActionDown(ks, "Ripcord") || CurrentJoystickFrame(gameTime).Ripcord;
         if (!composing && lRipcord && !_lKeyWasDown)
         {
             bool ripcordActive;
@@ -1745,7 +1817,7 @@ public sealed partial class Game1
         // unclaimed by every other binding (W/S/Q/E/Arrows/A/D/Shift/R/M/V/T/G/
         // Enter/Back/Escape/Space/K/C/N/OemTilde/[ /] all taken) and the common
         // flight-sim missile-fire convention (the brief's own suggestion).
-        bool missileCtrl = ActionDown(ks, "FireMissile");
+        bool missileCtrl = ActionDown(ks, "FireMissile") || CurrentJoystickFrame(gameTime).FireMissile;
         if (!composing && missileCtrl)
         {
             long nowMs = ClientNowMilliseconds;
@@ -2050,13 +2122,19 @@ public sealed partial class Game1
         // with the arrow keys; see the P380 report on native's bInternalCamera gate),
         // so the joystick axes are read in every camera mode, as native does.
         bool joystickTurnActive = false;
+        bool joystickStrafeActive = false;
+        var jsFrame = CurrentJoystickFrame(gameTime);
+        // The device that fed the throttle went away (a split HOTAS's throttle
+        // unplugged while the stick stays): drop the latch, so the keyboard throttle
+        // has authority again instead of a frozen joystick value.
+        if (_joystickThrottleWasBound && !jsFrame.ThrottleBound)
+            _joystickFlight.Reset();
+        _joystickThrottleWasBound = jsFrame.ThrottleBound;
         if (!composing)
         {
-            var jsState = CurrentJoystickState();
-            if (jsState is { IsConnected: true } jst)
+            if (jsFrame.AnyBound)
             {
-                var raw = JoystickFlightController.GatherRoles(jst.Axes, JoystickAxisLayout.DjiFpvRc3);
-                var jsr = _joystickFlight.Update(raw);
+                var jsr = _joystickFlight.Update(jsFrame.Axes);
                 cmd = cmd with
                 {
                     Controls = cmd.Controls with
@@ -2078,10 +2156,21 @@ public sealed partial class Game1
                 // IsTrekKeyDown(TK_*, bReadKeyboard) unified check): fire uses the
                 // same group/single-weapon selection as the Space key, booster the
                 // same AfterburnerButton bit as Shift.
-                if (IsJoystickButtonPressed(jst.Buttons, JoystickFlightController.FireButton))
+                if (jsFrame.Fire)
                     cmd = cmd with { StateM = cmd.StateM | FlightInput.FireContribution(true, _groupFire, _selectedMount) };
-                if (IsJoystickButtonPressed(jst.Buttons, JoystickFlightController.BoosterButton))
+                if (jsFrame.Booster)
                     cmd = cmd with { StateM = cmd.StateM | ShipControlState.AfterburnerButton };
+                // Side thrusters, the same bits as the strafe keys (FlightInput.Translate).
+                if (jsFrame.StrafeLeft)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.LeftButton };
+                if (jsFrame.StrafeRight)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.RightButton };
+                if (jsFrame.StrafeUp)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.UpButton };
+                if (jsFrame.StrafeDown)
+                    cmd = cmd with { StateM = cmd.StateM | ShipControlState.DownButton };
+                // Like the keyboard check below, left and right strafe count as manual input.
+                joystickStrafeActive = jsFrame.StrafeLeft || jsFrame.StrafeRight;
             }
         }
 
@@ -2130,7 +2219,8 @@ public sealed partial class Game1
         if (!composing)
         {
             bool gPress = AutopilotKeyDown(Rendering.KeyBindingStore.Instance.Map, ks,
-                Allegiance.ClientCore.Training.TrainingController.IsTraining);
+                Allegiance.ClientCore.Training.TrainingController.IsTraining)
+                || JoystickHoldsAction("ToggleAutopilot");
             if (gPress && !_gKeyWasDown)
             {
                 // P403 — with the starmap EXPANDED (Tab) and a sector selected (,/.),
@@ -2160,7 +2250,7 @@ public sealed partial class Game1
             // (native TK_TargetNothing/Center). Edge-triggered and composing-
             // gated like U/Z/T above.
             //   ;      → target nothing (clear target + disengage autopilot)
-            //   '      → target center (nearest to the reticle/crosshair)
+            //   '      → target center (smallest angle off the nose)
             //   (Target self — TK_TargetSelf — is deliberately NOT bound here:
             //   native's defaultinputmap.mdl leaves TK_TargetSelf UNBOUND by
             //   default, and binding it to Y conflicted with the P282 ready key
@@ -2169,12 +2259,12 @@ public sealed partial class Game1
             // Keys: ; and ' are punctuation unclaimed by every binding
             // (grep-verified; the sole OemSemicolon/OemQuotes-adjacent
             // keys in use are , / . starmap nav and the [+/-] music volume).
-            bool semiNothing = ActionDown(ks, "TargetNothing");
+            bool semiNothing = ActionDown(ks, "TargetNothing") || JoystickHoldsAction("TargetNothing");
             if (semiNothing && !_semicolonNothingKeyWasDown)
                 ClearTarget();
             _semicolonNothingKeyWasDown = semiNothing;
 
-            bool apostropheCenter = ActionDown(ks, "TargetCenter");
+            bool apostropheCenter = ActionDown(ks, "TargetCenter") || JoystickHoldsAction("TargetCenter");
             if (apostropheCenter && !_apostropheCenterKeyWasDown)
                 SelectCentermostTarget();
             _apostropheCenterKeyWasDown = apostropheCenter;
@@ -2332,7 +2422,8 @@ public sealed partial class Game1
             input.PitchUp || input.PitchDown || input.YawLeft || input.YawRight ||
             input.RollLeft || input.RollRight ||
             mouseManualInput ||
-            joystickTurnActive);   // P380 — a real stick deflection past deadzone is manual input too
+            joystickTurnActive ||  // P380 — a real stick deflection past deadzone is manual input too
+            joystickStrafeActive);
         if (_autoPilotEngaged && manualFlightInput)
             DisengageAutopilot(AutopilotDisengageReason.ManualInput);
 
