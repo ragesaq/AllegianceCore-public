@@ -216,7 +216,7 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   same session: "the logical mapping doesnt have button physical button 73 bound. i just bound it. it shows up as
   logical button 80"); before that the game never saw it. After the mapping the throttle reports 80 buttons,
   and with the lever past the detent it holds button 79 (0-based) *(observed: probe, 2026-11-25)*. The built-in
-  throttle profile binds button 79 to the booster, held while the lever is past the detent.
+  throttle profile bound button 79 to the booster until the move below.
 - ragesaq later moved the afterburner to logical button 76, after adjusting buttons "with overlapping features"
   *(ragesaq, Port's working session 2026-11-26)*. With the lever past the detent the throttle now holds button 75
   (0-based) and reports 76 buttons *(observed: probe, 2026-11-26)*. The built-in profile binds button 75 to the
