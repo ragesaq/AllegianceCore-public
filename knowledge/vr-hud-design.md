@@ -236,7 +236,7 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
   off its centre, so each marker's pixel size is taken at its own pixel, measured up and down; off to the side a
   square bracket is then a little narrower than its angle. Labels are name and range from the radar's own label
   rules.
-- **The aim reticle is a direction** (the ship's nose), the same pixel in both eyes, so it is seen at infinity. The
+- **The aim reticle is a direction** (the ship's nose), the same direction in both eyes, so it is seen at infinity. The
   flat game's centre crosshair is left off the panel in VR (`HudContext.CentreReticleInWorld`). ragesaq looked in the
   headset on 2026-11-25 and asked that the targeting reticles be drawn farther than 1 m, to tell them apart from the
   near HUD *(ragesaq, Port's working session 2026-11-25)*; the flat crosshair on the 1 m panel was the one that was
@@ -368,11 +368,12 @@ Layers 1 and 3, for every skin. What it changes, all in the eye images and none 
   held between 1.15 and 2.1). So the box cut out of the image is sized from that spread
   (`VrHudGeometry.CentreGroupBox`), and shown on a quad 10 m out (`VrHudGeometry.FlightBlockQuad`). The angle per
   pixel is fixed: 400 pixels about the centre are 40° by default, so the ring (about 215 pixels) is about 21.5° wide
-  whatever the window size, and the image's centre, the ring's, is on the nose. Each eye draws the
-  quad with the seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see each point of it in the same
-  direction: no vergence disparity, and no movement when the head moves. It is fixed to the ship: turning the head looks away from it. For
-  headset tuning, set `ALLEGIANCE_VR_FLIGHT_BLOCK` to "width degrees,pitch down degrees" (for example `40,0`);
-  values outside 10° to 90° or -30° to 45° fall back to the default (`VrHudGeometry.FlightBlock.Parse`).
+  whatever the window size, and the image's centre, the ring's, is on the nose. Each eye draws the quad with the
+  seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see each point of it in the same
+  direction: no vergence disparity, and no movement when the head moves. It is fixed to the ship: turning the head
+  looks away from it. For headset tuning, set `ALLEGIANCE_VR_FLIGHT_BLOCK` to "width degrees,pitch down degrees"
+  (for example `40,0`); values outside 10° to 90° or -30° to 45° fall back to the default
+  (`VrHudGeometry.FlightBlock.Parse`).
 - **The flight-path marker is at infinity (layer 1).** A circle (0.6° radius) with wings and a tail, in the
   reticle's colour, drawn along the ship's velocity in each eye as a direction. It is the space cue that replaces
   the horizon cues: original Allegiance shows the velocity direction too, and Star Citizen has the same marker. It

@@ -4,6 +4,20 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #22 VR HUD step 2, round 2
+
+- Record: [summary](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/summary.md), [receipt](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2e0a431..6737eaa`, head `6737eaa`, tree `93d8f6b`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. F1 to F4 closed and the F2 decline judged sound. The ROLL gate leaves the flat game unchanged.
+  Fixed after round 2, prose only:
+  1. N1, cosmetic: two note lines past the paragraph's wrap, rewrapped.
+  2. Observation: the DAG node now says one suggested test was declined.
+  3. Observation: the note's aim reticle line says "the same direction in both eyes", as F2 did for the block.
+- Left as stated: the ROLL test checks the gate's predicate, not its call site in `HudRenderer.Draw`. Whether bank
+  stays readable without the ROLL dial is for the headset pass.
+
 ## 2026-11-26: PR #22 VR HUD step 2, round 1
 
 - Record: [summary](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/summary.md), [receipt](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/receipt.md)
