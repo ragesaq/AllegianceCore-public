@@ -621,7 +621,7 @@ public sealed class VrHudGeometryTests
     }
 
     [Fact]
-    public void A_view_at_infinity_shows_the_same_pixel_to_both_eyes_and_to_a_moved_head()
+    public void A_view_at_infinity_shows_a_point_in_the_same_direction_to_both_eyes_and_to_a_moved_head()
     {
         var turn = Quaternion.CreateFromYawPitchRoll(0.3f, -0.1f, 0.05f);
         var proj = VrHudGeometry.SeatProjection(GameProjection);

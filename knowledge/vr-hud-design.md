@@ -192,7 +192,7 @@ service with upstream, not two.
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
 | Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-26 |
-| Horizon cues in VR | none: the pitch ladder, the heading tape (a 360° compass) and the roll pointer are left out of the VR HUD; the block keeps speed and throttle, and the flight-path marker stays. Follow space-game HUDs (Elite Dangerous, Star Citizen) and stay close to original Allegiance, which has none of these; the flat Jet skin keeps them ("i dont know that a ladder makes a lot of sense in space, we dont have a horizon to worry about, the same with a 360' compass, so we should remove those elements") | Jet's full fighter-jet flight reference at infinity (the first step 2 build) | ragesaq, 2026-11-26 | 2026-11-26 |
+| Horizon cues in VR | none: the pitch ladder, the heading tape (a 360° compass) and the roll pointer are left out of the VR HUD, and Classic's ROLL dial with them; the flight-path marker stays (the block itself is Classic's ring, next row). Follow space-game HUDs (Elite Dangerous, Star Citizen) and stay close to original Allegiance, which has none of these; the flat Jet skin keeps them ("i dont know that a ladder makes a lot of sense in space, we dont have a horizon to worry about, the same with a 360' compass, so we should remove those elements") | Jet's full fighter-jet flight reference at infinity (the first step 2 build) | ragesaq, 2026-11-26 | 2026-11-26 |
 | What the VR HUD is built from | the flight block at infinity is the Classic centre group (the ring gauge, the speed, the own-ship status), drawn by the Classic renderer whatever skin is active; the other skins stay in the game, and each leaves its own centre instruments off its VR panel. ragesaq showed original Allegiance's ring ("i think we can have it be simple like that"), chose "Use Classic's ring", and added "these other UIs can be in i just want to use the classic one" | the Jet skin's speed and throttle tapes as the block (accepted 2026-11-25 and built first in step 2); laying out the whole Classic HUD again for VR | ragesaq, 2026-11-26 (revisits the 2026-11-25 choice of Jet) | 2026-11-26 |
 
 ## Disagreements between sources
@@ -359,7 +359,8 @@ Layers 1 and 3, for every skin. What it changes, all in the eye images and none 
   port draws it at the screen's foot). It does this whatever skin is active, because Modern and Jet are separate
   renderer instances and ragesaq wants the Classic ring in VR (decision table).
 - **Each skin leaves its own centre instruments off the 1 m panel in VR.** Classic and Modern leave out the centre
-  group (`HudRenderer.CentreGroupOnMainPass`); the afterburner readout stays on the panel. Jet leaves out its speed
+  group (`HudRenderer.CentreGroupOnMainPass`) and the port's ROLL dial (`HudRenderer.RollOnMainPass`); the
+  afterburner readout stays on the panel. Jet leaves out its speed
   and throttle tapes and its horizon cues: the heading tape, the pitch ladder (with its `PITCH` readout) and the roll
   pointer are drawn in VR nowhere (ragesaq, 2026-11-26, decision table). The flat game is unchanged in every skin.
 - **The crop and its size.** Classic draws the ring at fixed pixels around the image's centre (pane scale 0.72), but
@@ -368,8 +369,8 @@ Layers 1 and 3, for every skin. What it changes, all in the eye images and none 
   (`VrHudGeometry.CentreGroupBox`), and shown on a quad 10 m out (`VrHudGeometry.FlightBlockQuad`). The angle per
   pixel is fixed: 400 pixels about the centre are 40° by default, so the ring (about 215 pixels) is about 21.5° wide
   whatever the window size, and the image's centre, the ring's, is on the nose. Each eye draws the
-  quad with the seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see the same pixels: no
-  disparity, and no movement when the head moves. It is fixed to the ship: turning the head looks away from it. For
+  quad with the seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see each point of it in the same
+  direction: no vergence disparity, and no movement when the head moves. It is fixed to the ship: turning the head looks away from it. For
   headset tuning, set `ALLEGIANCE_VR_FLIGHT_BLOCK` to "width degrees,pitch down degrees" (for example `40,0`);
   values outside 10° to 90° or -30° to 45° fall back to the default (`VrHudGeometry.FlightBlock.Parse`).
 - **The flight-path marker is at infinity (layer 1).** A circle (0.6° radius) with wings and a tail, in the
@@ -432,8 +433,10 @@ was done on `port/vr-hud-step2`:
   a mixed basis, so the quad was tilted toward the camera's axis. In the headset each eye's view turns with the head,
   so the tilt changed with every head turn and showed in stereo. **Fix:** the columns. This changes the flat game
   too, where billboard rounds are on screen: native draws them facing the camera. Eight other renderers read the
-  rows the same way (explosions, smoke, chaff, mines, dust, the particle batcher and two sizing helpers); they are not
-  changed here.
+  rows the same way (explosions, smoke, chaff, mines, dust, the particle batcher and two sizing helpers), and so do
+  two other sites: the camera right and up handed to the debris field (`NativeScene`) and the 3D sound listener's right
+  (`SoundManager.SetListenerCamera`, whose comment says the rows hold the basis). None of them is changed here
+  (found by the cross-family review of PR #22, round 1).
 - "a lo fo the UI elements flicker a little bit". Not yet found beyond the bracket depth above; asked of ragesaq which
   elements.
 

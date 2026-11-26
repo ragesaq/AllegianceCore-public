@@ -22,6 +22,13 @@ public sealed class VrCentreGroupTests
         Assert.False(HudRenderer.CentreGroupOnMainPass(Model(inWorld: true, centreHud: true)));
     }
 
+    [Fact]
+    public void A_vr_eye_frame_shows_no_roll_dial_and_a_flat_frame_keeps_it()
+    {
+        Assert.True(HudRenderer.RollOnMainPass(Model(inWorld: false, centreHud: true)));
+        Assert.False(HudRenderer.RollOnMainPass(Model(inWorld: true, centreHud: true)));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

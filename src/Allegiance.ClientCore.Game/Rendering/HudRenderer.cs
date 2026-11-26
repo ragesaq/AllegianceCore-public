@@ -480,7 +480,7 @@ public class HudRenderer
             // dialog.mdl anchors (kill bonus, signature, detection eye, cloak,
             // autopilot, vector lock, carried flag/artifact).
             if (centreHere) DrawOwnStatus(model, viewport);
-            DrawRoll(f.RollDegrees, w, h);
+            if (RollOnMainPass(model)) DrawRoll(f.RollDegrees, w, h);
             // HUD-10 — native has no in-flight money readout: moneyPane lives only
             // inside MergedInvestmentsPaneImage under ofInvestment
             // (dialog.mdl:5199-5203,5368), so the old always-visible "$n" line is
@@ -539,6 +539,11 @@ public class HudRenderer
     /// which draws them on their own at infinity (<see cref="DrawFlightReference"/>).</summary>
     public static bool CentreGroupOnMainPass(HudModel model) =>
         model.CentreHudVisible && !model.Context.FlightReferenceInWorld;
+
+    /// <summary>Whether the main pass draws the port's ROLL dial: not in a VR eye
+    /// frame, which shows no horizon cues (knowledge/vr-hud-design.md, decision
+    /// table).</summary>
+    public static bool RollOnMainPass(HudModel model) => !model.Context.FlightReferenceInWorld;
 
     /// <summary>Where VR puts the speed readout: this many pixels below the
     /// gauge ring's centre, under the own-ship status, as native draws it inside

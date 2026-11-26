@@ -4,6 +4,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #22 VR HUD step 2, round 1
+
+- Record: [summary](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/summary.md), [receipt](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of the whole pull request, `f362cdf..2e0a431`, head `2e0a431`, tree `ab9e955`, in a standalone clone
+  with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, no code defect. The reviewer found the flat game's main pass equivalent to `master`
+  by reading. Fixed after round 1, all low:
+  1. F1: the `FlightBlock` comments said the block's angle covers the crop. It covers the 400 reference pixels; the
+     crop is wider.
+  2. F2: "both eyes see the same pixels" became "the same direction: no vergence disparity", in the note and in the
+     test's name. Declined: a new test with separate off-centre projections. Each eye's pass uses its own projection,
+     as the panel did before this pull request, and the existing test checks the direction.
+  3. F3: the decision row "Horizon cues in VR" no longer says the block keeps speed and throttle.
+  4. F4: the note names the two further row-basis sites, the debris field (`NativeScene`) and the sound listener
+     (`SoundManager`). Their code and the listener's comment are left for the follow-up.
+  5. Observation: Classic's ROLL dial stayed on the VR panel. It is now hidden in VR with the other horizon cues
+     (`HudRenderer.RollOnMainPass`; test `A_vr_eye_frame_shows_no_roll_dial_and_a_flat_frame_keeps_it` fails when
+     the gate is removed).
+
 ## 2026-11-26: PR #18 VR recenter button, round 3
 
 - Record: [summary](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/summary.md), [receipt](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/receipt.md)

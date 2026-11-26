@@ -66,12 +66,13 @@ public static class VrHudGeometry
     }
 
     /// <summary>The flight reference block (layer 3), seen at infinity: the angle
-    /// its crop covers across, and how far the gauge ring's centre is below the
-    /// nose.</summary>
+    /// that <see cref="FlightBlockReferencePixels"/> about the image centre cover
+    /// (the crop itself is wider: <see cref="CentreGroupBox"/>), and how far the
+    /// gauge ring's centre is below the nose.</summary>
     public readonly record struct FlightBlock(float WidthRadians, float PitchDownRadians)
     {
-        /// <summary>40° across the crop, so the Classic gauge ring (about 215 of
-        /// the crop's 400 pixels) is about 21.5° wide: the spec's 30° by 20°
+        /// <summary>40° across the 400 reference pixels, so the Classic gauge ring
+        /// (about 215 pixels) is about 21.5° wide: the spec's 30° by 20°
         /// field holds it with its readouts. Centred on the nose, where native
         /// draws the ring around the boresight.</summary>
         public static FlightBlock Default => new(MathHelper.ToRadians(40f), 0f);
