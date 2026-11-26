@@ -230,19 +230,17 @@ public sealed partial class Game1
                 && ResolveShipAnchor(_poses, world.Ships, lockState.TargetId, out var anchor)
                     ? PoseConverter.ToXna(anchor)
                     : PoseConverter.ToXna(lockState.TargetPosition);
-            // Every lockable type, as the flat lock flower takes it (Game1.Camera.cs).
-            radius = lockState.TargetType switch
+            // Every lockable type, through the selection's lookup (the flat lock
+            // flower in Game1.Camera.cs takes the same four).
+            TargetKind? kind = lockState.TargetType switch
             {
-                Allegiance.Core.IgcObjectType.Ship when world.Ships.TryGetValue(lockState.TargetId, out var ship)
-                    && HullLength(ship.HullId) > 0f => HullLength(ship.HullId) * 0.5f,
-                Allegiance.Core.IgcObjectType.Station when world.Stations.TryGetValue(lockState.TargetId, out var station)
-                    && _shopCatalog?.StationTypes is { } types && types.TryGetValue(station.StationTypeId, out var type) => type.Radius,
-                Allegiance.Core.IgcObjectType.Asteroid when world.Asteroids.TryGetValue(lockState.TargetId, out var asteroid)
-                    && asteroid.Radius > 0 => asteroid.Radius,
-                Allegiance.Core.IgcObjectType.Warp when world.Warps.TryGetValue(lockState.TargetId, out var warp)
-                    && warp.Radius > 0 => warp.Radius,
+                Allegiance.Core.IgcObjectType.Ship => TargetKind.Ship,
+                Allegiance.Core.IgcObjectType.Station => TargetKind.Station,
+                Allegiance.Core.IgcObjectType.Asteroid => TargetKind.Asteroid,
+                Allegiance.Core.IgcObjectType.Warp => TargetKind.Warp,
                 _ => null,
             };
+            radius = kind is { } k ? TargetWorldRadius(world, new AutopilotTarget(k, lockState.TargetId, "")) : null;
         }
         float distance = TryOwnPose(out var own, out _, out _) ? (position - PoseConverter.ToXna(own)).Length() : 0f;
         _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.3f, VrHudGeometry.BracketCapRadians),

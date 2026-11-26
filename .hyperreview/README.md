@@ -4,6 +4,21 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #17 VR HUD bracket depth, round 4
+
+- Record: [summary](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/summary.md), [receipt](patch-review-2026-11-26T04-00-00Z-allegiancecore-vr-hud-bracket-depth-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `78e9be3..1a3adf7`, head `1a3adf7`, tree `badfd07`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, no source defect. Round 3's N1, N2 and N3 are closed, and the reviewer confirmed the
+  author's correction to round 3's example (the 100 m clamp). Findings:
+  1. Low (R4-F1): the lock repeated the selection's radius switch, and no test reaches the lookup from a lock or
+     selection to the marker's radius. Partly taken: the lock now uses the selection's lookup (`TargetWorldRadius`), so
+     there is one switch. The test is deferred, by reading only: it needs a game world holding one object of each
+     type, and the design note records the gap.
+  2. Low (R4-F2, records): corrected. The round 3 entry now says the test uses radii standing for a ship, a hull and a
+     station, not the type lookup; the note says only a marker with no radius can be hidden, within 100 m.
+
 ## 2026-11-25: PR #17 VR HUD bracket depth, round 3
 
 - Record: [summary](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/summary.md), [receipt](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/receipt.md)
@@ -18,7 +33,8 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
      station about 590 m from the head; the new test uses that case.
   2. Low (N2): the round 2 test did not run the world-space path. Fixed: `VrHudGeometry.MarkerAnchorInWorld` is the
      whole anchor calculation, `VrMarkerAnchor` only calls it, and a new test runs it with the ship's centre and a head
-     14 m ahead for a ship, a locked hull and a station, and checks that without the radius each would be inside.
+     14 m ahead for radii of 20, 15 and 500 m (sizes standing for a ship, a locked hull and a station; the test does not
+     run the lock's type lookup), and checks that without the radius each would be inside.
   3. Low (N3): the reticle cone's comment named the bracket. Fixed: it names the anchor angle.
   - Observation 1 taken: a marker with no radius is anchored from its drawn angle alone, so the lead marker is exactly
     as before (new test).
