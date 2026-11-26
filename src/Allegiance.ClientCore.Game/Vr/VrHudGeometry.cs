@@ -201,8 +201,9 @@ public static class VrHudGeometry
     public const float ReticleNearestMetres = 15f, ReticleFarthestMetres = 100f;
 
     /// <summary>How far off the boresight a target's centre may lie and still
-    /// give the reticle its depth: 3°, or half the target's bracket when that
-    /// is wider, so a near ship gives it while its hull is under the reticle.</summary>
+    /// give the reticle its depth: 3°, or half its anchor angle
+    /// (<see cref="AnchorAngle"/>) when that is wider, so a near object gives it
+    /// while its hull is under the reticle.</summary>
     public static readonly float ReticleConeRadians = MathHelper.ToRadians(3f);
 
     /// <summary>The aim reticle's depth from one target, as an inverse
@@ -233,7 +234,19 @@ public static class VrHudGeometry
     /// ship's centre does, and a wrap measured from the ship would put the
     /// anchor inside the hull.</summary>
     public static float AnchorAngle(Vector3 relative, float bracketRadians, float wrapRadians, float? radiusMetres) =>
-        MathF.Max(MathF.Max(bracketRadians, wrapRadians), WrapAngle(radiusMetres, relative.Length()));
+        MathF.Max(MathF.Max(bracketRadians, wrapRadians),
+            radiusMetres is { } r && r > 0f ? WrapAngle(r, relative.Length()) : 0f);
+
+    /// <summary>A marker's anchor in the world, for an object at
+    /// <paramref name="world"/> seen from <paramref name="head"/> (midway between
+    /// the eyes): <see cref="MarkerAnchor"/> along the head-relative vector, with
+    /// the angle from <see cref="AnchorAngle"/> measured along that same vector.</summary>
+    public static Vector3 MarkerAnchorInWorld(Vector3 world, Vector3 head, float bracketRadians, float wrapRadians,
+        float? radiusMetres)
+    {
+        var relative = world - head;
+        return head + MarkerAnchor(relative, AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres));
+    }
 
     /// <summary>How fast the reticle's depth follows its target: an
     /// exponential approach with this time constant, in seconds.</summary>

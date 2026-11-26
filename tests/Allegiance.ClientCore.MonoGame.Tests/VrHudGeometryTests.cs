@@ -468,4 +468,34 @@ public sealed class VrHudGeometryTests
         Assert.True(VrHudGeometry.ReticleInverseDistance(nose, off * 60f, drawn, 0f, 50f) > 0f);
         Assert.Equal(0f, VrHudGeometry.ReticleInverseDistance(nose, off * 60f, drawn));
     }
+
+    [Fact]
+    public void A_marker_made_at_the_ships_centre_is_anchored_in_front_of_its_hull_as_the_head_sees_it()
+    {
+        // The world-space path every marker takes: the bracket is sized from
+        // the ship's centre, the cockpit head is 14 m ahead of it.
+        var ship = new Vector3(500f, -30f, 2000f);
+        var forward = Vector3.Normalize(new Vector3(0.3f, 0.1f, -1f));
+        var head = ship + forward * 14f;
+        foreach (var (fromShip, radius) in new[] { (40f, 20f), (85f, 15f), (600f, 500f) })
+        {
+            var world = ship + forward * fromShip;
+            float bracket = MathF.Min(VrHudGeometry.BracketAngle(radius, fromShip) * 1.3f, VrHudGeometry.BracketCapRadians);
+            var anchor = VrHudGeometry.MarkerAnchorInWorld(world, head, bracket, 0f, radius);
+            float hullFromHead = Vector3.Distance(world, head) - radius;
+            Assert.True(Vector3.Distance(anchor, head) < hullFromHead,
+                $"{fromShip} m, radius {radius}: anchor {Vector3.Distance(anchor, head)} m, hull from {hullFromHead} m");
+            Near3(Vector3.Normalize(world - head), Vector3.Normalize(anchor - head), 1e-4f);
+            // Without the radius the drawn bracket alone puts it inside the hull.
+            Assert.True(Vector3.Distance(VrHudGeometry.MarkerAnchorInWorld(world, head, bracket, 0f, null), head) > hullFromHead);
+        }
+    }
+
+    [Fact]
+    public void A_marker_with_no_radius_is_anchored_from_its_drawn_angle_alone()
+    {
+        var relative = new Vector3(0f, 0f, -100f);
+        float lead = MathHelper.ToRadians(1.2f);
+        Assert.Equal(lead, VrHudGeometry.AnchorAngle(relative, lead, 0f, null));
+    }
 }

@@ -279,9 +279,11 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
   the eyes) to its object, at the near side of the sphere its bracket frames, so the object does not hide its own
   bracket, and never farther than 100 m. The sphere comes from the object's own size, not the drawn bracket, which is
   capped at 20°: anchored from the capped angle, a marker near a large object fell inside its hull and was hidden
-  (review round 1, F1). For the selection and the lock the size is the object's world radius, measured from the head
-  (`VrHudGeometry.AnchorAngle`): the cockpit eye is 14 m ahead of the ship's centre, and a wrap angle measured from
-  the ship still put close targets inside their hulls (review round 2, N1). A radar contact's size comes from its
+  (review round 1, F1). For the selection and the lock the size is the object's world radius, for every type that
+  can be selected or locked, measured from the head (`VrHudGeometry.AnchorAngle`, `MarkerAnchorInWorld`): the cockpit
+  eye is 14 m ahead of the ship's centre, and a wrap angle measured from the ship still put close targets inside their
+  hulls (review rounds 2 and 3). Because of the 100 m clamp, an object can hide its own marker only when its near side
+  is within 100 m. A radar contact's size comes from its
   screen radius, which the radar caps, so an asteroid nearer than about 1.6 radii can still hide its own contact
   bracket *(derived: review round 2, observation 4)*. It is drawn with a read-only depth test at that point's depth, so a nearer object that
   passes in front of it hides it. Beyond 100 m the clamp changes nothing that can be seen: vergence is under 0.04°
@@ -316,9 +318,10 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
   fusing two images at the centre of view *(read: Panum's fusional area, about 10 to 20 arcminutes at the fovea;
   textbook figure, not measured here)*. So infinity only fails for a close target under the reticle, which is the
   case the change covers.
-- Tests: `VrHudGeometryTests`, 97 VR tests. Each of 13 deliberate breaks of the new geometry made a test fail.
+- Tests: `VrHudGeometryTests`, 99 VR tests. Each of 15 deliberate breaks of the new geometry made a test fail.
 - Cross-family review: round 1 PASS-WITH-CONDITIONS; round 2 WARN, because the round 1 fix measured the wrap from the
-  ship's centre; answered (`.hyperreview/README.md`).
+  ship's centre; round 3 WARN, because the lock passed a radius only for ships; each answered
+  (`.hyperreview/README.md`).
 - Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
 
 ## Open questions

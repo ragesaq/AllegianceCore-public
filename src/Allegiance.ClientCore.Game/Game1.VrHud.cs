@@ -230,9 +230,19 @@ public sealed partial class Game1
                 && ResolveShipAnchor(_poses, world.Ships, lockState.TargetId, out var anchor)
                     ? PoseConverter.ToXna(anchor)
                     : PoseConverter.ToXna(lockState.TargetPosition);
-            radius = lockState.TargetType == Allegiance.Core.IgcObjectType.Ship
-                && world.Ships.TryGetValue(lockState.TargetId, out var ship) && HullLength(ship.HullId) > 0f
-                    ? HullLength(ship.HullId) * 0.5f : null;
+            // Every lockable type, as the flat lock flower takes it (Game1.Camera.cs).
+            radius = lockState.TargetType switch
+            {
+                Allegiance.Core.IgcObjectType.Ship when world.Ships.TryGetValue(lockState.TargetId, out var ship)
+                    && HullLength(ship.HullId) > 0f => HullLength(ship.HullId) * 0.5f,
+                Allegiance.Core.IgcObjectType.Station when world.Stations.TryGetValue(lockState.TargetId, out var station)
+                    && _shopCatalog?.StationTypes is { } types && types.TryGetValue(station.StationTypeId, out var type) => type.Radius,
+                Allegiance.Core.IgcObjectType.Asteroid when world.Asteroids.TryGetValue(lockState.TargetId, out var asteroid)
+                    && asteroid.Radius > 0 => asteroid.Radius,
+                Allegiance.Core.IgcObjectType.Warp when world.Warps.TryGetValue(lockState.TargetId, out var warp)
+                    && warp.Radius > 0 => warp.Radius,
+                _ => null,
+            };
         }
         float distance = TryOwnPose(out var own, out _, out _) ? (position - PoseConverter.ToXna(own)).Length() : 0f;
         _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.3f, VrHudGeometry.BracketCapRadians),
@@ -352,12 +362,8 @@ public sealed partial class Game1
     /// <summary>A marker's anchor in the world: on the line from the head to its
     /// object, in front of the object and at most 100 m away
     /// (<see cref="VrHudGeometry.MarkerAnchor"/>).</summary>
-    private static Vector3 VrMarkerAnchor(in VrMarker marker, Vector3 head)
-    {
-        var relative = marker.World - head;
-        return head + VrHudGeometry.MarkerAnchor(relative,
-            VrHudGeometry.AnchorAngle(relative, marker.AngleRadians, marker.WrapRadians, marker.RadiusMetres));
-    }
+    private static Vector3 VrMarkerAnchor(in VrMarker marker, Vector3 head) =>
+        VrHudGeometry.MarkerAnchorInWorld(marker.World, head, marker.AngleRadians, marker.WrapRadians, marker.RadiusMetres);
 
     /// <summary>The boresight's direction in the world: the seat's forward,
     /// taken through the eye's seat view and back out of its world view.</summary>

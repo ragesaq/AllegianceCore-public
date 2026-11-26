@@ -4,6 +4,25 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #17 VR HUD bracket depth, round 3
+
+- Record: [summary](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/summary.md), [receipt](patch-review-2026-11-26T03-30-00Z-allegiancecore-vr-hud-bracket-depth-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `e2825d5..78e9be3`, head `78e9be3`, tree `2b087f3`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. The round 2 fix closed the defect for ships. Findings, all accepted and fixed:
+  1. Medium (N1): the lock passed a radius only for ships, so a locked station, asteroid or warp kept the defect.
+     Fixed: the lock takes the radius for every lockable type, as the flat lock flower does. One correction to the
+     reviewer's example: an Outpost locked 1.2 km away is not hidden, because the anchor's 100 m clamp keeps it in
+     front of a near surface 700 m away. The defect needs the near surface within 100 m, such as a 500 m radius
+     station about 590 m from the head; the new test uses that case.
+  2. Low (N2): the round 2 test did not run the world-space path. Fixed: `VrHudGeometry.MarkerAnchorInWorld` is the
+     whole anchor calculation, `VrMarkerAnchor` only calls it, and a new test runs it with the ship's centre and a head
+     14 m ahead for a ship, a locked hull and a station, and checks that without the radius each would be inside.
+  3. Low (N3): the reticle cone's comment named the bracket. Fixed: it names the anchor angle.
+  - Observation 1 taken: a marker with no radius is anchored from its drawn angle alone, so the lead marker is exactly
+    as before (new test).
+
 ## 2026-11-25: PR #17 VR HUD bracket depth, round 2
 
 - Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/receipt.md)
@@ -14,8 +33,8 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
   1. High (N1, round 1 F1 still open): the selection and lock measured their wrap angle from the ship's centre and the
      anchor applied it from the head, which the cockpit camera puts 14 m ahead. A target dead ahead inside about
      300 m was still anchored inside its hull (a 30 m hull locked 85 m away: 1.8 m inside), and the round 1 test used
-     one vector for both, so it could not see it. Accepted and fixed: the selection and lock carry the object's world
-     radius, and `VrHudGeometry.AnchorAngle` measures its wrap along the head-relative vector the anchor uses. New
+     one vector for both, so it could not see it. Accepted and fixed for ships (round 3 found the lock passed a radius
+     only for ships): the selection and lock carry the object's world radius, and `VrHudGeometry.AnchorAngle` measures its wrap along the head-relative vector the anchor uses. New
      test at that seam, with the reviewer's numbers (40 m from the ship, 26 m from the head, 20 m radius; and the
      locked 30 m hull); it fails when the radius term is dropped.
   - F2 wording: the note now says the probe bounds any difference between the sprite path's and the scene's depth to
