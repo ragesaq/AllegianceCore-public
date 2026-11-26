@@ -288,16 +288,20 @@ public sealed partial class Game1
 
     /// <summary>The cockpit lead marker: the solved lead direction (the flat
     /// marker's pixel, cast back through the game camera) at the led target's
-    /// range, so it sits at the same depth as the target it leads.</summary>
+    /// range, so it sits at the same depth as the target it leads. It carries the
+    /// target's radius: the lead falls on or beside the target, and without it the
+    /// target's own hull, nearer than its centre, hid the marker.</summary>
     private void AddVrLeadMarker(Matrix view, Matrix proj, Vector3 cameraEye)
     {
         if (_leadIndicator is not { Granted: true } lead) return;
         Vector3 targetPosition;
+        float targetRadius;
         lock (_session.Gate)
         {
             if (_session.World.MyCurrentCommand is not { } command
                 || !TryGatherLeadScene(command.TargetType, command.TargetId, out var scene)) return;
             targetPosition = PoseConverter.ToXna(scene.TargetPosition);
+            targetRadius = scene.TargetRadius;
         }
         var vp = GraphicsDevice.Viewport;
         var direction = VrHudGeometry.RayThroughPixel(lead.LeadCenter, vp.Width, vp.Height, view, proj);
@@ -305,7 +309,7 @@ public sealed partial class Game1
         if (!(distance > 0f)) return;
         var colour = Color.Lerp(VrLeadOutOfRange, VrLeadInRange, lead.InRange ? Math.Clamp(lead.Green, 0.35f, 1f) : 0f);
         _vrMarkers.Add(new VrMarker(cameraEye + direction * distance, MathHelper.ToRadians(1.2f), colour,
-            VrMarkerShape.Lead, null, null));
+            VrMarkerShape.Lead, null, null, RadiusMetres: targetRadius > 0f ? targetRadius : null));
     }
 
     private static Color ToColour(HudColor c) => new(c.R, c.G, c.B, c.A);
@@ -378,7 +382,10 @@ public sealed partial class Game1
                 {
                     var anchor = VrMarkerAnchor(marker, head) - eyeWorld;
                     if (!VrHudGeometry.TryProject(anchor, view, proj, target.Width, target.Height, out var at)) continue;
-                    _vrMarkerDepth = Math.Clamp(VrHudGeometry.BufferDepth(anchor, view, proj), 0f, 1f);
+                    float sphere = VrHudGeometry.MarkerSphereRadius(marker.World - head, marker.AngleRadians, marker.WrapRadians,
+                        marker.RadiusMetres);
+                    _vrMarkerDepth = Math.Clamp(VrHudGeometry.MarkerTestDepth(anchor, marker.World - eyeWorld, sphere, view, proj),
+                        0f, 1f);
                     DrawVrMarker(marker, at, proj, target.Width, target.Height);
                 }
             }

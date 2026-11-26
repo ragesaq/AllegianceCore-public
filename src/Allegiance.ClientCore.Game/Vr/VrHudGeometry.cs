@@ -238,6 +238,31 @@ public static class VrHudGeometry
         return clip.W > 1e-6f ? clip.Z / clip.W : -1f;
     }
 
+    /// <summary>The radius of the sphere a marker's anchor sits in front of, for an
+    /// object at <paramref name="relative"/> from the head: the same sphere
+    /// <see cref="MarkerAnchor"/> takes the near side of.</summary>
+    public static float MarkerSphereRadius(Vector3 relative, float bracketRadians, float wrapRadians, float? radiusMetres) =>
+        relative.Length() * MathF.Min(0.95f, MathF.Tan(AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres) / 2f));
+
+    /// <summary>The depth-buffer value a marker is tested at in one eye. A marker is
+    /// drawn flat in the eye's image, so it has one depth along the eye's axis. Its
+    /// anchor's depth is not enough: off the eye's axis, the object's sphere
+    /// reaches up to radius · (1 − cos θ) nearer than the anchor along that axis,
+    /// and its near side then cut through the marker, more the farther the head
+    /// turned from it. So the marker is tested at the nearer of its anchor and the
+    /// sphere's nearest point along the axis. Its place in the image, and so its
+    /// stereo depth, stays at the anchor. Positions are relative to the eye.</summary>
+    public static float MarkerTestDepth(Vector3 anchorRelative, Vector3 objectRelative, float sphereRadius, Matrix view,
+        Matrix projection)
+    {
+        float anchorZ = -Vector3.Transform(anchorRelative, view).Z;
+        float sphereZ = -Vector3.Transform(objectRelative, view).Z - MathF.Max(0f, sphereRadius);
+        float z = MathF.Min(anchorZ, sphereZ);
+        if (!(z > 0f)) return -1f;
+        var clip = Vector4.Transform(new Vector4(0f, 0f, -z, 1f), projection);
+        return clip.W > 1e-6f ? clip.Z / clip.W : -1f;
+    }
+
     /// <summary>The off-view arrow for an object in <paramref name="directionInView"/>
     /// (view space, -Z ahead): a point on a ring <paramref name="ringRadians"/>
     /// off the view's centre at <paramref name="distance"/> metres, on the side

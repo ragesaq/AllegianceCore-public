@@ -379,7 +379,47 @@ Layers 1 and 3, for the Jet skin only. What it changes, all in the eye images an
   are byte-identical to `master`'s *(observed 2026-11-26, with `hud.jetSkin=on` and the Jet skin selected)*. A
   60-second VR smoke run of the replay under SteamVR raised no exceptions.
 
+## Headset notes of 2026-11-26 and what they found
+
+ragesaq's notes from a session in the headset *(Port's working session, 2026-11-26)*, each with its cause and what
+was done on `port/vr-hud-step2`:
+
+- "the target box surrounding your selected target seem to have an axial shift depending on how you are looking at
+  it, which makes part of the targeting box go behind the object and causes a focal shift". **Cause** *(derived
+  from `Game1.VrHud.cs`; confirmed by a test)*: a marker is drawn flat in each eye's image, so the depth test gives it
+  one depth along the eye's axis, and that depth was its anchor's. Off the eye's axis, the object's sphere reaches
+  up to radius · (1 − cos θ) nearer along that axis than the anchor, so the near side of a large or close object cut
+  through the bracket, more the farther the head turned from it. **Fix:** each marker is tested at the nearer of its
+  anchor and its sphere's nearest point along the eye's axis (`VrHudGeometry.MarkerTestDepth`). Its place in the
+  image, and so its stereo depth, is unchanged. This also likely explains part of the flicker: a bracket tested at
+  about the depth of its hull's surface is hidden and shown again as the hull moves *(derived, not checked in the
+  headset)*.
+- "i also didnt see an aim lead indicator on enemy ships". **Causes:** the lead is drawn only when native
+  Allegiance grants it (the hull's lead capability, or a friendly relay that sees the target: `LeadGranted`), and
+  the flat game hides it then too; that is kept. Separately, in VR the lead marker carried no radius, so when it fell
+  on its target the target's own hull, nearer than its centre, hid it *(derived)*. **Fix:** the lead marker carries
+  the target's radius.
+- "the directional indicator as to where we were aiming": the aim reticle and the flight-path marker are drawn only
+  in the cockpit view with the own ship in flight (`GatherVrHudMarkers`). Neither is visible in the window shots of
+  the replay smoke runs, and whether the replay meets that gate was not checked. **Not yet explained**; asked of
+  ragesaq which view and mode the session used.
+- "bullets are sprites and they seem to be rotated". **Cause** *(read: `ProjectileSpriteRenderer.DrawBillboard`;
+  confirmed by a test)*: the round's quad took the camera's right and up from the view matrix's rows, but a
+  `CreateLookAt` view keeps them in its columns (the same mistake HUD-21b fixed for the target preview). The rows are
+  a mixed basis, so the quad was tilted toward the camera's axis. In the headset each eye's view turns with the head,
+  so the tilt changed with every head turn and showed in stereo. **Fix:** the columns. This changes the flat game
+  too, where billboard rounds are on screen: native draws them facing the camera. Eight other renderers read the
+  rows the same way (explosions, smoke, chaff, mines, dust, the particle batcher and two sizing helpers); they are not
+  changed here.
+- "a lo fo the UI elements flicker a little bit". Not yet found beyond the bracket depth above; asked of ragesaq which
+  elements.
+
 ## Open questions
+
+- Which skin the VR HUD is built from. ragesaq showed original Allegiance's centre gauge (the ring of thrust, fuel,
+  armour, shield, ammunition and energy around the own ship, with speed and signature below) and said "i think we
+  can have it be simple like that" *(Port's working session, 2026-11-26)*. The Classic skin draws that gauge. This
+  would replace the Jet-based block of step 2 and revisit the decision "What the VR HUD is built from".
 
 - Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
   the upstream author (node `ragesaq-012`).

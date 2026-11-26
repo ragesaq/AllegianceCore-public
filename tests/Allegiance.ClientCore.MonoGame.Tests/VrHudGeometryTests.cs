@@ -610,4 +610,58 @@ public sealed class VrHudGeometryTests
         var velocity = new Vector3(120f, -30f, -260f);
         Near3(Vector3.Normalize(velocity), VrHudGeometry.FlightPathDirection(velocity)!.Value, 1e-6f);
     }
+
+    // An object 60 m away and 40° off the eye's axis, of radius 15 m: the head has
+    // turned away from it (ragesaq's headset report, 2026-11-26).
+    private static readonly Vector3 OffAxisObject =
+        Vector3.Transform(new Vector3(0f, 0f, -60f), Matrix.CreateRotationY(MathHelper.ToRadians(40f)));
+    private const float OffAxisRadius = 15f;
+
+    private static float SphereNearestDepth(Vector3 relative, float radius, Matrix view) =>
+        VrHudGeometry.BufferDepth(new Vector3(0f, 0f, Vector3.Transform(relative, view).Z + radius), Matrix.Identity,
+            GameProjection);
+
+    [Fact]
+    public void Off_the_eyes_axis_the_anchors_own_depth_cuts_through_the_objects_sphere()
+    {
+        // The control for the fix below: the depth the markers were tested at.
+        var view = LookingAlong(Vector3.Forward);
+        float sphere = VrHudGeometry.MarkerSphereRadius(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+        var anchor = VrHudGeometry.MarkerAnchor(OffAxisObject,
+            VrHudGeometry.AnchorAngle(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+        Assert.True(VrHudGeometry.BufferDepth(anchor, view, GameProjection) > SphereNearestDepth(OffAxisObject, sphere, view));
+    }
+
+    [Fact]
+    public void A_marker_is_tested_in_front_of_its_objects_sphere_wherever_the_head_looks()
+    {
+        foreach (float yawDegrees in new[] { 0f, 20f, 40f, 60f })
+        {
+            var view = LookingAlong(Vector3.Transform(Vector3.Forward, Matrix.CreateRotationY(MathHelper.ToRadians(40f - yawDegrees))));
+            float sphere = VrHudGeometry.MarkerSphereRadius(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+            var anchor = VrHudGeometry.MarkerAnchor(OffAxisObject,
+                VrHudGeometry.AnchorAngle(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+            float tested = VrHudGeometry.MarkerTestDepth(anchor, OffAxisObject, sphere, view, GameProjection);
+            Assert.True(tested <= SphereNearestDepth(OffAxisObject, sphere, view) + 1e-6f, $"yaw {yawDegrees}");
+            Assert.True(tested <= VrHudGeometry.BufferDepth(anchor, view, GameProjection) + 1e-6f, $"yaw {yawDegrees}");
+            Assert.True(tested > 0f, $"yaw {yawDegrees}");
+        }
+    }
+
+    [Fact]
+    public void Looking_straight_at_an_object_or_far_away_the_test_depth_is_the_anchors()
+    {
+        var view = LookingAlong(Vector3.Forward);
+        var ahead = new Vector3(0f, 0f, -60f);
+        float aheadSphere = VrHudGeometry.MarkerSphereRadius(ahead, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+        var aheadAnchor = VrHudGeometry.MarkerAnchor(ahead, VrHudGeometry.AnchorAngle(ahead, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+        Assert.Equal(VrHudGeometry.BufferDepth(aheadAnchor, view, GameProjection),
+            VrHudGeometry.MarkerTestDepth(aheadAnchor, ahead, aheadSphere, view, GameProjection), 4);
+        // Past the 100 m clamp the sphere is farther than the anchor.
+        var far = new Vector3(0f, 0f, -1000f);
+        float farSphere = VrHudGeometry.MarkerSphereRadius(far, MathHelper.ToRadians(2f), 0f, 5f);
+        var farAnchor = VrHudGeometry.MarkerAnchor(far, VrHudGeometry.AnchorAngle(far, MathHelper.ToRadians(2f), 0f, 5f));
+        Assert.Equal(VrHudGeometry.BufferDepth(farAnchor, view, GameProjection),
+            VrHudGeometry.MarkerTestDepth(farAnchor, far, farSphere, view, GameProjection), 5);
+    }
 }
