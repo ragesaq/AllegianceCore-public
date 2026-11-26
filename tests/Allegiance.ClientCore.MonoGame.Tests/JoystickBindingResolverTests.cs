@@ -30,7 +30,7 @@ public class JoystickBindingResolverTests
         Device(index, Stick, 8, 128, axes, pressed);
 
     private static JoystickDeviceSample ThrottleAt(int index, (int, int)[]? axes = null, int[]? pressed = null) =>
-        Device(index, Throttle, 6, 80, axes, pressed);
+        Device(index, Throttle, 6, 76, axes, pressed);
 
     private static JoystickDeviceSample PedalsAt(int index, (int, int)[]? axes = null) =>
         Device(index, Pedals, 3, 0, axes);
@@ -529,8 +529,8 @@ public class JoystickBindingResolverTests
         Assert.Equal(0, again.HeldMask);
     }
 
-    // Capture 2026-11-25: with the lever past the afterburner detent the throttle holds
-    // button 79 (the Virpil configurator's logical button 80).
+    // Probe 2026-11-26: with the lever past the afterburner detent the throttle holds
+    // button 75 (the Virpil configurator's logical button 76).
     [Fact]
     public void ThrottleButton42_HoldsTheVrRecenter()
     {
@@ -546,7 +546,7 @@ public class JoystickBindingResolverTests
     {
         var r = new JoystickBindingResolver();
         r.Resolve([StickAt(0), ThrottleAt(1)]);
-        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)], pressed: [79])]);
+        var f = r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)], pressed: [75])]);
         Assert.True(f.Booster);
         Assert.Equal(1f, f.Axes.Throttle, 5);
         Assert.False(r.Resolve([StickAt(0), ThrottleAt(1, [(3, 32767)])]).Booster);
