@@ -110,7 +110,7 @@ public sealed class VrHudGeometryTests
     [InlineData(5000f)]
     public void A_far_marker_covers_the_floor_angle_whatever_its_distance(float distance)
     {
-        // A 0.5 m object is under 2° across from 50 m on.
+        // A 0.5 m object is under 1.4° across from 50 m on.
         Assert.Equal(VrHudGeometry.BracketFloorRadians, VrHudGeometry.BracketAngle(0.5f, distance), 6);
     }
 
@@ -125,9 +125,10 @@ public sealed class VrHudGeometryTests
     }
 
     [Fact]
-    public void The_floor_is_about_two_degrees_for_brackets_and_six_tenths_for_text()
+    public void The_floor_is_one_and_four_tenths_degrees_for_brackets_and_six_tenths_for_text()
     {
-        Assert.Equal(2f, MathHelper.ToDegrees(VrHudGeometry.BracketFloorRadians), 4);
+        // ragesaq, 2026-11-26: the spec's 2° less 30%.
+        Assert.Equal(1.4f, MathHelper.ToDegrees(VrHudGeometry.BracketFloorRadians), 4);
         Assert.Equal(0.6f, MathHelper.ToDegrees(VrHudGeometry.TextFloorRadians), 4);
     }
 
@@ -497,5 +498,346 @@ public sealed class VrHudGeometryTests
         var relative = new Vector3(0f, 0f, -100f);
         float lead = MathHelper.ToRadians(1.2f);
         Assert.Equal(lead, VrHudGeometry.AnchorAngle(relative, lead, 0f, null));
+    }
+
+    // Build step 2: the flight reference block (layer 3) and the flight-path
+    // marker (layer 1) at infinity.
+
+    private static float Degrees(Vector3 a, Vector3 b) =>
+        MathHelper.ToDegrees(MathF.Acos(Math.Clamp(Vector3.Dot(Vector3.Normalize(a), Vector3.Normalize(b)), -1f, 1f)));
+
+    [Fact]
+    public void The_flight_block_is_40_degrees_across_and_centred_on_the_nose_by_default()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        Assert.Equal(40f, MathHelper.ToDegrees(block.WidthRadians), 3);
+        Assert.Equal(0f, block.PitchDownRadians);
+    }
+
+    /// <summary>A pixel of the HUD image on the flight block's quad, from the
+    /// quad's corners and texture coordinates.</summary>
+    private static Vector3 OnQuad((Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+        Vector2 UvTopLeft, Vector2 UvBottomRight) q, float u, float v)
+    {
+        float fu = (u - q.UvTopLeft.X) / (q.UvBottomRight.X - q.UvTopLeft.X);
+        float fv = (v - q.UvTopLeft.Y) / (q.UvBottomRight.Y - q.UvTopLeft.Y);
+        return q.TopLeft + (q.TopRight - q.TopLeft) * fu + (q.BottomLeft - q.TopLeft) * fv;
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(12f)]
+    public void The_flight_block_puts_the_ring_centre_on_its_axis_and_covers_its_angle_across(float pitchDegrees)
+    {
+        var block = new VrHudGeometry.FlightBlock(MathHelper.ToRadians(40f), MathHelper.ToRadians(pitchDegrees));
+        var box = VrHudGeometry.CentreGroupBox(Height);
+        var q = VrHudGeometry.FlightBlockQuad(block, box, Width, Height);
+        // The image centre, where Classic centres its ring, is on the axis.
+        var axis = new Vector3(0f, -MathF.Sin(block.PitchDownRadians), -MathF.Cos(block.PitchDownRadians));
+        var centre = OnQuad(q, 0.5f, 0.5f);
+        Assert.True(Degrees(centre, axis) < 0.01f, $"ring centre {centre} off the axis {axis}");
+        Assert.Equal(pitchDegrees, Degrees(centre, Vector3.Forward), 2);
+        Assert.Equal(VrHudGeometry.FlightBlockDistanceMetres, centre.Length(), 3);
+        // The reference span about the centre, level with it, is 40° across.
+        float half = VrHudGeometry.FlightBlockReferencePixels / 2f;
+        var left = OnQuad(q, (Width / 2f - half) / Width, 0.5f);
+        var right = OnQuad(q, (Width / 2f + half) / Width, 0.5f);
+        Assert.Equal(40f, Degrees(left, right), 2);
+        // The quad keeps the box's shape: square pixels.
+        float across = Vector3.Distance(q.TopLeft, q.TopRight), down = Vector3.Distance(q.TopLeft, q.BottomLeft);
+        Assert.Equal(box.Width / box.Height, across / down, 3);
+        // Upright and facing the head.
+        Assert.True(q.TopLeft.Y > q.BottomLeft.Y);
+        Assert.True(q.TopRight.X > q.TopLeft.X);
+    }
+
+    [Fact]
+    public void The_flight_block_crops_the_centre_group_box_out_of_the_image()
+    {
+        var box = VrHudGeometry.CentreGroupBox(1080);
+        var q = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default, box, 1920, 1080);
+        Assert.Equal((960f + box.Left) / 1920f, q.UvTopLeft.X, 5);
+        Assert.Equal((540f + box.Top) / 1080f, q.UvTopLeft.Y, 5);
+        Assert.Equal((960f + box.Right) / 1920f, q.UvBottomRight.X, 5);
+        Assert.Equal((540f + box.Bottom) / 1080f, q.UvBottomRight.Y, 5);
+        // The ring's pixels keep their size whatever the image size: the same
+        // box in a bigger image covers the same angle.
+        var big = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default, box, 2560, 1440);
+        Near3(q.TopLeft, big.TopLeft, 1e-4f);
+        Near3(q.BottomRight, big.BottomRight, 1e-4f);
+    }
+
+    [Fact]
+    public void An_image_smaller_than_the_box_is_cropped_not_enlarged()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        var box = VrHudGeometry.CentreGroupBox(Height);
+        var full = VrHudGeometry.FlightBlockQuad(block, box, Width, Height);
+        var small = VrHudGeometry.FlightBlockQuad(block, box, 300, 200);
+        Assert.Equal(Vector2.Zero, small.UvTopLeft);
+        Assert.Equal(Vector2.One, small.UvBottomRight);
+        float metresPerPixel = Vector3.Distance(full.TopLeft, full.TopRight) / box.Width;
+        Assert.Equal(300f * metresPerPixel, Vector3.Distance(small.TopLeft, small.TopRight), 3);
+        Assert.Equal(200f * metresPerPixel, Vector3.Distance(small.TopLeft, small.BottomLeft), 3);
+    }
+
+    [Theory]
+    [InlineData(720)]
+    [InlineData(1080)]
+    [InlineData(1440)]
+    [InlineData(2160)]
+    public void The_centre_group_box_holds_the_ring_the_speed_and_every_own_status_point(int height)
+    {
+        var box = VrHudGeometry.CentreGroupBox(height);
+        int width = height * 16 / 9;
+        float spread = Allegiance.ClientCore.MonoGame.Rendering.OwnStatusLayout.Spread(height);
+        string[] ids = { "Kill bonus", "Signature percentage", "Detection eye", "Cloak active",
+            "Cloak strength and drained state", "Autopilot status", "Vector lock status", "Carried flag", "Carried artifact" };
+        foreach (var id in ids)
+        {
+            var at = Allegiance.ClientCore.MonoGame.Rendering.OwnStatusLayout.ScreenPos(id, width, height)
+                - new Vector2(width / 2f, height / 2f);
+            // A status point is an icon's lower-left corner or a text's
+            // upper-left one: keep 32 pixels of icon or text around it.
+            Assert.True(at.X - 8f >= box.Left && at.X + 32f <= box.Right, $"{id} at {at} outside {box} (spread {spread})");
+            Assert.True(at.Y - 40f >= box.Top && at.Y + 24f <= box.Bottom, $"{id} at {at} outside {box} (spread {spread})");
+        }
+        // The ring (about 215 pixels across) and the speed readout below it.
+        Assert.True(box.Left <= -120f && box.Right >= 120f && box.Top <= -120f);
+        Assert.True(box.Bottom >= Allegiance.ClientCore.MonoGame.Rendering.HudRenderer.FlightReferenceSpeedBelowCentre + 30f);
+        // And the box fits in the image.
+        Assert.True(-box.Left <= width / 2f && box.Right <= width / 2f && -box.Top <= height / 2f && box.Bottom <= height / 2f);
+    }
+
+    [Fact]
+    public void The_ring_looks_the_same_size_whatever_the_box_or_image()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        var small = VrHudGeometry.FlightBlockQuad(block, VrHudGeometry.CentreGroupBox(720), 1280, 720);
+        var big = VrHudGeometry.FlightBlockQuad(block, VrHudGeometry.CentreGroupBox(1440), 2560, 1440);
+        float MetresPerPixel((Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+            Vector2 UvTopLeft, Vector2 UvBottomRight) q, int w) =>
+            Vector3.Distance(q.TopLeft, q.TopRight) / ((q.UvBottomRight.X - q.UvTopLeft.X) * w);
+        Assert.Equal(MetresPerPixel(small, 1280), MetresPerPixel(big, 2560), 5);
+    }
+
+    [Fact]
+    public void The_flight_block_is_ten_metres_out_and_both_eyes_see_it_at_that_depth()
+    {
+        var proj = VrHudGeometry.SeatProjection(GameProjection);
+        var (tl, tr, bl, br, _, _) = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default,
+            VrHudGeometry.CentreGroupBox(Height), Width, Height);
+        foreach (var corner in new[] { tl, tr, bl, br }) Assert.Equal(-10f, corner.Z, 4);
+        // Seen by eyes 64 mm apart, a point's disparity is the IPD over its depth:
+        // a 10 m point's, not a far point's (none) and not the 1 m panel's.
+        var leftEye = VrHudGeometry.SeatView(Eye(Quaternion.Identity, -0.032f));
+        var rightEye = VrHudGeometry.SeatView(Eye(Quaternion.Identity, 0.032f));
+        var centre = (tl + br) / 2f;
+        Assert.True(VrHudGeometry.TryProject(centre, leftEye, proj, Width, Height, out var l));
+        Assert.True(VrHudGeometry.TryProject(centre, rightEye, proj, Width, Height, out var r));
+        float expected = VrHudGeometry.PixelsForAngle(2f * MathF.Atan(0.032f / 10f), proj, Height);
+        Assert.Equal(expected, l.X - r.X, 0);
+    }
+
+    [Theory]
+    [InlineData("40,5", 40f, 5f)]
+    [InlineData(" 30 , -10 ", 30f, -10f)]
+    [InlineData("90,45", 90f, 45f)]
+    [InlineData("10,-30", 10f, -30f)]
+    public void The_flight_block_can_be_tuned_from_the_environment(string text, float width, float pitch)
+    {
+        var block = VrHudGeometry.FlightBlock.Parse(text);
+        Assert.Equal(width, MathHelper.ToDegrees(block.WidthRadians), 3);
+        Assert.Equal(pitch, MathHelper.ToDegrees(block.PitchDownRadians), 3);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("36")]
+    [InlineData("36,0,1")]
+    [InlineData("wide,0")]
+    [InlineData("9,0")]
+    [InlineData("91,0")]
+    [InlineData("36,-31")]
+    [InlineData("36,46")]
+    [InlineData("NaN,0")]
+    public void An_unusable_flight_block_setting_is_the_default(string? text)
+    {
+        Assert.Equal(VrHudGeometry.FlightBlock.Default, VrHudGeometry.FlightBlock.Parse(text));
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.49f)]
+    public void The_flight_path_marker_hides_when_the_rounded_speed_is_zero(float speed)
+    {
+        Assert.Null(VrHudGeometry.FlightPathDirection(new Vector3(0f, speed, 0f)));
+    }
+
+    [Fact]
+    public void The_flight_path_marker_points_along_the_velocity()
+    {
+        Assert.Equal(Vector3.UnitY, VrHudGeometry.FlightPathDirection(new Vector3(0f, 0.5f, 0f)));
+        var velocity = new Vector3(120f, -30f, -260f);
+        Near3(Vector3.Normalize(velocity), VrHudGeometry.FlightPathDirection(velocity)!.Value, 1e-6f);
+    }
+
+    // An object 60 m away and 40° off the eye's axis, of radius 15 m: the head has
+    // turned away from it (ragesaq's headset report, 2026-11-26).
+    private static readonly Vector3 OffAxisObject =
+        Vector3.Transform(new Vector3(0f, 0f, -60f), Matrix.CreateRotationY(MathHelper.ToRadians(40f)));
+    private const float OffAxisRadius = 15f;
+
+    private static float SphereNearestDepth(Vector3 relative, float radius, Matrix view) =>
+        VrHudGeometry.BufferDepth(new Vector3(0f, 0f, Vector3.Transform(relative, view).Z + radius), Matrix.Identity,
+            GameProjection);
+
+    [Fact]
+    public void Off_the_eyes_axis_the_anchors_own_depth_cuts_through_the_objects_sphere()
+    {
+        // The control for the fix below: the depth the markers were tested at.
+        var view = LookingAlong(Vector3.Forward);
+        float sphere = VrHudGeometry.MarkerSphereRadius(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+        var anchor = VrHudGeometry.MarkerAnchor(OffAxisObject,
+            VrHudGeometry.AnchorAngle(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+        Assert.True(VrHudGeometry.BufferDepth(anchor, view, GameProjection) > SphereNearestDepth(OffAxisObject, sphere, view));
+    }
+
+    [Fact]
+    public void A_marker_is_tested_in_front_of_its_objects_sphere_wherever_the_head_looks()
+    {
+        foreach (float yawDegrees in new[] { 0f, 20f, 40f, 60f })
+        {
+            var view = LookingAlong(Vector3.Transform(Vector3.Forward, Matrix.CreateRotationY(MathHelper.ToRadians(40f - yawDegrees))));
+            float sphere = VrHudGeometry.MarkerSphereRadius(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+            var anchor = VrHudGeometry.MarkerAnchor(OffAxisObject,
+                VrHudGeometry.AnchorAngle(OffAxisObject, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+            float tested = VrHudGeometry.MarkerTestDepth(anchor, OffAxisObject, sphere, view, GameProjection);
+            Assert.True(tested <= SphereNearestDepth(OffAxisObject, sphere, view) + 1e-6f, $"yaw {yawDegrees}");
+            Assert.True(tested <= VrHudGeometry.BufferDepth(anchor, view, GameProjection) + 1e-6f, $"yaw {yawDegrees}");
+            Assert.True(tested > 0f, $"yaw {yawDegrees}");
+        }
+    }
+
+    [Fact]
+    public void Looking_straight_at_an_object_or_far_away_the_test_depth_is_the_anchors()
+    {
+        var view = LookingAlong(Vector3.Forward);
+        var ahead = new Vector3(0f, 0f, -60f);
+        float aheadSphere = VrHudGeometry.MarkerSphereRadius(ahead, MathHelper.ToRadians(2f), 0f, OffAxisRadius);
+        var aheadAnchor = VrHudGeometry.MarkerAnchor(ahead, VrHudGeometry.AnchorAngle(ahead, MathHelper.ToRadians(2f), 0f, OffAxisRadius));
+        Assert.Equal(VrHudGeometry.BufferDepth(aheadAnchor, view, GameProjection),
+            VrHudGeometry.MarkerTestDepth(aheadAnchor, ahead, aheadSphere, view, GameProjection), 4);
+        // Past the 100 m clamp the sphere is farther than the anchor.
+        var far = new Vector3(0f, 0f, -1000f);
+        float farSphere = VrHudGeometry.MarkerSphereRadius(far, MathHelper.ToRadians(2f), 0f, 5f);
+        var farAnchor = VrHudGeometry.MarkerAnchor(far, VrHudGeometry.AnchorAngle(far, MathHelper.ToRadians(2f), 0f, 5f));
+        Assert.Equal(VrHudGeometry.BufferDepth(farAnchor, view, GameProjection),
+            VrHudGeometry.MarkerTestDepth(farAnchor, far, farSphere, view, GameProjection), 5);
+    }
+
+    // Headset test of 2026-11-26: the targeting markers are flat shapes at
+    // their anchor's depth, facing the head, so both eyes see every edge at
+    // that depth; the port's text lines leave the target pane.
+
+    [Theory]
+    [InlineData(0f, 0f, -8f, 0f)]
+    [InlineData(3f, -1f, -8f, 0f)]
+    [InlineData(-40f, 25f, -60f, 30f)]
+    public void A_marker_plane_faces_the_head_at_the_anchor_and_spans_the_marker_angle(float x, float y, float z, float rollDegrees)
+    {
+        var toAnchor = new Vector3(x, y, z);
+        var headUp = Vector3.Transform(Vector3.Up, Quaternion.CreateFromAxisAngle(Vector3.Forward, MathHelper.ToRadians(rollDegrees)));
+        float angle = MathHelper.ToRadians(4f);
+        var (right, up) = VrHudGeometry.MarkerBillboard(toAnchor, headUp, angle);
+        var forward = Vector3.Normalize(toAnchor);
+        // In the plane at right angles to the line from the head, so its edges
+        // are where the anchor is, not nearer or farther on one side.
+        Assert.Equal(0f, Vector3.Dot(right, forward), 4);
+        Assert.Equal(0f, Vector3.Dot(up, forward), 4);
+        Assert.Equal(0f, Vector3.Dot(right, up), 3);
+        // Each half spans half the marker's angle from the head.
+        Assert.Equal(2f, Degrees(toAnchor, toAnchor + right), 3);
+        Assert.Equal(2f, Degrees(toAnchor, toAnchor + up), 3);
+        // Upright to the head: up leans with the head's up, right lies across it.
+        Assert.True(Vector3.Dot(Vector3.Normalize(up), headUp) > 0.7f);
+        Assert.Equal(0f, Vector3.Dot(Vector3.Normalize(right), headUp), 3);
+        Assert.True(Vector3.Dot(Vector3.Cross(right, up), forward) < 0f, "right, up and the line from the head make a right-handed frame seen from the head");
+    }
+
+    [Fact]
+    public void A_marker_straight_above_the_head_still_gets_a_plane()
+    {
+        var (right, up) = VrHudGeometry.MarkerBillboard(new Vector3(0, 20, 0), Vector3.Up, MathHelper.ToRadians(4f));
+        Assert.True(right.Length() > 0.1f && up.Length() > 0.1f);
+        Assert.Equal(0f, right.Y, 4);
+        Assert.Equal(0f, up.Y, 4);
+    }
+
+    [Fact]
+    public void A_marker_plane_seen_by_canted_eyes_puts_each_corner_at_one_point()
+    {
+        // Eyes 64 mm apart, each turned 10 degrees outward with its own
+        // off-centre view: the same corner, projected into each eye and cast
+        // back out, meets itself at the corner's depth.
+        var toAnchor = new Vector3(2.5f, -0.8f, -6f);
+        var (right, up) = VrHudGeometry.MarkerBillboard(toAnchor, Vector3.Up, MathHelper.ToRadians(6f));
+        var corner = toAnchor + right - up;
+        var eyes = new[] { new Vector3(-0.032f, 0, 0), new Vector3(0.032f, 0, 0) };
+        var turns = new[] { MathHelper.ToRadians(10f), MathHelper.ToRadians(-10f) };
+        var rays = new Vector3[2];
+        for (int i = 0; i < 2; i++)
+        {
+            // Eye-relative, as the VR client projects: the view holds the turn only.
+            var view = Matrix.Invert(Matrix.CreateRotationY(turns[i]));
+            var proj = Matrix.CreatePerspectiveOffCenter(-0.9f + i * 0.2f, 0.7f + i * 0.2f, -0.9f, 0.85f, 0.1f, 1000f);
+            Assert.True(VrHudGeometry.TryProject(corner - eyes[i], view, proj, 3708, 3564, out var pixel));
+            rays[i] = VrHudGeometry.RayThroughPixel(pixel, 3708, 3564, view, proj);
+        }
+        // The nearest points of the two rays: both at the corner.
+        var w0 = eyes[0] - eyes[1];
+        float a = Vector3.Dot(rays[0], rays[0]), b = Vector3.Dot(rays[0], rays[1]), c = Vector3.Dot(rays[1], rays[1]);
+        float d = Vector3.Dot(rays[0], w0), e = Vector3.Dot(rays[1], w0), den = a * c - b * b;
+        var p0 = eyes[0] + rays[0] * ((b * e - c * d) / den);
+        var p1 = eyes[1] + rays[1] * ((a * e - b * d) / den);
+        Near3(corner, p0, 0.05f);
+        Near3(corner, p1, 0.05f);
+    }
+
+    // Each character 10 units wide, as a monospaced font measures.
+    private static float Mono(string s) => s.Length * 10f;
+
+    [Fact]
+    public void A_port_text_line_wraps_at_spaces_within_the_width()
+    {
+        var lines = VrHudGeometry.WrapLine("CARGO: @-1#14x1 @-2#25x20 @-3#25x20", 200f, Mono);
+        Assert.Equal(new[] { "CARGO: @-1#14x1", "@-2#25x20 @-3#25x20" }, lines);
+        foreach (var line in lines) Assert.True(Mono(line) <= 200f, line);
+    }
+
+    [Fact]
+    public void A_line_that_fits_is_one_line_unchanged_with_its_double_spaces()
+    {
+        const string text = "WEAPONS: GROUP  BOOST: OFF  [1:Gun]";
+        Assert.Equal(new[] { text }, VrHudGeometry.WrapLine(text, 1000f, Mono));
+    }
+
+    [Fact]
+    public void A_wrap_keeps_every_word_in_order_and_a_long_word_gets_its_own_line()
+    {
+        const string text = "A  BB CCCCCCCCCCCCCCCCCCCCCCC D";
+        var lines = VrHudGeometry.WrapLine(text, 60f, Mono);
+        Assert.Equal(new[] { "A  BB", "CCCCCCCCCCCCCCCCCCCCCCC", "D" }, lines);
+        Assert.Equal(text.Replace(" ", ""), string.Concat(lines).Replace(" ", ""));
+    }
+
+    [Fact]
+    public void Vr_puts_the_port_text_under_the_chat_pane_and_short_of_the_weapons_pane()
+    {
+        // The chat pane's foot is at about 125 px, the keys hint's at about 146.
+        Assert.InRange(VrHudGeometry.PortTextTopPixels, 146f, 200f);
+        // At 1280 the weapons pane starts at about 882.
+        Assert.InRange(VrHudGeometry.PortTextWrapWidth(1280f) + 20f, 500f, 870f);
     }
 }

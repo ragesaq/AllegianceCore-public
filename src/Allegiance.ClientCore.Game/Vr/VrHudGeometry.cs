@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace Allegiance.ClientCore.MonoGame.Vr;
@@ -14,8 +15,10 @@ namespace Allegiance.ClientCore.MonoGame.Vr;
 /// frame, so the local space's -Z is the camera's forward).</summary>
 public static class VrHudGeometry
 {
-    /// <summary>The smallest angle a bracket covers, across (spec: about 2°).</summary>
-    public static readonly float BracketFloorRadians = MathHelper.ToRadians(2f);
+    /// <summary>The smallest angle a bracket covers, across: 1.4°, the spec's
+    /// 2° less 30% after ragesaq's headset look (2026-11-26), so a far or small
+    /// object's box is told apart from a near or large one's.</summary>
+    public static readonly float BracketFloorRadians = MathHelper.ToRadians(1.4f);
 
     /// <summary>The smallest height of marker text (spec: about 0.6°).</summary>
     public static readonly float TextFloorRadians = MathHelper.ToRadians(0.6f);
@@ -63,6 +66,168 @@ public static class VrHudGeometry
         var right = Vector3.UnitX * halfWidth;
         var upHalf = up * halfHeight;
         return (centre - right + upHalf, centre + right + upHalf, centre - right - upHalf, centre + right - upHalf);
+    }
+
+    /// <summary>The flight reference block (layer 3), 10 m out in the seat: the angle
+    /// that <see cref="FlightBlockReferencePixels"/> about the image centre cover
+    /// (the crop itself is wider: <see cref="CentreGroupBox"/>), and how far the
+    /// gauge ring's centre is below the nose.</summary>
+    public readonly record struct FlightBlock(float WidthRadians, float PitchDownRadians)
+    {
+        /// <summary>40° across the 400 reference pixels, so the Classic gauge ring
+        /// (about 215 pixels) is about 21.5° wide: the spec's 30° by 20°
+        /// field holds it with its readouts. Centred on the nose, where native
+        /// draws the ring around the boresight.</summary>
+        public static FlightBlock Default => new(MathHelper.ToRadians(40f), 0f);
+
+        /// <summary>Reads "widthDegrees,pitchDegrees" (for example "40,0"), as set
+        /// in ALLEGIANCE_VR_FLIGHT_BLOCK for headset tuning. Anything that does not
+        /// parse to a width of 10° to 90° and a pitch of -30° to 45° is the
+        /// default.</summary>
+        public static FlightBlock Parse(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return Default;
+            var parts = text.Split(',');
+            if (parts.Length != 2) return Default;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            const System.Globalization.NumberStyles style = System.Globalization.NumberStyles.Float;
+            if (!float.TryParse(parts[0], style, inv, out float w) || !float.TryParse(parts[1], style, inv, out float p))
+                return Default;
+            if (!(w >= 10f && w <= 90f) || !(p >= -30f && p <= 45f)) return Default;
+            return new FlightBlock(MathHelper.ToRadians(w), MathHelper.ToRadians(p));
+        }
+    }
+
+    /// <summary>A box in an image, in pixels from the image's centre (x right,
+    /// y down): left and top are negative.</summary>
+    public readonly record struct PixelBox(float Left, float Top, float Right, float Bottom)
+    {
+        public float Width => Right - Left;
+        public float Height => Bottom - Top;
+    }
+
+    /// <summary>The span, in pixels, that <see cref="FlightBlock.WidthRadians"/>
+    /// covers: the Classic ring (about 215 pixels, at the fixed native pane
+    /// scale) with room around it.</summary>
+    public const float FlightBlockReferencePixels = 400f;
+
+    /// <summary>The Classic centre group around the image centre, for an image
+    /// this tall: the gauge ring (fixed pixels, about 215 across), the speed
+    /// readout <see cref="Rendering.HudRenderer.FlightReferenceSpeedBelowCentre"/>
+    /// pixels down, and the own-ship status, whose native points
+    /// (<see cref="Rendering.OwnStatusLayout"/>: x from -200 to 122, y from -110
+    /// to 185) are spread with the image height. The margins hold the icons and
+    /// text drawn from those points; the image is transparent around the group,
+    /// so a margin costs nothing.</summary>
+    public static PixelBox CentreGroupBox(int imageHeight)
+    {
+        float s = Rendering.OwnStatusLayout.Spread(imageHeight);
+        return new(-(200f * s + 60f), -(110f * s + 90f), 122f * s + 100f,
+            MathF.Max(Rendering.HudRenderer.FlightReferenceSpeedBelowCentre + 45f, 185f * s + 60f));
+    }
+
+    /// <summary>How far out the flight block is drawn, in seat space: 10 m, so
+    /// both eyes see it at that depth (ragesaq, 2026-11-26: at infinity it
+    /// "feels a little fake").</summary>
+    public const float FlightBlockDistanceMetres = 10f;
+
+    /// <summary>The quad that shows <paramref name="box"/> of an image as the
+    /// flight block: corners in seat space (top-left, top-right, bottom-left,
+    /// bottom-right) at <see cref="FlightBlockDistanceMetres"/>, so
+    /// <see cref="FlightBlockReferencePixels"/> about the image centre cover the
+    /// block's angle and the image centre lies on the block's axis, and the
+    /// matching texture coordinates. The box is clamped to the image.</summary>
+    public static (Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+        Vector2 UvTopLeft, Vector2 UvBottomRight) FlightBlockQuad(in FlightBlock block, PixelBox box,
+        int pixelWidth, int pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0) throw new ArgumentOutOfRangeException(nameof(pixelWidth), "The HUD image has no area.");
+        float cx = pixelWidth / 2f, cy = pixelHeight / 2f;
+        // Metres per pixel from the fixed reference span, so neither the box nor
+        // the image's size changes how large the ring looks.
+        float scale = 2f * FlightBlockDistanceMetres * MathF.Tan(block.WidthRadians / 2f) / FlightBlockReferencePixels;
+        box = new PixelBox(MathF.Max(box.Left, -cx), MathF.Max(box.Top, -cy),
+            MathF.Min(box.Right, cx), MathF.Min(box.Bottom, cy));
+        float sin = MathF.Sin(block.PitchDownRadians), cos = MathF.Cos(block.PitchDownRadians);
+        Vector3 At(float px, float py)
+        {
+            // Unpitched: x right, y up, the plane 10 m ahead; then turned down
+            // about x by the pitch, as PanelCorners turns a panel.
+            float x = px * scale, y = -py * scale, z = -FlightBlockDistanceMetres;
+            return new Vector3(x, y * cos + z * sin, -y * sin + z * cos);
+        }
+        return (At(box.Left, box.Top), At(box.Right, box.Top), At(box.Left, box.Bottom), At(box.Right, box.Bottom),
+            new Vector2((cx + box.Left) / pixelWidth, (cy + box.Top) / pixelHeight),
+            new Vector2((cx + box.Right) / pixelWidth, (cy + box.Bottom) / pixelHeight));
+    }
+
+    /// <summary>Where VR puts the top of the port's weapons and cargo text
+    /// lines on the HUD panel, in pixels from the image's top: under the chat
+    /// pane (top centre, its foot at about 125) and the keys hint below it, at
+    /// the left. At the foot they ran across the target pane, and in the
+    /// middle across the panel's centre (ragesaq, 2026-11-26).</summary>
+    public const float PortTextTopPixels = 152f;
+
+    /// <summary>How wide VR lets the port's text lines run before they wrap:
+    /// about two thirds of the image, short of the weapons pane at the right.</summary>
+    public static float PortTextWrapWidth(float imageWidth) => imageWidth * 0.65f;
+
+    /// <summary>A line broken at its spaces into lines no wider than
+    /// <paramref name="maxWidth"/> by <paramref name="measure"/>. A word wider
+    /// than that has a line of its own. Each line's text is the original's,
+    /// runs of spaces kept, less the space it was broken at.</summary>
+    public static IReadOnlyList<string> WrapLine(string text, float maxWidth, Func<string, float> measure)
+    {
+        var lines = new List<string>();
+        string current = "";
+        bool started = false;
+        foreach (var word in text.Split(' '))
+        {
+            string joined = started ? current + " " + word : word;
+            if (started && word.Length > 0 && current.Trim().Length > 0 && measure(joined) > maxWidth)
+            {
+                lines.Add(current.TrimEnd());
+                current = word;
+            }
+            else current = joined;
+            started = true;
+        }
+        if (current.Trim().Length > 0 || lines.Count == 0) lines.Add(current.TrimEnd());
+        return lines;
+    }
+
+    /// <summary>A targeting marker's plane in the world: two vectors from its
+    /// anchor, at right angles to the line from the head to the anchor, upright
+    /// to <paramref name="upright"/> (in VR the seat's up, so a marker does not
+    /// roll with the head), each half the marker's width
+    /// (<paramref name="angleRadians"/> as seen from the head). A marker drawn
+    /// from points anchor + Right·x − Up·y (x right, y down, ±1 at its edges)
+    /// is a flat shape at the anchor's depth, facing the head: each eye projects
+    /// the same points, so every edge has the anchor's disparity. A shape drawn
+    /// as pixel offsets in each eye's image does not, because the eyes' images
+    /// stretch differently at the anchor's pixel.</summary>
+    public static (Vector3 Right, Vector3 Up) MarkerBillboard(Vector3 headToAnchor, Vector3 upright, float angleRadians)
+    {
+        float distance = headToAnchor.Length();
+        if (!(distance > 0f)) return (Vector3.Zero, Vector3.Zero);
+        var forward = headToAnchor / distance;
+        var right = Vector3.Cross(forward, upright);
+        // Straight along the upright: any right angle to the line will do.
+        if (right.LengthSquared() < 1e-8f) right = Vector3.Cross(forward, MathF.Abs(forward.X) < 0.9f ? Vector3.UnitX : Vector3.UnitZ);
+        right = Vector3.Normalize(right);
+        var up = Vector3.Cross(right, forward);
+        float half = distance * MathF.Tan(angleRadians / 2f);
+        return (right * half, up * half);
+    }
+
+    /// <summary>The flight-path marker's direction (layer 1): the unit velocity,
+    /// or null when the rounded speed is zero, the rule the flat velocity marker
+    /// follows (native <c>(int)(length + 0.5f)</c>).</summary>
+    public static Vector3? FlightPathDirection(Vector3 velocity)
+    {
+        float speed = velocity.Length();
+        if ((int)(speed + 0.5f) == 0) return null;
+        return velocity / speed;
     }
 
     /// <summary>A seat-space view for one eye: the eye's pose in the local
@@ -177,6 +342,31 @@ public static class VrHudGeometry
     public static float BufferDepth(Vector3 relative, Matrix view, Matrix projection)
     {
         var clip = Vector4.Transform(new Vector4(relative, 1f), view * projection);
+        return clip.W > 1e-6f ? clip.Z / clip.W : -1f;
+    }
+
+    /// <summary>The radius of the sphere a marker's anchor sits in front of, for an
+    /// object at <paramref name="relative"/> from the head: the same sphere
+    /// <see cref="MarkerAnchor"/> takes the near side of.</summary>
+    public static float MarkerSphereRadius(Vector3 relative, float bracketRadians, float wrapRadians, float? radiusMetres) =>
+        relative.Length() * MathF.Min(0.95f, MathF.Tan(AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres) / 2f));
+
+    /// <summary>The depth-buffer value a marker is tested at in one eye. A marker is
+    /// drawn flat in the eye's image, so it has one depth along the eye's axis. Its
+    /// anchor's depth is not enough: off the eye's axis, the object's sphere
+    /// reaches up to radius · (1 − cos θ) nearer than the anchor along that axis,
+    /// and its near side then cut through the marker, more the farther the head
+    /// turned from it. So the marker is tested at the nearer of its anchor and the
+    /// sphere's nearest point along the axis. Its place in the image, and so its
+    /// stereo depth, stays at the anchor. Positions are relative to the eye.</summary>
+    public static float MarkerTestDepth(Vector3 anchorRelative, Vector3 objectRelative, float sphereRadius, Matrix view,
+        Matrix projection)
+    {
+        float anchorZ = -Vector3.Transform(anchorRelative, view).Z;
+        float sphereZ = -Vector3.Transform(objectRelative, view).Z - MathF.Max(0f, sphereRadius);
+        float z = MathF.Min(anchorZ, sphereZ);
+        if (!(z > 0f)) return -1f;
+        var clip = Vector4.Transform(new Vector4(0f, 0f, -z, 1f), projection);
         return clip.W > 1e-6f ? clip.Z / clip.W : -1f;
     }
 

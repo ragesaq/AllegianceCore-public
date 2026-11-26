@@ -380,6 +380,21 @@ public static class TargetModelPreview
     }
 
     /// <summary>
+    /// <see cref="PaneRect(float, float, float)"/> made <paramref name="enlargement"/>
+    /// times as wide and high, about the native square's centre column, with
+    /// its bottom edge kept: it grows upward, out of the oval, so a bigger
+    /// preview sits higher. An enlargement of 1 is the native square.
+    /// </summary>
+    public static Rectangle PaneRect(float x0, float y0, float s, float enlargement)
+    {
+        var native = PaneRect(x0, y0, s);
+        if (enlargement == 1f) return native;
+        int size = (int)MathF.Round(native.Width * enlargement);
+        int x = (int)MathF.Round(native.X + (native.Width - size) / 2f);
+        return new Rectangle(x, native.Bottom - size, size, size);
+    }
+
+    /// <summary>
     /// The preview's native light (<c>GeoImage</c> default): a single white
     /// directional light, no alt light, ambient 0 (<c>image.cpp:1120-1129</c>,
     /// <c>device3d.cpp:444-452,734-752,295-297</c>). Sign derivation (full in

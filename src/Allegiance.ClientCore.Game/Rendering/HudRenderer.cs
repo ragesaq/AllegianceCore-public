@@ -188,6 +188,7 @@ public class HudRenderer
         _viewportWidth = viewport.Width;
         _viewportHeight = viewport.Height;
         Layout.Reset(viewport.Width, viewport.Height);
+        _targetPreviewEnlargement = TargetPreviewEnlargement(model);
         PrepareLayout(model, viewport);
         if (!model.Visible) return;
         var frame = model.InstrumentsVisible ? model.Telemetry : null;
@@ -443,41 +444,21 @@ public class HudRenderer
             // the batch is restored to alpha blend for the rest of the HUD.
             // The MODERN skin is a port invention (not native), so its gauges
             // keep the normal alpha-blended batch.
-            bool classicGaugesLoaded = !UsesModernGauges && _gauges is { } g && g.AllLoaded;
             // P805 (row 470) — native ShowCenterHUD (WinTrek.cpp:2898,3300;
             // dialog.mdl:5195-5197 VisibleImage(CenterHudDisplay, ShowCenterHUD))
             // hides the whole centre group: gauges, speed, afterburner, own-ship
             // status. The F1 global hide (Context.Hidden) stays on top of it.
-            if (classicGaugesLoaded && model.CentreHudVisible)
-            {
-                _sb.End();
-                // HUD-14c — gauge textures are premultiplied (GaugeTextures.cs
-                // ToPremultipliedRgba) and so are the SpriteFont glyphs, so
-                // BlendState.Additive (SrcAlpha/One) would apply alpha twice;
-                // native BlendModeAdd SRCALPHA/ONE on straight-alpha == One/One
-                // here (engine/RasterD3D9.cpp:295-302).
-                _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne);
-                DrawGauges(model, viewport);
-                _sb.End();
-                _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            }
-            else if (UsesModernGauges || _gauges is { } mg && mg.AllLoaded)
-            {
-                if (model.CentreHudVisible) DrawGauges(model, viewport);
-            }
-            else if (model.CentreHudVisible)
-            {
-                DrawStatusPanel(f, w);
-                DrawThrottleGauge(f.Throttle, w, h);
-            }
-            if (model.CentreHudVisible)
+            // VR draws the gauges, speed and own-ship status on their own
+            // (DrawFlightReference); the afterburner readout stays here.
+            bool centreHere = CentreGroupOnMainPass(model);
+            if (centreHere)
             {
                 float speedCy = model.TargetPaneVisible ? paneTop - 40f
                     : model.PodVisible && !UsesModernGauges ? h - 238f : h - 108f;
-                DrawSpeed(f.Speed, model.SpeedUnit, w, speedCy);
-                ElementDrawn("Speed");
-                DrawAfterburner(f.AfterburnerActive, f.Power, w);
+                DrawCentreGauges(model, f, viewport, speedCy);
             }
+            if (model.CentreHudVisible)
+                DrawAfterburner(f.AfterburnerActive, f.Power, w);
             {
                 DrawWeaponMode(f, w);
                 ElementDrawn("Equipment selected and active state");
@@ -499,8 +480,8 @@ public class HudRenderer
             // HUD-6 — native centre-HUD own-ship status icons/readouts at their
             // dialog.mdl anchors (kill bonus, signature, detection eye, cloak,
             // autopilot, vector lock, carried flag/artifact).
-            if (model.CentreHudVisible) DrawOwnStatus(model, viewport);
-            DrawRoll(f.RollDegrees, w, h);
+            if (centreHere) DrawOwnStatus(model, viewport);
+            if (RollOnMainPass(model)) DrawRoll(f.RollDegrees, w, h);
             // HUD-10 — native has no in-flight money readout: moneyPane lives only
             // inside MergedInvestmentsPaneImage under ofInvestment
             // (dialog.mdl:5199-5203,5368), so the old always-visible "$n" line is
@@ -554,6 +535,102 @@ public class HudRenderer
         }
     }
 
+    /// <summary>Whether the main pass draws the centre group's gauges, speed and
+    /// own-ship status: when the centre HUD is shown, except in a VR eye frame,
+    /// which draws them on their own, 10 m out in the seat (<see cref="DrawFlightReference"/>).</summary>
+    public static bool CentreGroupOnMainPass(HudModel model) =>
+        model.CentreHudVisible && !model.Context.FlightReferenceInWorld;
+
+    /// <summary>Whether the main pass draws the port's ROLL dial: not in a VR eye
+    /// frame, which shows no horizon cues (knowledge/vr-hud-design.md, decision
+    /// table).</summary>
+    public static bool RollOnMainPass(HudModel model) => !model.Context.FlightReferenceInWorld;
+
+    /// <summary>How many times its native size the target pane's model preview
+    /// is drawn: 1.5 in a VR eye frame, where the HUD is a panel at arm's length
+    /// and the native square is too small to read (ragesaq's headset test of
+    /// 2026-11-26); 1 in the flat game.</summary>
+    public static float TargetPreviewEnlargement(HudModel model) => model.Context.FlightReferenceInWorld ? 1.5f : 1f;
+
+    // Set from the model at the start of each Draw.
+    private float _targetPreviewEnlargement = 1f;
+
+    /// <summary>Where VR puts the speed readout: this many pixels below the
+    /// gauge ring's centre, under the own-ship status, as native draws it inside
+    /// the ring (the flat port draws it at the screen's foot).</summary>
+    public const float FlightReferenceSpeedBelowCentre = 195f;
+
+    /// <summary>VR: only the centre group's gauges, speed and own-ship status,
+    /// around the viewport's centre, for the VR client to show in front of the
+    /// seat. The main pass leaves them out while <see cref="HudContext.FlightReferenceInWorld"/>
+    /// is set. Self-contained like <see cref="Draw(HudModel, Viewport)"/>.
+    /// <paramref name="viewport"/> is the layout's size; with
+    /// <paramref name="density"/> above 1 the target has that many times its
+    /// pixels each way, everything is drawn scaled up to fill it, and text uses
+    /// the denser bake where there is one (<see cref="NativeFonts.TryDenser"/>).</summary>
+    public void DrawFlightReference(HudModel model, Viewport viewport, float density = 1f)
+    {
+        if (!model.Visible || !model.CentreHudVisible || !model.InstrumentsVisible || model.Telemetry is not { } f) return;
+        _viewportWidth = viewport.Width;
+        _viewportHeight = viewport.Height;
+        Layout.Reset(viewport.Width, viewport.Height);
+        _density = density;
+        try
+        {
+            BeginBatch();
+            try
+            {
+                DrawCentreGauges(model, f, viewport, viewport.Height / 2f + FlightReferenceSpeedBelowCentre);
+                DrawOwnStatus(model, viewport);
+            }
+            finally
+            {
+                _sb.End();
+            }
+        }
+        finally
+        {
+            _density = 1f;
+        }
+    }
+
+    // Pixels per layout pixel in the image being drawn: 1 except inside a
+    // DrawFlightReference with a density.
+    private float _density = 1f;
+    private Matrix? DensityTransform => _density == 1f ? null : Matrix.CreateScale(_density, _density, 1f);
+
+    /// <summary>The centre group's gauges and speed readout, inside an
+    /// alpha-blended batch (the classic gauges take their own additive pass).</summary>
+    private void DrawCentreGauges(HudModel model, HudFrame f, Viewport viewport, float speedCy)
+    {
+        float w = viewport.Width, h = viewport.Height;
+        bool classicGaugesLoaded = !UsesModernGauges && _gauges is { } g && g.AllLoaded;
+        if (classicGaugesLoaded)
+        {
+            _sb.End();
+            // HUD-14c — gauge textures are premultiplied (GaugeTextures.cs
+            // ToPremultipliedRgba) and so are the SpriteFont glyphs, so
+            // BlendState.Additive (SrcAlpha/One) would apply alpha twice;
+            // native BlendModeAdd SRCALPHA/ONE on straight-alpha == One/One
+            // here (engine/RasterD3D9.cpp:295-302).
+            _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne, transformMatrix: DensityTransform);
+            DrawGauges(model, viewport);
+            _sb.End();
+            _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, transformMatrix: DensityTransform);
+        }
+        else if (UsesModernGauges || _gauges is { } mg && mg.AllLoaded)
+        {
+            DrawGauges(model, viewport);
+        }
+        else
+        {
+            DrawStatusPanel(f, w);
+            DrawThrottleGauge(f.Throttle, w, h);
+        }
+        DrawSpeed(f.Speed, model.SpeedUnit, w, speedCy);
+        ElementDrawn("Speed");
+    }
+
     public HudTextLayout Layout { get; } = new();
     // HUD-5b — per-contact cache for the resolved radar labels and their
     // formatted lines (no per-frame string/array allocation at 107v107).
@@ -603,9 +680,20 @@ public class HudRenderer
     protected virtual void ElementDrawn(params string[] ids) { }
     protected virtual bool UsesModernGauges => false;
     protected virtual bool DeferWarpFlash => false;
-    protected virtual void BeginBatch() => _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+    protected virtual void BeginBatch() =>
+        _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, transformMatrix: DensityTransform);
     protected virtual void RenderText(SpriteFont font, string text, Vector2 position, Color color, float scale)
-        => _sb.DrawString(font, text, position, color, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+    {
+        var (drawn, drawnScale) = DenseText(_nativeFonts, _density, font, scale);
+        _sb.DrawString(drawn, text, position, color, 0, Vector2.Zero, drawnScale, SpriteEffects.None, 0);
+    }
+
+    /// <summary>The font and scale text is drawn with: at a density of 2, a 1×
+    /// bake's 2× bake at half the scale (the same size, twice the glyph
+    /// pixels); otherwise the font as given.</summary>
+    internal static (SpriteFont Font, float Scale) DenseText(NativeFonts? fonts, float density, SpriteFont font, float scale) =>
+        density >= 2f && fonts is { } native && native.TryDenser(font, out var dense)
+            ? (dense, scale / 2f) : (font, scale);
 
     /// <summary>HUD-7 — fit a pane column string to a measured on-screen width by
     /// truncating with an ellipsis (the same binary-search fit as
@@ -2625,7 +2713,7 @@ public class HudRenderer
     protected virtual void DrawTargetModelPreview(float x0, float y0, float s)
     {
         if (TargetModelPreview is null) return;
-        var dst = global::Allegiance.ClientCore.MonoGame.Rendering.TargetModelPreview.PaneRect(x0, y0, s);
+        var dst = global::Allegiance.ClientCore.MonoGame.Rendering.TargetModelPreview.PaneRect(x0, y0, s, _targetPreviewEnlargement);
         _sb.Draw(TargetModelPreview, dst, Color.White);
         ElementDrawn("Target model preview");
     }

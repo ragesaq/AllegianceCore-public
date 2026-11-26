@@ -114,9 +114,15 @@ refocus from the fight. ragesaq accepted it on 2026-11-25.
 
 - One block of readouts in a field of about 30° by 20°, centred a little below the nose, fixed to the ship, drawn at
   infinity with depth testing off. It is the fighter's head-up display: it stays put in the cockpit when the head
-  turns.
+  turns. **Revised 2026-11-26 by ragesaq:** 10 m out instead of at infinity (decision table).
 - Its content is today's central gauges and readouts, laid out again for a smaller field rather than scaled down:
   the flat layout spreads across the whole 1280x720 screen.
+- **Revised 2026-11-26 by ragesaq:** no horizon cues. Space has no horizon, so the pitch ladder, the heading tape and
+  the roll pointer are left out; the block is the speed and throttle readouts, in the manner of Elite Dangerous and
+  Star Citizen and of original Allegiance (decision table).
+- **Revised again 2026-11-26 by ragesaq:** the block is the Classic skin's centre group, the ring gauge of original
+  Allegiance (thrust, fuel, armour, shield, ammunition and energy around the own ship), with the speed and the
+  own-ship status (signature) below it, whatever skin is active (decision table).
 
 ### Layer 4: cockpit displays
 
@@ -149,18 +155,21 @@ and the two geometry files on `master`)*. Its elements map onto the layers like 
 |---|---|
 | broken gun cross; round flight-path marker | 1, aim at infinity |
 | target designator (corner brackets at 1.05 times the target's radius), missile lock, lead marker, order arrows | 2, at the target's depth |
-| pitch ladder on the sector plane, heading tape, speed and throttle tapes | 3, flight reference at infinity |
+| speed and throttle tapes | 3, flight reference at infinity |
+| pitch ladder on the sector plane, heading tape, roll pointer | not shown in VR (decided 2026-11-26: no horizon in space) |
 | stores block (hull, shield, energy, fuel, ammunition), master caution, console and chat, inventory pane, radar | 4, cockpit displays |
 
 Layer 3 is the part a fighter HUD is built around. In Jet, the pitch ladder is drawn against the sector plane,
 not against the screen. A ladder like that only lines up with the world when it is drawn at infinity, which supports
-layer 3 *(derived)*.
+layer 3 *(derived)*. ragesaq decided on 2026-11-26 that VR shows no horizon cues at all (decision table), so this
+argument no longer applies.
 
 **Build the VR HUD by placing Jet's elements, not by laying out Classic again** *(proposed by Port, accepted by ragesaq 2026-11-25)*. The work becomes a VR
 placement for each Jet element group, chosen by layer. Classic and Modern keep their flat layouts in VR, on one
 panel, as a fallback. The flat Jet skin keeps its bytes. One cost: Jet is behind a default-off flag and still in
 development upstream, so the VR placement follows its changes. That argues for doing this work with the upstream
-author, not as a fork-only branch (node `ragesaq-012`).
+author, not as a fork-only branch (node `ragesaq-012`). **Superseded 2026-11-26 by ragesaq for the centre block:**
+the VR HUD's flight block is Classic's ring gauge, not Jet's tapes (decision table).
 
 **The upstream cockpit study (P1044) proposes the same split for the flat game.** It is a report, not built code.
 It keeps aim, targeting and urgent symbols as a sharp overlay ("HUD glass", which matches layers 1 to 3). It moves
@@ -179,11 +188,12 @@ service with upstream, not two.
 | Where the HUD is composited | into each eye image | its own composition layer (milestone 2), fixing capture in the capture tool | ragesaq, 2026-11 | 2026-11-25 |
 | Aiming reticle depth | infinity, except that a selected or locked target under the reticle (within 3°, or half its bracket) gives it that target's depth, held between 15 and 100 m and eased over 0.2 s ("your recommendation for the smaller version sounds like a plan to me") | always at infinity (the step 1 build; ragesaq kept it after the first headset test); snapping to the target's distance wherever it is, with a 25 m rest distance (a prompt from another assistant: the reticle shows where the guns point, so an off-axis target must not set its depth, and a 25 m rest brings it back toward the near HUD); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; revised 2026-11-25 | 2026-11-25 |
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
-| Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
+| Information panels | 2 m out, angled like cockpit displays ("1m is a little too close") | one flat sheet (milestone 2); panels fixed to the head; about 1 m (the first choice, 2026-11) | ragesaq, 2026-11; distance revised 2026-11-26 | 2026-11-26 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
-| Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
-| What the VR HUD is built from | the Jet skin's elements, placed by layer; Classic and Modern on one fallback panel | laying out the Classic HUD again for VR | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
+| Flight reference block (layer 3) | accepted, 10 m out in the seat ("the classic hud circular lines shouldnt be drawn to infinity, it feels a little fake that way, maybe closer like 10m") | all non-marker elements on close panels; the block at infinity (built first, 2026-11-25 to 26) | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25); depth revised 2026-11-26 | 2026-11-26 |
+| Horizon cues in VR | none: the pitch ladder, the heading tape (a 360° compass) and the roll pointer are left out of the VR HUD, and Classic's ROLL dial with them; the flight-path marker stays (the block itself is Classic's ring, next row). Follow space-game HUDs (Elite Dangerous, Star Citizen) and stay close to original Allegiance, which has none of these; the flat Jet skin keeps them ("i dont know that a ladder makes a lot of sense in space, we dont have a horizon to worry about, the same with a 360' compass, so we should remove those elements") | Jet's full fighter-jet flight reference at infinity (the first step 2 build) | ragesaq, 2026-11-26 | 2026-11-26 |
+| What the VR HUD is built from | the flight block (10 m out in the seat since 2026-11-26) is the Classic centre group (the ring gauge, the speed, the own-ship status), drawn by the Classic renderer whatever skin is active; the other skins stay in the game, and each leaves its own centre instruments off its VR panel. ragesaq showed original Allegiance's ring ("i think we can have it be simple like that"), chose "Use Classic's ring", and added "these other UIs can be in i just want to use the classic one" | the Jet skin's speed and throttle tapes as the block (accepted 2026-11-25 and built first in step 2); laying out the whole Classic HUD again for VR | ragesaq, 2026-11-26 (revisits the 2026-11-25 choice of Jet) | 2026-11-26 |
 
 ## Disagreements between sources
 
@@ -226,7 +236,7 @@ Each step keeps the flat HUD's bytes (replay frames) and goes through the review
   off its centre, so each marker's pixel size is taken at its own pixel, measured up and down; off to the side a
   square bracket is then a little narrower than its angle. Labels are name and range from the radar's own label
   rules.
-- **The aim reticle is a direction** (the ship's nose), the same pixel in both eyes, so it is seen at infinity. The
+- **The aim reticle is a direction** (the ship's nose), the same direction in both eyes, so it is seen at infinity. The
   flat game's centre crosshair is left off the panel in VR (`HudContext.CentreReticleInWorld`). ragesaq looked in the
   headset on 2026-11-25 and asked that the targeting reticles be drawn farther than 1 m, to tell them apart from the
   near HUD *(ragesaq, Port's working session 2026-11-25)*; the flat crosshair on the 1 m panel was the one that was
@@ -329,13 +339,275 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 - Final VR smoke run of the reviewed code in the battle replay under SteamVR: renders at about 6.7 ms a frame, no
   exceptions.
 - Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
+  *(Checked: see below.)*
+- Merged in PR #17 (merge commit `de0c1ce`, 2026-11-26).
+
+## The layer 2 follow-up in the headset (2026-11-26)
+
+ragesaq looked at PR #17 in the headset: "i did the PR17 headset review, it looked good" *(ragesaq, Port's working
+session 2026-11-26)*. No problem was reported with the bracket depth, the off-view arrows or the reticle's depth.
+
+## Step 2 as built (branch `port/vr-hud-step2`)
+
+Layers 1 and 3, for every skin. What it changes, all in the eye images and none of it in a flat frame:
+
+- **The flight block at infinity is Classic's centre group (layer 3).** In a stereo frame
+  (`HudContext.FlightReferenceInWorld`) the Classic renderer draws, once a frame, only its centre group into an
+  image the size of the HUD image (`HudRenderer.DrawFlightReference`): the ring gauge (thrust, fuel, armour, shield,
+  ammunition, energy), the own-ship status (signature, status icons, kill bonus) and the speed readout, which it
+  puts 195 pixels below the ring's centre as native does (`HudRenderer.FlightReferenceSpeedBelowCentre`; the flat
+  port draws it at the screen's foot). It does this whatever skin is active, because Modern and Jet are separate
+  renderer instances and ragesaq wants the Classic ring in VR (decision table).
+- **Each skin leaves its own centre instruments off the 1 m panel in VR.** Classic and Modern leave out the centre
+  group (`HudRenderer.CentreGroupOnMainPass`) and the port's ROLL dial (`HudRenderer.RollOnMainPass`); the
+  afterburner readout stays on the panel. Jet leaves out its speed
+  and throttle tapes and its horizon cues: the heading tape, the pitch ladder (with its `PITCH` readout) and the roll
+  pointer are drawn in VR nowhere (ragesaq, 2026-11-26, decision table). The flat game is unchanged in every skin.
+- **The crop and its size.** Classic draws the ring at fixed pixels around the image's centre (pane scale 0.72), but
+  places the own-ship status from native points spread with the image height (`OwnStatusLayout.Spread`: height/680,
+  held between 1.15 and 2.1). So the box cut out of the image is sized from that spread
+  (`VrHudGeometry.CentreGroupBox`), and shown on a quad 10 m out (`VrHudGeometry.FlightBlockQuad`). The angle per
+  pixel is fixed: 400 pixels about the centre are 40° by default, so the ring (about 215 pixels) is about 21.5° wide
+  whatever the window size, and the image's centre, the ring's, is on the nose. Each eye draws the quad with the
+  seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see each point of it in the same
+  direction: no vergence disparity, and no movement when the head moves. It is fixed to the ship: turning the head
+  looks away from it. For headset tuning, set `ALLEGIANCE_VR_FLIGHT_BLOCK` to "width degrees,pitch down degrees"
+  (for example `40,0`); values outside 10° to 90° or -30° to 45° fall back to the default
+  (`VrHudGeometry.FlightBlock.Parse`).
+- **The flight-path marker is at infinity (layer 1).** A circle (0.6° radius) with wings and a tail, in the
+  reticle's colour, drawn along the ship's velocity in each eye as a direction. It is the space cue that replaces
+  the horizon cues: original Allegiance shows the velocity direction too, and Star Citizen has the same marker. It
+  is drawn with the same gate as the aim reticle and only when the speed rounds to at least 1 m/s
+  (`VrHudGeometry.FlightPathDirection`).
+- **Draw order in each eye:** the flight block first, then the aim reticle, the flight-path marker and the arrows,
+  then the markers with the depth test, then the panel.
+- **History:** the first step 2 build drew Jet's speed and throttle tapes (and, before the no-horizon decision, its
+  ladder, heading tape and roll pointer) as the block, for Jet only. ragesaq chose Classic's ring instead; that
+  build and its `IHudFlightReferenceRenderer` interface were removed.
+- **Not built:** the crosshair fade under 30 m (layer 1); the stores block and the other layer 4 displays stay on the
+  panel.
+- Tests: `VrCentreGroupTests` (the Classic and Modern main pass keeps the centre group in a flat frame and leaves it
+  out in a VR eye frame), `JetVrFlightReferenceTests` (Jet's flat pass draws its flight elements; its VR main pass
+  leaves them out) and `VrHudGeometryTests` (the crop quad: the ring's centre on the axis at each pitch, 40° across,
+  square pixels, upright; the crop's texture coordinates; the same angle in a bigger image; a small image cropped,
+  not enlarged; the box holds the ring, the speed and every own-status point at 720 to 2160 lines, and fits the
+  image; the ring the same size whatever the window; `AtInfinity`, `Parse`, the flight-path rule). Each deliberate break of the new code made a test fail.
+- Checked: with the VR flag off, the main pass makes the same calls in the same order and under the same condition
+  as `master` (gauges, speed, afterburner, then the own-ship status), by reading the diff. Flat replay frames 300,
+  1500, 3600, 6000 and 9000 of `battle.alr` are byte-identical to `master`'s *(observed 2026-11-26)*. **Limit:**
+  those frames show the same HUD whether `hud.json` names Classic, Modern or Jet *(observed 2026-11-26: the three
+  sets are byte-identical to each other)*, so they check one skin's flat pass, not each skin. An earlier record here
+  that the flat Jet frames were byte-identical was wrong in the same way: they were not Jet frames. Why the replay
+  capture ignores the skin setting is not yet found.
+- Checked in VR with Classic selected *(observed 2026-11-26)*: 60-second runs of the replay and of training under
+  SteamVR raised no exceptions (one known audio warning, also on `master`). The window, a mirror of the left eye,
+  shows the ring with SIG, the detection eye and the speed readout below it at the nose, none of it cut by the crop.
+  Not checked: how it looks in the headset, and the other skins in VR.
+
+## Headset notes of 2026-11-26 and what they found
+
+ragesaq's notes from a session in the headset *(Port's working session, 2026-11-26)*, each with its cause and what
+was done on `port/vr-hud-step2`:
+
+- "the target box surrounding your selected target seem to have an axial shift depending on how you are looking at
+  it, which makes part of the targeting box go behind the object and causes a focal shift". **Cause** *(derived
+  from `Game1.VrHud.cs`; confirmed by a test)*: a marker is drawn flat in each eye's image, so the depth test gives it
+  one depth along the eye's axis, and that depth was its anchor's. Off the eye's axis, the object's sphere reaches
+  up to radius · (1 − cos θ) nearer along that axis than the anchor, so the near side of a large or close object cut
+  through the bracket, more the farther the head turned from it. **Fix:** each marker is tested at the nearer of its
+  anchor and its sphere's nearest point along the eye's axis (`VrHudGeometry.MarkerTestDepth`). Its place in the
+  image, and so its stereo depth, is unchanged. This also likely explains part of the flicker: a bracket tested at
+  about the depth of its hull's surface is hidden and shown again as the hull moves *(derived, not checked in the
+  headset)*.
+- "i also didnt see an aim lead indicator on enemy ships". **Causes:** the lead is drawn only when native
+  Allegiance grants it (the hull's lead capability, or a friendly relay that sees the target: `LeadGranted`), and
+  the flat game hides it then too; that is kept. Separately, in VR the lead marker carried no radius, so when it fell
+  on its target the target's own hull, nearer than its centre, hid it *(derived)*. **Fix:** the lead marker carries
+  the target's radius.
+- "the directional indicator as to where we were aiming": the aim reticle and the flight-path marker are drawn only
+  in the cockpit view with the own ship in flight (`GatherVrHudMarkers`). Neither is visible in the window shots of
+  the replay smoke runs, and whether the replay meets that gate was not checked. **Not yet explained**; asked of
+  ragesaq which view and mode the session used.
+- "bullets are sprites and they seem to be rotated". **Cause** *(read: `ProjectileSpriteRenderer.DrawBillboard`;
+  confirmed by a test)*: the round's quad took the camera's right and up from the view matrix's rows, but a
+  `CreateLookAt` view keeps them in its columns (the same mistake HUD-21b fixed for the target preview). The rows are
+  a mixed basis, so the quad was tilted toward the camera's axis. In the headset each eye's view turns with the head,
+  so the tilt changed with every head turn and showed in stereo. **Fix:** the columns. This changes the flat game
+  too, where billboard rounds are on screen: native draws them facing the camera. Eight other renderers read the
+  rows the same way (explosions, smoke, chaff, mines, dust, the particle batcher and two sizing helpers), and so do
+  two other sites: the camera right and up handed to the debris field (`NativeScene`) and the 3D sound listener's right
+  (`SoundManager.SetListenerCamera`, whose comment says the rows hold the basis). None of them is changed here
+  (found by the cross-family review of PR #22, round 1).
+- "a lo fo the UI elements flicker a little bit". Not yet found beyond the bracket depth above; asked of ragesaq which
+  elements.
+
+## Step 2 in the headset (2026-11-26, second look)
+
+ragesaq's look at the build at `6737eaa` *(Port's working session, 2026-11-26)*, with its cause and what was done on
+`port/vr-hud-step2`:
+
+- "the classic ring looks good, no roll dial needed" and "flickering is gone". Native Allegiance has no lasting roll
+  instrument, only a training text *(read: the `DrawRoll` comment in `HudRenderer.cs`, citing
+  `WinTrek/indicator.cpp:634-641`)*; the ROLL dial is the port's own.
+- No lead marker on enemy ships: the hull flown did not have the lead capability, which native requires
+  (`c_habmLeadIndicator`, or a friendly relay that sees the target: `LeadGranted`). Not a VR defect.
+- "the flight path marker ... its green, its supposed to be grey". **Cause:** VR drew its own green shape. **Fix:**
+  VR draws the original game's velocity marker (`directionbmp`, 32 by 32 pixels, untinted as in the flat game) at
+  the flight block's angle per pixel, about 3.2° across. A grey shape stands in when the art is missing.
+- "the left hand side of targeting boxes seems to not be in focus ... and the boxes dont seem to be billboarding
+  towards the camera orientation". **Cause** *(derived from `Game1.VrHud.cs`, not measured in the headset)*: each eye
+  drew the box as pixel offsets around its anchor's pixel, sized by that eye's stretch at that pixel. The two eyes'
+  images stretch differently there (they are turned and off-centre, and this headset's are wide), so a box's edges
+  got a disparity other than its anchor's, and one side sat at another depth. **Fix:** a marker is a flat shape in
+  the world at its anchor, at right angles to the line from the head and upright to the head
+  (`VrHudGeometry.MarkerBillboard`); each eye projects its corners. On the flat mirror window a box off the centre
+  now shows in perspective, as such a shape does on a flat image; the headset's lenses undo that.
+- "parts of a log are overlapping the target indicator that shows a PIP of the object, and the PIP needs to be a
+  little higher and increased in size by 150%". **Cause** *(observed in a dump of the VR panel image, 1280 by 720,
+  with a target selected)*: the port's own weapons and cargo text lines (`DrawFlightPartsHud`, `DrawCargoHud`; not
+  in native) run across the target pane at the image's foot. **Fix, VR only:** the two lines move up to the image's
+  middle, which VR leaves empty since the centre group went to infinity (`VrHudGeometry.PortTextLift`, replaced
+  in the third look); the target
+  preview is drawn 1.5 times its native size with its bottom edge kept, so it also sits higher
+  (`HudRenderer.TargetPreviewEnlargement`, `TargetModelPreview.PaneRect`). "Increased by 150%" was read as 1.5
+  times the size; the flat game is unchanged.
+- dominusbelial's review notes of a recording (`dominusbelial/AllegianceCore-public`,
+  `docs/reports/VR_TEST1_REVIEW_2026-11-26.md`) describe the Classic panel of an earlier build, with the ROLL dial and
+  the centre group still on it: doubled ARMOR and SHIELD labels and KB lines. Step 2 takes the centre group and the
+  dial off the panel. A cyan separator still runs through one "NOT READY" weapons row in the panel dump; not
+  changed here.
+
+## Step 2 in the headset (2026-11-26, third look)
+
+ragesaq's look at the build at `0314c5e` *(Port's working session, 2026-11-26)*, with its cause and what was done on
+`port/vr-hud-step2`:
+
+- "target boxes look good" and the flight-path marker "is grey, so that part is good".
+- Box sizes: "we need to have a scaling on how big they should be, a maximum and minimum size ... the minimum size im
+  seeing right now is close, lets reduce its size by 30%". **Cause:** sizes already scale with the object's size and
+  distance between a floor of 2° and a cap of 20°, but most objects at fighting range sit at the floor, so most boxes
+  look the same. **Fix:** the floor is 1.4°, 30% less; the cap stays 20° (`VrHudGeometry.BracketFloorRadians`).
+- "the targeting boxes rotate if you rotate your head ... they should stay static". **Cause:** a box's plane was
+  upright to the head, so it rolled with the head. **Fix:** upright to the seat (the ship); it still faces the head,
+  so its edges keep the anchor's depth (`VrSeatUpInWorld`, `VrHudGeometry.MarkerBillboard`).
+- "the weapon and cargo area is kind of overlapping other elements ... like the chat, so this needs to move up
+  higher". **Fix, VR only:** the two lines start under the chat pane and the keys hint, at the panel's left (152 of
+  720 pixels down), and wrap at 65% of its width, short of the weapons pane (`VrHudGeometry.PortTextTopPixels`,
+  `PortTextWrapWidth`, `WrapLine`). The flat game is unchanged.
+- "the classic hud circular lines shouldnt be drawn to infinity, it feels a little fake that way, maybe closer like
+  10m". **Fix:** the flight block is drawn 10 m out in the seat, at the same angle as before. Its quad was already
+  placed 10 m out; the view no longer drops the eye's offset. The decision table row is changed.
+- "the thrust bar isnt animating with thrust amount, just when the afterburner is on". **Cause:** the gauge showed
+  the keyboard throttle (P445), which a joystick throttle axis never moves: the axis goes straight into the controls
+  sent. **Fix:** with a joystick throttle bound and no autopilot, the gauge shows the throttle sent, as native shows
+  the applied controls (`HudThrottle.Gauge`). Keyboard flight and autopilot keep P445's value. This changes the flat
+  game too, on purpose.
+- "the text inside the classic hud circle area is pretty low resolution". **Cause:** the block's image had the HUD
+  image's pixels (1280 by 720), and 40° across 400 of them is 0.1° a pixel, coarser than the headset's eye images.
+  **Fix:** the block's image has twice the pixels each way; it is laid out as before and drawn scaled up, and its
+  text takes the 2x font bakes at half the scale (`HudRenderer.DrawFlightReference` with a density,
+  `NativeFonts.TryDenser`, `HudRenderer.DenseText`). The gauge art is the same bitmaps, sampled finer. The flat
+  game draws at density 1, unchanged.
+- "when missiles launch i see them either at really low framerate or kind of double vision". **Cause** *(derived
+  from `Game1.Rendering.cs`, not measured in the headset)*: a missile was drawn at its last server position, which
+  changes about 20 times a second, so at the headset's frame rate it stood still and jumped; an update that landed
+  between the two eyes' passes put it in two places. **Fix:** a missile is drawn moved on from its last position
+  along the velocity measured between updates, at most 0.1 s, and the second eye uses the first eye's positions
+  (`MissileMotionSmoother`). The exhaust trail follows the same positions. This changes the flat game too.
+
+## Layout criteria for the VR HUD (accepted 2026-11-26)
+
+*(decided 2026-11 by ragesaq: proposed by Port, approved in Port's working session on 2026-11-26 as "Approve,
+new PR": the zones below, built as layer 4 in its own pull request stacked on PR #22.)*
+
+ragesaq's third look at step 2 *(Port's working session, 2026-11-26)*: "a lot of the text is on top of the circle hud,
+we need to have primary hud UI non overlapping. the text chat needs to go above the circle hud. we need a more
+comprehensive UI design criteria that accounts for all of the elements and their position."
+
+**Cause** *(derived from `VrHudGeometry.PanelCorners`, `FlightBlockQuad` and a dump of the panel image; script-free
+arithmetic, not measured in the headset)*: the flight block is centred on the nose and its group reaches 20.6° below
+it (the own-ship status and the speed readout under the ring). The panel is one sheet 1 m out, 25° below the nose,
+whose top edge is 6.9° below the nose. So the panel's top third lands inside the flight block, at 1 m against 10 m:
+
+| Element | Across (az) | Up and down (el) | Overlaps |
+|---|---|---|---|
+| Ring gauge | -11.0° .. 11.0° | -10.8° .. 10.8° | |
+| Own-ship status and speed | -22.7° .. 14.3° | -20.6° .. 12.0° | |
+| Chat pane | -7.6° .. 9.6° | -13.4° .. -8.1° | ring, status |
+| Keys hint (transient) | -12.6° .. 12.6° | -14.2° .. -13.5° | status |
+| Port weapons and cargo lines | -28.5° .. 10.9° | -18.8° .. -13.1° | status, speed |
+| Afterburner and weapon mode | 11.9° .. 17.9° | -15.6° .. -13.6° | status |
+| Weapons pane | 12.0° .. 30.1° | -20.2° .. -14.5° | status |
+| Location | 22.2° .. 26.8° | -9.5° .. -8.8° | |
+| Target pane | -8.1° .. 8.5° | -39.5° .. -31.7° | |
+| Minimap | 16.3° .. 34.5° | -36.1° .. -29.8° | |
+
+### The rules
+
+1. **One owner per place.** The view is divided into zones, and every HUD element belongs to exactly one zone. A
+   zone is a region of directions from the seat (degrees across and up), with its depth.
+2. **No two zones overlap, with a gap of at least 1.5°** between them. The aim and targeting symbols (layers 1 and 2:
+   reticle, flight-path marker, brackets, lock, lead, arrows) are exempt: they sit on their objects in the world.
+3. **No depth conflict.** Two things at different depths never share a direction, because the eyes cannot focus on
+   both: the 10 m flight block and a 1 m panel must not overlap even by a margin.
+4. **Placement by how often it is read.** The flight block keeps the centre. What is read in a fight (target, weapons,
+   energy) sits nearest the centre, below it. What is read now and then (chat, location, map, inventory) sits
+   further out. What is read in a fight stays within 26° across and 40° down; nothing to be read goes beyond 42°,
+   where reading needs a head turn.
+5. **The forward view stays clear** above the ring, except the chat zone ragesaq asked for there.
+6. **Text size floor:** text is at least 0.6° tall where it is read; a zone that cannot fit its text at that size
+   wraps or drops it, never shrinks it.
+7. **Transient messages have a reserved zone** (keys hint, training callouts, warnings), so they never land on
+   another element.
+8. **The flat game keeps its layout.** Zones apply to the VR eye frame only.
+9. **Checked by a test.** The zone table lives in code; a test fails when two zones overlap or when an element's
+   rectangle leaves its zone.
+
+### The zones
+
+Degrees from the seat: across is positive to the right, up is positive above the nose. Each zone's quad is sized so
+1° covers about 20 pixels of the HUD image's layout (1280 by 720), whatever its distance, so the small font's line
+is about 0.64° tall. The panels are 2 m out (ragesaq, 2026-11-26: "i think purple panels should be at 2m, 1m is a
+little too close"), so each quad is twice the size it would be at 1 m.
+
+| Zone | Across | Up and down | Depth | What it holds |
+|---|---|---|---|---|
+| A, flight block | -26° .. 26° | -22° .. 14° | 10 m | the ring gauge, the own-ship status, the speed (as now) |
+| B, comms | -16° .. 16° | 16° .. 30° | 2 m, facing the head | chat history and compose box, vote banner, critical and ordinary tips, warnings, base objectives, "NO X IN SECTOR", the keys hint, training callouts, the skin-switch toast |
+| C, target | -14° .. 14° | -24° .. -40° | 2 m | the target pane with its preview, the port's weapons and cargo lines (wrapped to the zone), the commandee and leader lines, the mouse-stick indicator and its notice |
+| D, navigation | -42° .. -16° | -24° .. -42° | 2 m | the minimap, the location and turret lines, current orders, the lives and kills badges, the camera label, the command ship summary |
+| E, ship systems | 16° .. 42° | -24° .. -42° | 2 m | afterburner and power, weapon mode, mining, time dilation, the weapon status list or the inventory pane (F4) in its place |
+| Modal | centre | centre | 2 m | the expanded starmap (Tab), the death and lifepod overlays, the ripcord countdown, the command bar and command view, the scoreboard: shown alone, and the flight block is hidden while one is open |
+| Tint | whole view | whole view | none | the damage and warp flashes, as a tint over the eye image, not a panel |
+
+Gaps: 2° between A and B, A and C, A and D or E, and between C and D or E. Reading reach: what is read in a
+fight is within 26° across and 40° down (A, C, the inner half of E); what is read now and then may reach 42°.
+
+The aim and targeting symbols are not zoned: the reticle, the flight-path marker, the selection, lock and lead
+markers, the contact brackets and tags, the off-view arrows and the order arrows sit on their objects. The target
+bearing arrow (bottom right of the flat HUD) is redundant with the off-view arrows in VR and is left out.
+
+### How it would be built (layer 4)
+
+The single panel is replaced. In a VR eye frame the HUD pass lays each element out in its zone's own region of the
+HUD image (an anchor per element, taken from the zone table instead of the flat screen), and each zone's region is
+drawn on its own quad at the zone's direction and depth, as the flight block is now. The flat layout stays as it is.
+A geometry test checks the zone table (no overlaps, the gaps, the reach) and each element's rectangle against its
+zone at 1280 by 720.
 
 ## Open questions
 
+- Whether ragesaq accepts the layout criteria and zones above, and where layer 4 builds them. *(Answered
+  2026-11-26: accepted, in its own pull request stacked on PR #22.)*
+- Which skin the VR HUD is built from. *(Answered 2026-11-26 by ragesaq: Classic's ring, decision table.)*
+- Why a replay frame capture (`ALLEGIANCE_BENCHMARK_FRAME` with `--benchmark replay:...`) draws the same HUD
+  whatever skin `hud.json` names, though the game reads and saves that file *(observed 2026-11-26)*. Until it is
+  found, a flat byte comparison checks only the skin the capture shows ("Step 2 as built").
 - Whether Jet must leave its default-off flag before the VR HUD depends on it, and how that is coordinated with
   the upstream author (node `ragesaq-012`).
 - What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
-  headset look with Classic, then Modern, would tell.
+  headset look with Classic, then Modern, would tell. *(Partly answered 2026-11-26: on the Classic panel they were
+  the centre group and the target pane over each other, "Step 2 in the headset". Modern in VR is not looked at.)*
 - What the desktop window shows in VR mode. *(Answered in step 1: a mirror of the left eye.)*
 - How HUD pixels should be written to depth, if depth is ever submitted for reprojection *(read: SteamVR names
   `XR_KHR_composition_layer_depth`, [Steam partner docs](https://partner.steamgames.com/doc/steamframe/compat/perf_criteria);
@@ -351,6 +623,18 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
 - 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
+- 2026-11-26: ragesaq decided the VR HUD shows no horizon cues (pitch ladder, heading tape, roll pointer) and
+  follows space-game HUDs and original Allegiance; step 2 was changed to match.
+- 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
+- 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
+  it and the Jet-based block removed.
+- 2026-11-26: ragesaq found the panel's text on the ring and asked for layout criteria covering every element;
+  ragesaq accepted Port's zones with the panels at 2 m, to be built as layer 4 in its own pull request.
+- 2026-11-26: ragesaq's third look at step 2 (above): the box floor lowered, boxes upright to the ship, the
+  ring 10 m out and sharper, the port's lines under the chat pane, the thrust gauge and missiles fixed.
+- 2026-11-26: ragesaq's headset look at step 2 (above): the ring kept; the flight-path marker, the targeting
+  boxes, the port's text lines and the target preview changed for VR.
+- 2026-11-26: PR #17 merged; ragesaq's headset look at it "looked good".
 - 2026-11-25: Port built the layer 2 follow-up on `port/vr-hud-bracket-depth` (above). ragesaq accepted Port's
   smaller version of a reticle-depth prompt from another assistant: a target under the reticle gives it depth.
 - 2026-11-25: ragesaq tested step 1 in the headset (above): the brackets' depth confused, the boresight was right;

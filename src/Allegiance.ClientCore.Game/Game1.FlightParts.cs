@@ -294,11 +294,34 @@ public sealed partial class Game1
         return text;
     }
 
+    // The weapons line's and the cargo line's tops, in pixels above the image's foot.
+    private const float FlightPartsLineFromFoot = 158f, CargoLineFromFoot = 132f;
+
     private void DrawFlightPartsHud(Rendering.HudModel model)
     {
         if (!model.Visible || model.Context.FlightPartsLine is not { } text) return;
         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-        try { _spriteBatch.DrawString(_hudSmall, text, new Vector2(20, GraphicsDevice.Viewport.Height - 158), Color.LightCyan); }
+        try
+        {
+            if (model.Context.FlightReferenceInWorld)
+            {
+                float y = Vr.VrHudGeometry.PortTextTopPixels;
+                foreach (var line in VrPortTextLines(text))
+                {
+                    _spriteBatch.DrawString(_hudSmall, line, new Vector2(20, y), Color.LightCyan);
+                    y += _hudSmall.LineSpacing;
+                }
+            }
+            else
+                _spriteBatch.DrawString(_hudSmall, text, new Vector2(20, GraphicsDevice.Viewport.Height - FlightPartsLineFromFoot),
+                    Color.LightCyan);
+        }
         finally { _spriteBatch.End(); }
     }
+
+    /// <summary>VR: a port text line wrapped to the panel
+    /// (<see cref="Vr.VrHudGeometry.PortTextWrapWidth"/>).</summary>
+    private IReadOnlyList<string> VrPortTextLines(string text) =>
+        Vr.VrHudGeometry.WrapLine(text, Vr.VrHudGeometry.PortTextWrapWidth(GraphicsDevice.Viewport.Width),
+            s => _hudSmall.MeasureString(s).X);
 }

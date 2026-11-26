@@ -4,6 +4,78 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #22 VR HUD step 2, round 4
+
+- Record: [summary](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/summary.md), [receipt](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `0314c5e..d0e8b1c`, head `d0e8b1c`, tree `b5ac652`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, three low findings, none blocking. The fixes from ragesaq's third headset look:
+  the 1.4° box floor, the flight block at 10 m, markers upright to the seat, the flight block at twice the density,
+  the port's lines wrapped higher, the thrust bar from the HOTAS throttle, and missiles drawn once per frame.
+  1. F1 (a comment in `Game1.Rendering.cs` still said missiles are not extrapolated): fixed in the commit that
+     records this review. Prose only.
+  2. F2 ("at infinity" left in current-state prose): fixed in `HudRenderer.cs`, `HudModel.cs` and the note's
+     decision-table row "What the VR HUD is built from". The "Step 2 as built" section is left as it is: it records
+     what was built then, and the third-look section says what changed. Prose only.
+  3. F3 (the 10 m flight block is drawn with no depth test, so its ring paints over a hull nearer than 10 m):
+     answered, no change. The flight block is an instrument that must stay readable, as a real HUD's symbols are,
+     so it stays drawn over the scene; the markers keep their depth test because they mark objects in the world.
+     Whether a near hull under the ring is uncomfortable is for ragesaq's next headset look.
+- The fixes for F1 and F2 change only comments and prose, which the review gates in `AGENTS.md` exempt, so they
+  are not re-reviewed.
+
+## 2026-11-26: PR #22 VR HUD step 2, round 3
+
+- Record: [summary](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/summary.md), [receipt](patch-review-2026-11-26T14-00-00Z-allegiancecore-vr-hud-step2-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `6737eaa..0314c5e`, head `0314c5e`, tree `bb3df52`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS, no findings. The fixes from ragesaq's second headset look: markers as flat shapes facing the head,
+  the original velocity marker art, and in VR the port's text lines off the target pane and a larger target preview.
+  The reviewer found the flat game unchanged. Three notes, no code change:
+  1. N1: the canted-eye test cannot fail on what its name says, because any fixed point triangulates to itself. The
+     plane's orientation is carried by the other billboard test and the mutants; that `DrawVrMarker` uses the plane
+     is shown by the VR run and the headset, not by a test. Left as stated.
+  2. N2: the preview's enlargement is cached in the renderer during `Draw`, so a harness that paints the preview
+     outside `Draw` after a VR frame would get 1.5 times. No shipped path does. Left as stated.
+  3. N3: a marker is now skipped when an edge of its plane falls behind the eye. That needs the anchor about 80° off
+     the eye's forward, far outside the image. Left as stated.
+
+## 2026-11-26: PR #22 VR HUD step 2, round 2
+
+- Record: [summary](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/summary.md), [receipt](patch-review-2026-11-26T08-10-00Z-allegiancecore-vr-hud-step2-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2e0a431..6737eaa`, head `6737eaa`, tree `93d8f6b`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS. F1 to F4 closed and the F2 decline judged sound. The ROLL gate leaves the flat game unchanged.
+  Fixed after round 2, prose only:
+  1. N1, cosmetic: two note lines past the paragraph's wrap, rewrapped.
+  2. Observation: the DAG node now says one suggested test was declined.
+  3. Observation: the note's aim reticle line says "the same direction in both eyes", as F2 did for the block.
+- Left as stated: the ROLL test checks the gate's predicate, not its call site in `HudRenderer.Draw`. Whether bank
+  stays readable without the ROLL dial is for the headset pass.
+
+## 2026-11-26: PR #22 VR HUD step 2, round 1
+
+- Record: [summary](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/summary.md), [receipt](patch-review-2026-11-26T07-30-00Z-allegiancecore-vr-hud-step2-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of the whole pull request, `f362cdf..2e0a431`, head `2e0a431`, tree `ab9e955`, in a standalone clone
+  with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS, no code defect. The reviewer found the flat game's main pass equivalent to `master`
+  by reading. Fixed after round 1, all low:
+  1. F1: the `FlightBlock` comments said the block's angle covers the crop. It covers the 400 reference pixels; the
+     crop is wider.
+  2. F2: "both eyes see the same pixels" became "the same direction: no vergence disparity", in the note and in the
+     test's name. Declined: a new test with separate off-centre projections. Each eye's pass uses its own projection,
+     as the panel did before this pull request, and the existing test checks the direction.
+  3. F3: the decision row "Horizon cues in VR" no longer says the block keeps speed and throttle.
+  4. F4: the note names the two further row-basis sites, the debris field (`NativeScene`) and the sound listener
+     (`SoundManager`). Their code and the listener's comment are left for the follow-up.
+  5. Observation: Classic's ROLL dial stayed on the VR panel. It is now hidden in VR with the other horizon cues
+     (`HudRenderer.RollOnMainPass`; test `A_vr_eye_frame_shows_no_roll_dial_and_a_flat_frame_keeps_it` fails when
+     the gate is removed).
+
 ## 2026-11-26: PR #18 VR recenter button, round 3
 
 - Record: [summary](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/summary.md), [receipt](patch-review-2026-11-26T07-00-00Z-allegiancecore-vr-recenter-r3/receipt.md)

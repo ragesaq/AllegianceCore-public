@@ -38,6 +38,8 @@ public sealed partial class Game1
 
     private static readonly VrHudGeometry.Panel VrPanel =
         VrHudGeometry.Panel.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_HUD_PANEL"));
+    private static readonly VrHudGeometry.FlightBlock VrFlightBlock =
+        VrHudGeometry.FlightBlock.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_FLIGHT_BLOCK"));
 
     private static readonly (float X, float Y)[] VrCorners = { (-1f, -1f), (1f, -1f), (-1f, 1f), (1f, 1f) };
 
@@ -50,6 +52,11 @@ public sealed partial class Game1
     private static readonly Color VrReticleColour = new(120, 255, 140);
 
     private RenderTarget2D? _vrHudImage;
+    // The flight reference block (layer 3) and the HUD model of the stereo
+    // frame it is drawn from; the flight-path marker's world direction (layer 1).
+    private RenderTarget2D? _vrFlightImage;
+    private HudModel? _vrHudModel;
+    private Vector3? _vrFlightPath;
     private Texture2D? _vrPixel;
     private BasicEffect? _vrPanelEffect;
     private readonly VertexPositionTexture[] _vrPanelVertices = new VertexPositionTexture[4];
@@ -99,6 +106,10 @@ public sealed partial class Game1
         bool indicators = flight && !CommandCameraActive
             && _cameraMode is CameraMode.Cockpit or CameraMode.Chase or CameraMode.ExternalMissile;
         _vrAimReticle = indicators && _cameraMode == CameraMode.Cockpit;
+        // The flight-path marker follows the flat velocity marker's gate: the
+        // cockpit, and a rounded source speed that is not zero.
+        _vrFlightPath = _vrAimReticle && TrySourcePose(out _, out _, out var velocity)
+            ? VrHudGeometry.FlightPathDirection(PoseConverter.ToXna(velocity)) : null;
 
         if (flight)
         {
@@ -125,6 +136,38 @@ public sealed partial class Game1
         _orderArrows = null;
         _drawRadarContacts.Clear();
         _drawShipTags.Clear();
+    }
+
+    /// <summary>Called right after the skin's HUD pass. In a stereo frame it keeps
+    /// the model, so <see cref="ComposeVrHud"/> can draw the flight reference
+    /// block from the same data; a flat frame keeps none.</summary>
+    private void KeepVrHudModel(HudModel model) => _vrHudModel = _vrEyesDrawn ? model : null;
+
+    /// <summary>How many times the HUD image's pixels, each way, the flight
+    /// reference image has, so its text and lines stay sharp at 10 m.</summary>
+    private const int VrFlightImageDensity = 2;
+
+    /// <summary>The flight reference block (layer 3) drawn into its own image,
+    /// laid out at the size of the HUD image and drawn at
+    /// <see cref="VrFlightImageDensity"/> times its pixels: the Classic centre group (gauge ring, speed,
+    /// own-ship status), drawn by the Classic renderer whatever skin is active,
+    /// laid out as in the flat game. Null when the instruments are hidden.</summary>
+    private RenderTarget2D? DrawVrFlightImage(GraphicsDevice gd, int width, int height)
+    {
+        if (_vrHudModel is not { InstrumentsVisible: true } model) return null;
+        int pixelWidth = width * VrFlightImageDensity, pixelHeight = height * VrFlightImageDensity;
+        if (_vrFlightImage is null || _vrFlightImage.Width != pixelWidth || _vrFlightImage.Height != pixelHeight)
+        {
+            _vrFlightImage?.Dispose();
+            // Preserve, as the HUD image: an excursion to another target that
+            // comes back must not find it cleared.
+            _vrFlightImage = new RenderTarget2D(gd, pixelWidth, pixelHeight, false, SurfaceFormat.Color,
+                DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+        }
+        gd.SetRenderTarget(_vrFlightImage);
+        gd.Clear(Color.Transparent);
+        _hudRenderer.DrawFlightReference(model, new Viewport(0, 0, width, height), VrFlightImageDensity);
+        return _vrFlightImage;
     }
 
     private bool OwnShipInFlight()
@@ -250,16 +293,20 @@ public sealed partial class Game1
 
     /// <summary>The cockpit lead marker: the solved lead direction (the flat
     /// marker's pixel, cast back through the game camera) at the led target's
-    /// range, so it sits at the same depth as the target it leads.</summary>
+    /// range, so it sits at the same depth as the target it leads. It carries the
+    /// target's radius: the lead falls on or beside the target, and without it the
+    /// target's own hull, nearer than its centre, hid the marker.</summary>
     private void AddVrLeadMarker(Matrix view, Matrix proj, Vector3 cameraEye)
     {
         if (_leadIndicator is not { Granted: true } lead) return;
         Vector3 targetPosition;
+        float targetRadius;
         lock (_session.Gate)
         {
             if (_session.World.MyCurrentCommand is not { } command
                 || !TryGatherLeadScene(command.TargetType, command.TargetId, out var scene)) return;
             targetPosition = PoseConverter.ToXna(scene.TargetPosition);
+            targetRadius = scene.TargetRadius;
         }
         var vp = GraphicsDevice.Viewport;
         var direction = VrHudGeometry.RayThroughPixel(lead.LeadCenter, vp.Width, vp.Height, view, proj);
@@ -267,7 +314,7 @@ public sealed partial class Game1
         if (!(distance > 0f)) return;
         var colour = Color.Lerp(VrLeadOutOfRange, VrLeadInRange, lead.InRange ? Math.Clamp(lead.Green, 0.35f, 1f) : 0f);
         _vrMarkers.Add(new VrMarker(cameraEye + direction * distance, MathHelper.ToRadians(1.2f), colour,
-            VrMarkerShape.Lead, null, null));
+            VrMarkerShape.Lead, null, null, RadiusMetres: targetRadius > 0f ? targetRadius : null));
     }
 
     private static Color ToColour(HudColor c) => new(c.R, c.G, c.B, c.A);
@@ -286,9 +333,13 @@ public sealed partial class Game1
         // The head: midway between the eyes. Markers and arrows are placed from
         // it, so both eyes see one point and its disparity.
         var head = (_vrEyeCameras[0].Eye + _vrEyeCameras[1].Eye) / 2f;
+        // The seat's up in the world, for the markers' planes: a marker stays
+        // upright to the ship and does not roll when the head rolls.
+        var seatUp = VrSeatUpInWorld(frame.Left);
         GatherVrArrows(head, left.Width, left.Height);
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
+        var flightImage = _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
         for (int pass = 0; pass < 2; pass++)
         {
             var target = pass == 0 ? left : right;
@@ -297,6 +348,11 @@ public sealed partial class Game1
             var seatView = VrHudGeometry.SeatView(eye);
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
             if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
+
+            // The flight reference block first, 10 m out in the seat: the
+            // reticle, the arrows and the markers draw over it.
+            if (flightImage is not null)
+                DrawVrFlightBlock(flightImage, seatView, VrHudGeometry.SeatProjection(proj));
 
             // The aim reticle (at infinity, or at the depth of a target under it)
             // and the off-view arrows (on a ring 3 m out) draw over the scene.
@@ -308,6 +364,10 @@ public sealed partial class Game1
                         out var aim))
                     DrawVrReticle(aim, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(1.5f), proj, target.Height),
                         VrLineWidth(proj, target.Height));
+                // The flight-path marker, at infinity along the velocity.
+                if (_vrFlightPath is { } path
+                    && VrHudGeometry.TryProjectDirection(path, view, proj, target.Width, target.Height, out var fpm))
+                    DrawVrFlightPathMarker(fpm, proj, target.Width, target.Height);
                 foreach (var arrow in _vrArrows)
                 {
                     if (!VrHudGeometry.TryProject(arrow.World - eyeWorld, view, proj, target.Width, target.Height, out var at)) continue;
@@ -326,10 +386,15 @@ public sealed partial class Game1
             {
                 foreach (var marker in _vrMarkers)
                 {
-                    var anchor = VrMarkerAnchor(marker, head) - eyeWorld;
-                    if (!VrHudGeometry.TryProject(anchor, view, proj, target.Width, target.Height, out var at)) continue;
-                    _vrMarkerDepth = Math.Clamp(VrHudGeometry.BufferDepth(anchor, view, proj), 0f, 1f);
-                    DrawVrMarker(marker, at, proj, target.Width, target.Height);
+                    var anchorWorld = VrMarkerAnchor(marker, head);
+                    var anchor = anchorWorld - eyeWorld;
+                    if (!VrHudGeometry.TryProject(anchor, view, proj, target.Width, target.Height, out _)) continue;
+                    float sphere = VrHudGeometry.MarkerSphereRadius(marker.World - head, marker.AngleRadians, marker.WrapRadians,
+                        marker.RadiusMetres);
+                    _vrMarkerDepth = Math.Clamp(VrHudGeometry.MarkerTestDepth(anchor, marker.World - eyeWorld, sphere, view, proj),
+                        0f, 1f);
+                    var (planeRight, planeUp) = VrHudGeometry.MarkerBillboard(anchorWorld - head, seatUp, marker.AngleRadians);
+                    DrawVrMarker(marker, new VrMarkerPlane(anchor, planeRight, planeUp, view, proj, target.Width, target.Height));
                 }
             }
             finally
@@ -339,9 +404,11 @@ public sealed partial class Game1
             }
 
             // The panel last: at 1 m it is nearer than every marker.
-            if (_vrHudImage is { } hud) DrawVrPanel(hud, seatView, VrHudGeometry.SeatProjection(proj));
+            if (_vrHudImage is { } hud) DrawVrPanel(hud, VrPanel, seatView, VrHudGeometry.SeatProjection(proj));
         }
 
+        // Each frame keeps its own model; one that skips the HUD pass draws no block.
+        _vrHudModel = null;
         gd.SetRenderTarget(null);
         gd.Clear(Color.Black);
         var pp = gd.PresentationParameters;
@@ -368,6 +435,14 @@ public sealed partial class Game1
     private Vector3 VrNoseInWorld(in VrEyeView eye)
     {
         var inEye = Vector3.TransformNormal(Vector3.Forward, VrHudGeometry.SeatView(eye));
+        return Vector3.Normalize(Vector3.TransformNormal(inEye, Matrix.Invert(_vrEyeCameras[0].View)));
+    }
+
+    /// <summary>The seat's up in the world, taken as <see cref="VrNoseInWorld"/>
+    /// takes its forward.</summary>
+    private Vector3 VrSeatUpInWorld(in VrEyeView eye)
+    {
+        var inEye = Vector3.TransformNormal(Vector3.Up, VrHudGeometry.SeatView(eye));
         return Vector3.Normalize(Vector3.TransformNormal(inEye, Matrix.Invert(_vrEyeCameras[0].View)));
     }
 
@@ -468,13 +543,30 @@ public sealed partial class Game1
         return pixel;
     }
 
-    private void DrawVrPanel(Texture2D hud, Matrix seatView, Matrix proj)
+    private void DrawVrPanel(Texture2D hud, in VrHudGeometry.Panel panel, Matrix seatView, Matrix proj)
     {
-        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrPanel, hud.Width, hud.Height);
-        _vrPanelVertices[0] = new VertexPositionTexture(tl, new Vector2(0, 0));
-        _vrPanelVertices[1] = new VertexPositionTexture(tr, new Vector2(1, 0));
-        _vrPanelVertices[2] = new VertexPositionTexture(bl, new Vector2(0, 1));
-        _vrPanelVertices[3] = new VertexPositionTexture(br, new Vector2(1, 1));
+        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(panel, hud.Width, hud.Height);
+        DrawVrQuad(hud, tl, tr, bl, br, Vector2.Zero, Vector2.One, seatView, proj);
+    }
+
+    /// <summary>The Classic centre group cropped out of its image and shown as
+    /// the flight block.</summary>
+    private void DrawVrFlightBlock(Texture2D image, Matrix seatView, Matrix proj)
+    {
+        // The quad is laid out in the image's layout pixels, not its own.
+        int width = image.Width / VrFlightImageDensity, height = image.Height / VrFlightImageDensity;
+        var (tl, tr, bl, br, uv0, uv1) = VrHudGeometry.FlightBlockQuad(VrFlightBlock, VrHudGeometry.CentreGroupBox(height),
+            width, height);
+        DrawVrQuad(image, tl, tr, bl, br, uv0, uv1, seatView, proj);
+    }
+
+    private void DrawVrQuad(Texture2D hud, Vector3 tl, Vector3 tr, Vector3 bl, Vector3 br, Vector2 uv0, Vector2 uv1,
+        Matrix seatView, Matrix proj)
+    {
+        _vrPanelVertices[0] = new VertexPositionTexture(tl, uv0);
+        _vrPanelVertices[1] = new VertexPositionTexture(tr, new Vector2(uv1.X, uv0.Y));
+        _vrPanelVertices[2] = new VertexPositionTexture(bl, new Vector2(uv0.X, uv1.Y));
+        _vrPanelVertices[3] = new VertexPositionTexture(br, uv1);
         var gd = GraphicsDevice;
         // The HUD image holds premultiplied colour over transparent, as the
         // SpriteBatch HUD wrote it; AlphaBlend is XNA's premultiplied blend.
@@ -497,38 +589,67 @@ public sealed partial class Game1
     private static float VrLineWidth(Matrix proj, int height) =>
         MathF.Max(2f, VrHudGeometry.PixelsForAngle(MathHelper.ToRadians(0.08f), proj, height));
 
-    private void DrawVrMarker(in VrMarker marker, Vector2 at, Matrix proj, int width, int height)
+    /// <summary>One eye's view of a marker's plane (<see cref="VrHudGeometry.MarkerBillboard"/>):
+    /// the anchor relative to the eye and the plane's two half-width vectors.
+    /// A point x right, y down (±1 at the marker's edges) is projected from the
+    /// plane, so both eyes see each edge at the anchor's depth.</summary>
+    private readonly record struct VrMarkerPlane(Vector3 Anchor, Vector3 Right, Vector3 Up, Matrix View, Matrix Projection,
+        int Width, int Height)
     {
-        float size = VrHudGeometry.PixelsForAngleAt(marker.AngleRadians, at, proj, width, height);
-        float half = size / 2f;
+        public bool TryPoint(float x, float y, out Vector2 pixel) =>
+            VrHudGeometry.TryProject(Anchor + Right * x - Up * y, View, Projection, Width, Height, out pixel);
+    }
+
+    private void DrawVrMarker(in VrMarker marker, in VrMarkerPlane plane)
+    {
+        if (!plane.TryPoint(0f, 0f, out var at)
+            || !plane.TryPoint(-1f, 0f, out var leftEdge) || !plane.TryPoint(1f, 0f, out var rightEdge)) return;
+        float size = Vector2.Distance(leftEdge, rightEdge);
+        if (!(size > 0.5f)) return;
         // Line and text keep their angle off the image's centre too.
-        float stretch = size / MathF.Max(1e-3f, VrHudGeometry.PixelsForAngle(marker.AngleRadians, proj, height));
-        float line = VrLineWidth(proj, height) * stretch;
+        float stretch = size / MathF.Max(1e-3f, VrHudGeometry.PixelsForAngle(marker.AngleRadians, plane.Projection, plane.Height));
+        float line = VrLineWidth(plane.Projection, plane.Height) * stretch;
         switch (marker.Shape)
         {
             case VrMarkerShape.Contact:
             {
-                float arm = half * 0.4f;
+                const float arm = 0.4f;
                 foreach (var (sx, sy) in VrCorners)
                 {
-                    var corner = at + new Vector2(sx * half, sy * half);
-                    VrLine(corner, corner - new Vector2(sx * arm, 0), line, marker.Colour);
-                    VrLine(corner, corner - new Vector2(0, sy * arm), line, marker.Colour);
+                    VrPlaneLine(plane, sx, sy, sx - sx * arm, sy, line, marker.Colour);
+                    VrPlaneLine(plane, sx, sy, sx, sy - sy * arm, line, marker.Colour);
                 }
                 break;
             }
             case VrMarkerShape.Selection:
-                VrPolygon(at, half * MathF.Sqrt(2f), 4, MathHelper.PiOver4, line, marker.Colour);
+                VrPlanePolygon(plane, MathF.Sqrt(2f), 4, MathHelper.PiOver4, line, marker.Colour);
                 break;
             case VrMarkerShape.Lock:
-                VrPolygon(at, half, 4, 0f, line * 1.5f, marker.Colour);
+                VrPlanePolygon(plane, 1f, 4, 0f, line * 1.5f, marker.Colour);
                 break;
             case VrMarkerShape.Lead:
-                VrPolygon(at, half, 12, 0f, line, marker.Colour);
+                VrPlanePolygon(plane, 1f, 12, 0f, line, marker.Colour);
                 VrLine(at - new Vector2(line, 0), at + new Vector2(line, 0), line, marker.Colour);
                 break;
         }
-        DrawVrLabel(marker, at + new Vector2(0, half + line * 2f), proj, height, stretch);
+        // The label hangs below the marker's foot, two line widths down.
+        if (plane.TryPoint(0f, 1f + 4f * line / size, out var labelTop))
+            DrawVrLabel(marker, labelTop, plane.Projection, plane.Height, stretch);
+    }
+
+    private void VrPlaneLine(in VrMarkerPlane plane, float x0, float y0, float x1, float y1, float width, Color colour)
+    {
+        if (plane.TryPoint(x0, y0, out var from) && plane.TryPoint(x1, y1, out var to)) VrLine(from, to, width, colour);
+    }
+
+    private void VrPlanePolygon(in VrMarkerPlane plane, float radius, int sides, float phase, float width, Color colour)
+    {
+        for (int i = 0; i < sides; i++)
+        {
+            float a0 = phase + MathHelper.TwoPi * i / sides, a1 = phase + MathHelper.TwoPi * (i + 1) / sides;
+            VrPlaneLine(plane, radius * MathF.Cos(a0), radius * MathF.Sin(a0), radius * MathF.Cos(a1), radius * MathF.Sin(a1),
+                width, colour);
+        }
     }
 
     private void DrawVrLabel(in VrMarker marker, Vector2 topCentre, Matrix proj, int height, float stretch)
@@ -562,6 +683,34 @@ public sealed partial class Game1
         VrLine(at + new Vector2(0, gap), at + new Vector2(0, half), line, VrReticleColour);
     }
 
+    // The flight-path marker's circle when the native art is missing: about
+    // the size of Jet's (7 px at scale 1).
+    private static readonly float VrFlightPathRadiusRadians = MathHelper.ToRadians(0.6f);
+    private static readonly Color VrFlightPathFallbackColour = new(160, 160, 160);
+
+    /// <summary>The flight-path marker: the original game's velocity marker
+    /// (<c>directionbmp</c>, untinted, as the flat game draws it), at the flight
+    /// block's angle per pixel, so it keeps its size beside the ring. Without
+    /// the art, a grey circle with two side wings and a tail above.</summary>
+    private void DrawVrFlightPathMarker(Vector2 at, Matrix proj, int width, int height)
+    {
+        if (_indicatorTextures?.VelocityMarker is { } art)
+        {
+            float radiansPerPixel = VrFlightBlock.WidthRadians / VrHudGeometry.FlightBlockReferencePixels;
+            float pixels = VrHudGeometry.PixelsForAngleAt(art.Width * radiansPerPixel, at, proj, width, height);
+            _spriteBatch.Draw(art, at, null, Color.White, 0f, new Vector2(art.Width / 2f, art.Height / 2f), pixels / art.Width,
+                SpriteEffects.None, 0f);
+            return;
+        }
+        float radius = VrHudGeometry.PixelsForAngleAt(VrFlightPathRadiusRadians, at, proj, width, height);
+        float line = VrLineWidth(proj, height);
+        float wing = radius * 12f / 7f, tail = radius * 9f / 7f;
+        VrPolygon(at, radius, 16, 0f, line, VrFlightPathFallbackColour);
+        VrLine(at - new Vector2(radius + wing, 0), at - new Vector2(radius, 0), line, VrFlightPathFallbackColour);
+        VrLine(at + new Vector2(radius, 0), at + new Vector2(radius + wing, 0), line, VrFlightPathFallbackColour);
+        VrLine(at - new Vector2(0, radius + tail), at - new Vector2(0, radius), line, VrFlightPathFallbackColour);
+    }
+
     private void VrPolygon(Vector2 centre, float radius, int sides, float phase, float line, Color colour)
     {
         for (int i = 0; i < sides; i++)
@@ -585,6 +734,10 @@ public sealed partial class Game1
     {
         _vrHudImage?.Dispose();
         _vrHudImage = null;
+        _vrFlightImage?.Dispose();
+        _vrFlightImage = null;
+        _vrHudModel = null;
+        _vrFlightPath = null;
         _vrPanelEffect?.Dispose();
         _vrPanelEffect = null;
         _vrPixel?.Dispose();

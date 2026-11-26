@@ -400,8 +400,11 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                     // not move, so Jet's own ladder furniture yields to it (see DrawPitchLadder).
                     _trainingBox = TryTrainingCallout(model, w, h, scale,
                         out TrainingCalloutGeometry callout, out _) ? callout.Box : default;
-                    DrawHeadingTape(w, h, scale);
-                    DrawPitchLadder(w, h, scale);
+                    if (!model.Context.FlightReferenceInWorld)
+                    {
+                        DrawHeadingTape(w, h, scale);
+                        DrawPitchLadder(w, h, scale);
+                    }
                 }
 
                 if (model.ReticleVisible)
@@ -415,7 +418,7 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                 // Native hides the centre instrument group in the command view
                 // (HudModel.InstrumentsVisible = flight && !docked/dead/command), so
                 // the tapes follow that same gate rather than widening it.
-                if (model.InstrumentsVisible && model.Telemetry is { } own)
+                if (model.InstrumentsVisible && !model.Context.FlightReferenceInWorld && model.Telemetry is { } own)
                 {
                     DrawSpeedTape(own.Speed, w, h, scale);
                     DrawThrottleTape(own.Throttle, w, h, scale);
@@ -484,7 +487,8 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer
                 DrawTrainingCallout(model, w, h, scale);
                 // The F4 inventory pane is the modal overlay and owns the band the roll
                 // pointer sits in, so the pointer yields to it (like the WIP tag).
-                if (!model.Context.InventoryVisible && model.Context.InventorySlide <= 0f)
+                if (!model.Context.InventoryVisible && model.Context.InventorySlide <= 0f
+                    && !model.Context.FlightReferenceInWorld)
                     DrawRollPointer(w, h, scale);
                 DrawConsoleColumn(model, w, h, scale);
                 DrawVote(model, w, scale);

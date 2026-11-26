@@ -232,6 +232,13 @@ public sealed record HudContext
     /// (Game1.VrHud.cs), so the flat centre reticle stays off the near HUD panel.
     /// False everywhere else.</summary>
     public bool CentreReticleInWorld { get; init; }
+    /// <summary>A VR eye frame: the VR client shows the Classic centre group (gauge
+    /// ring, speed, own-ship status) 10 m out in the seat, drawn on its own by
+    /// <see cref="HudRenderer.DrawFlightReference"/>, so every skin leaves its own
+    /// centre instruments off its main pass: Classic and Modern their centre
+    /// group, Jet its speed and throttle tapes and the horizon cues (heading, pitch
+    /// ladder, roll) that VR does not show. False everywhere else.</summary>
+    public bool FlightReferenceInWorld { get; init; }
     /// <summary>P1038 — true when the incoming-missile warning is armed: an
     /// in-sector enemy missile is tracking the own ship (native
     /// <c>MISSILE_TRACK_WARNING(208)</c>, <see cref="MissileTrackState"/>). Null when the

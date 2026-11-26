@@ -141,8 +141,7 @@ public sealed class ProjectileSpriteRenderer : IDisposable
     /// </summary>
     public void DrawBillboard(XnaVec centre, Texture2D tex, float half, float spin, XnaVec tint, Matrix view, Matrix projection)
     {
-        var camRight = new XnaVec(view.M11, view.M12, view.M13);
-        var camUp = new XnaVec(view.M21, view.M22, view.M23);
+        BillboardBasis(view, out var camRight, out var camUp);
 
         // Spin in the screen plane (native rotation about the view/forward axis).
         float c = MathF.Cos(spin), s = MathF.Sin(spin);
@@ -160,6 +159,20 @@ public sealed class ProjectileSpriteRenderer : IDisposable
         BeginAdditive(view, projection);
         DrawQuads(tex, [new Quad(tl, tr, br, bl, tint)]);
         EndAdditive();
+    }
+
+    /// <summary>
+    /// The camera's right and up in the world, for a camera-facing quad. Every
+    /// flight view is <c>Matrix.CreateLookAt</c>, whose basis is stored in the
+    /// COLUMNS (see <see cref="TargetModelPreview.CameraBasis"/>); the rows are a
+    /// mixed basis that leaves the quad tilted toward the camera's axis. In the
+    /// headset, where each eye's view turns with the head, the tilt changed as
+    /// the head turned and showed in stereo as rotated rounds.
+    /// </summary>
+    public static void BillboardBasis(in Matrix view, out XnaVec right, out XnaVec up)
+    {
+        right = new XnaVec(view.M11, view.M21, view.M31);
+        up = new XnaVec(view.M12, view.M22, view.M32);
     }
 
     /// <summary>

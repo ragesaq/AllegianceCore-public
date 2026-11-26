@@ -299,6 +299,7 @@ public sealed partial class Game1 : Game
     private readonly StationFallbackWarnings _stationFallbackWarnings = new();
     private readonly List<(SimVec Pos, SimVec Dir, float Len, float Spin, ProjectileVisual Visual)> _drawBolts = new();
     private readonly List<(short TypeId, SimVec Pos, Orientation Ori, XnaModel? Model)> _drawMissiles = new();
+    private readonly Rendering.MissileMotionSmoother _missileMotion = new();
     private readonly List<TrailMissile> _drawTrailMissiles = new();
     private readonly List<(Vector3 Pos, short SideId, short TypeId)> _drawProbes = new();
     private readonly List<(Vector3 Pos, float Radius, int Seed, float Strength)> _drawMines = new();
