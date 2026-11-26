@@ -43,7 +43,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     private Space _space;
     private Space _localSpace;
     private Space _viewSpace;
-    private volatile bool _recenterRequested;
+    private readonly VrRecenterRequest _recenter = new();
     private bool _sessionRunning;
     private bool _firstFrameLogged;
     private bool _firstStereoLogged;
@@ -78,7 +78,7 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
 
     /// <summary>Asks for the seated view to be recentred on the head's current
     /// position and facing at the start of the next headset frame.</summary>
-    public void Recenter() => _recenterRequested = true;
+    public void Recenter() => _recenter.Press();
 
     public string? FailureReason { get; private set; }
 
@@ -326,10 +326,10 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
         _displayTime = state.PredictedDisplayTime;
         _shouldRender = state.ShouldRender != 0;
         _viewsGiven = false;
-        if (_recenterRequested)
+        if (_recenter.Pending)
         {
-            _recenterRequested = false;
-            RecenterSpace(xr);
+            if (RecenterSpace(xr)) _recenter.Done();
+            else if (_recenter.Missed()) _log("[vr] recenter skipped: the headset was not tracked");
         }
         if (!_shouldRender)
         {
@@ -461,31 +461,55 @@ public sealed unsafe class OpenXrPresenter : IVrFrameSink
     /// <summary>Makes the head's current position and facing the origin of the
     /// space the frame is placed in, keeping the runtime's gravity: only the turn
     /// about the vertical axis is taken from the head, so the horizon stays level.
-    /// Skipped when the runtime cannot locate the head this frame.</summary>
-    private void RecenterSpace(XR xr)
+    /// Returns false only when the head is not tracked this frame, so the request
+    /// waits; a runtime error or a pose that is not finite is logged and ends the
+    /// request with the view unchanged, never the VR session.</summary>
+    private bool RecenterSpace(XR xr)
     {
         var location = new SpaceLocation { Type = StructureType.SpaceLocation };
-        Check(xr.LocateSpace(_viewSpace, _localSpace, _displayTime, &location), "xrLocateSpace");
-        if ((location.LocationFlags & SpaceLocationFlags.OrientationValidBit) == 0)
+        Result located = xr.LocateSpace(_viewSpace, _localSpace, _displayTime, &location);
+        if (located < 0)
         {
-            _log("[vr] recenter skipped: the headset is not tracked");
-            return;
+            _log($"[vr] recenter failed: xrLocateSpace {located}");
+            return true;
         }
+        if ((location.LocationFlags & SpaceLocationFlags.OrientationValidBit) == 0) return false;
         var head = location.Pose;
         bool positioned = (location.LocationFlags & SpaceLocationFlags.PositionValidBit) != 0;
         var (yaw, origin) = SeatedOrigin(
             new XnaQuaternion(head.Orientation.X, head.Orientation.Y, head.Orientation.Z, head.Orientation.W),
             positioned ? new XnaVector3(head.Position.X, head.Position.Y, head.Position.Z) : XnaVector3.Zero);
-        var pose = new Posef
+        if (!IsFinite(yaw, origin))
         {
-            Orientation = new Quaternionf(yaw.X, yaw.Y, yaw.Z, yaw.W),
-            Position = new Vector3f(origin.X, origin.Y, origin.Z),
+            _log("[vr] recenter failed: the runtime gave a head pose that is not finite");
+            return true;
+        }
+        var info = new ReferenceSpaceCreateInfo
+        {
+            Type = StructureType.ReferenceSpaceCreateInfo,
+            ReferenceSpaceType = ReferenceSpaceType.Local,
+            PoseInReferenceSpace = new Posef
+            {
+                Orientation = new Quaternionf(yaw.X, yaw.Y, yaw.Z, yaw.W),
+                Position = new Vector3f(origin.X, origin.Y, origin.Z),
+            },
         };
-        var recentred = CreateSpace(xr, ReferenceSpaceType.Local, pose);
+        Space recentred;
+        Result created = xr.CreateReferenceSpace(_session, &info, &recentred);
+        if (created < 0)
+        {
+            _log($"[vr] recenter failed: xrCreateReferenceSpace {created}");
+            return true;
+        }
         xr.DestroySpace(_space);
         _space = recentred;
         _log($"[vr] view recentred (turn {MathF.Atan2(2f * yaw.Y * yaw.W, 1f - 2f * yaw.Y * yaw.Y) * 180f / MathF.PI:0} degrees{(positioned ? "" : ", position not tracked")})");
+        return true;
     }
+
+    internal static bool IsFinite(XnaQuaternion q, XnaVector3 v) =>
+        float.IsFinite(q.X) && float.IsFinite(q.Y) && float.IsFinite(q.Z) && float.IsFinite(q.W)
+        && float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
 
     /// <summary>The pose, in the runtime's LOCAL space, of a seated origin at the
     /// head: the head's position and only its turn about the vertical (+Y) axis.

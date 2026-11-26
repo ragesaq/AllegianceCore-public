@@ -38,6 +38,60 @@ public sealed class VrRecenterTests
     }
 
     [Fact]
+    public void HeadTurnedLeft90_FacesTheSpaceAlongMinusX()
+    {
+        // Stated without the implementation's formula: a quarter turn left about +Y
+        // carries the OpenXR forward (-Z) onto -X.
+        var head = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathHelper.PiOver2)
+                 * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(25f));
+        var (yaw, _) = OpenXrPresenter.SeatedOrigin(head, Vector3.Zero);
+        float s = MathF.Sqrt(0.5f);
+        Assert.Equal(1f, MathF.Abs(Quaternion.Dot(yaw, new Quaternion(0f, s, 0f, s))), 4);
+        var forward = Vector3.Transform(-Vector3.UnitZ, yaw);
+        Assert.Equal(-1f, forward.X, 4);
+        Assert.Equal(0f, forward.Y, 4);
+        Assert.Equal(0f, forward.Z, 4);
+    }
+
+    [Fact]
+    public void NaNPose_IsNotFinite()
+    {
+        Assert.True(OpenXrPresenter.IsFinite(Quaternion.Identity, Vector3.Zero));
+        Assert.False(OpenXrPresenter.IsFinite(new Quaternion(float.NaN, 0f, 0f, 1f), Vector3.Zero));
+        Assert.False(OpenXrPresenter.IsFinite(Quaternion.Identity, new Vector3(0f, float.PositiveInfinity, 0f)));
+    }
+
+    [Fact]
+    public void PressWhileUntracked_WaitsThenRunsOut()
+    {
+        var request = new VrRecenterRequest();
+        Assert.False(request.Pending);
+        request.Press();
+        for (int i = 1; i < VrRecenterRequest.WaitFrames; i++)
+        {
+            Assert.False(request.Missed());
+            Assert.True(request.Pending);
+        }
+        Assert.True(request.Missed());
+        Assert.False(request.Pending);
+        Assert.False(request.Missed());
+    }
+
+    [Fact]
+    public void TrackingReturns_TheWaitingPressIsCarriedOutOnce()
+    {
+        var request = new VrRecenterRequest();
+        request.Press();
+        request.Missed();
+        request.Missed();
+        Assert.True(request.Pending);
+        request.Done();
+        Assert.False(request.Pending);
+        request.Press();
+        Assert.True(request.Pending);
+    }
+
+    [Fact]
     public void HeadLookingStraightUp_GivesNoTurn()
     {
         var head = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.PiOver2);
