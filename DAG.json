@@ -189,12 +189,13 @@
       "owner": "ragesaq",
       "status": "waiting",
       "needs": [],
-      "next": "Raised by ragesaq 2026-11-25 (Port's working session): the upstream author has a Quest 3 and is interested, so the VR work should go back into the upstream project to keep the fork from diverging. Found 2026-11-25: master merges into upstream/master d3268557 with no conflicts (git merge-tree); the VR code is about 1,970 added lines in 23 source and test files plus one solution line, and HyperBench files stay out (AGENTS.md prime rule 3). The upstream author's Jet HUD skin and cockpit study (P1044) fit the VR HUD spec (knowledge/vr-hud-design.md, \"The Jet skin and the cockpit study\"). Next: ragesaq decides how the work goes upstream (who opens the pull request and under which account, and whether before or after the HUD work); no pull request to the upstream repository is opened before that. Owner of the work: Port.",
+      "next": "2026-11-26: ragesaq relayed the upstream author's requirements (tests split so the MonoGame suite does not depend on OpenXR, VR off by default with no loader probing, 0 warnings and green CI, one pull request per milestone and HOTAS separately, three known issues); knowledge/upstream-submission.md lists them and the fork's gaps. ragesaq wants the fork's open pull requests merged first. Raised by ragesaq 2026-11-25 (Port's working session): the upstream author has a Quest 3 and is interested, so the VR work should go back into the upstream project to keep the fork from diverging. Found 2026-11-25: master merges into upstream/master d3268557 with no conflicts (git merge-tree); the VR code is about 1,970 added lines in 23 source and test files plus one solution line, and HyperBench files stay out (AGENTS.md prime rule 3). The upstream author's Jet HUD skin and cockpit study (P1044) fit the VR HUD spec (knowledge/vr-hud-design.md, \"The Jet skin and the cockpit study\"). Next: ragesaq decides how the work goes upstream (who opens the pull request and under which account, and whether before or after the HUD work); no pull request to the upstream repository is opened before that. Owner of the work: Port.",
       "links": [
+        "knowledge/upstream-submission.md",
         "knowledge/vr-hud-design.md",
         "knowledge/vr-client-survey.md"
       ],
-      "updated": "2026-11-25"
+      "updated": "2026-11-26"
     }
   ]
 }
