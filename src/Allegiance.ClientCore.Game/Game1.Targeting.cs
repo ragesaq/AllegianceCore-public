@@ -1030,7 +1030,7 @@ public sealed partial class Game1
     /// the rising edge of the chord being down.</summary>
     private bool TargetEdgeDown(KeyboardState ks, string action)
     {
-        return _targetPressEdges.Observe(action, ActionDown(ks, action));
+        return _targetPressEdges.Observe(action, ActionDown(ks, action) || JoystickHoldsAction(action));
     }
 
     /// <summary>Dispatch one class-filtered command TRIAD (next/nearest/prev

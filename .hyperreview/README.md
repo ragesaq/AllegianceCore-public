@@ -48,6 +48,100 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
     are valid order targets. The parity row's older `InputActionCatalog.cs:161` citation was fixed to `:199` in
     `2384326`.
 
+## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 5
+
+- Record: [summary](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/summary.md), [receipt](patch-review-2026-11-26T05-00-00Z-allegiancecore-hotas-bindings-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `c6df4d7..3f99264`, head `3f99264`, tree `9223fac`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. N1 and N2 fixed; the reviewer found every reader of the targeting copy after the
+  undock disarm sees an empty frame. Fixed after round 5, all low:
+  1. R5-1: test `DisarmJoystick_EmptiesTheTargetingCopy` calls the game's own reset with every command held; it
+     fails when the reset line is removed.
+  2. R5-2: the note's sentence about button 79 is marked as the binding before the move.
+  3. R5-3: `DAG.json` node `ragesaq-006` `updated` is 2026-11-26.
+  - Observation kept for a separate issue: a keyboard G held through the ready screen can toggle the autopilot on
+    the first flight frame (`_gKeyWasDown` is not primed). Pre-existing, outside this pull request.
+
+## 2026-11-26: PR #14 joystick bindings for a split HOTAS, round 4
+
+- Record: [summary](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/summary.md), [receipt](patch-review-2026-11-26T01-00-00Z-allegiancecore-hotas-bindings-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `8e225d2..c6df4d7`, head `c6df4d7`, tree `0baf052`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. R3-2 and R3-3 fixed. R3-1 only partly: round 3's entry below says the undock
+  disarm "drops the frame already resolved for that update", which held for the cached frame but not for the copy
+  the targeting keys read. Fixed after round 4:
+  1. N1, medium: the targeting keys' copy of the joystick frame is taken before the docked check, so on the undock
+     frame a held autopilot, clear-target or target-center button could still act. `DisarmJoystick` now also resets
+     that copy to an empty frame. Test `DefaultFrame_HoldsNoAction`; the call site is read only.
+  2. N2, low: the resolver's class comment still said the throttle is inverted like native. It now says the lever
+     is read as the device sends it, and how a throttle at Virpil's own direction is set up.
+  - Observations kept for the flight test: a lever left at the detent takes the throttle role only after it moves
+    (native's latch works the same way); the action filter branch and the `Game1` glue are covered by reading only.
+
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 3
+
+- Record: [summary](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/summary.md), [receipt](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `a25c734..8e225d2`, head `8e225d2`, tree `4136c7e`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 2's N1 is fixed. New, all low, all fixed after round 3:
+  1. R3-1: only the launch from the ready screen disarmed the joystick, not an undock from the hangar, so a
+     button held through the undock could ripcord, drop chaff or toggle autopilot on the first flight frame. The
+     first frame after a docked one now disarms the joystick and drops the frame already resolved for that update.
+     Test `DisarmThenResolveAgain_SameSamples_DropsTheHeldButton` covers the resolver half; the call site is read
+     only.
+  2. R3-2: two comment defects (a doc comment attached to the wrong member, and "the others are held" read as
+     covering the targeting commands). Both corrected.
+  3. R3-3: the parity row's list of bindable commands was stale. It now names the targeting commands and says the
+     5-way switches are bound as buttons.
+  - Observations acted on: a joystick targeting press now respects the action filter a training lesson sets on the
+    keys (the reviewer noted the autopilot button bypassed it); the held-mask test checks each value's bit instead
+    of the count; the flight-commands test also covers `DropChaff` and `FireMissile`.
+  - Left as is: the autopilot key's cloak-key reservation in training concerns the native G key, not a joystick
+    button.
+
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 2
+
+- Record: [summary](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/summary.md), [receipt](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `b32f0e6..a25c734`, head `a25c734`, tree `7ffb38f`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 1: F1, F2 and F4 fixed; the reviewer agrees with the F3 dispute; F5 mostly
+  fixed, with the `Game1` glue (the reset call, the strafe bits, the ripcord edge) covered by reading only. New:
+  1. N1, low: the ripcord latch was primed from the last flight's cached joystick frame, so a thumb button held
+     through launch could ripcord on the first flight frame. Fixed after round 2: the prime no longer reads the
+     frame, and entering flight calls `JoystickBindingResolver.Disarm`, so a held button acts only after a release.
+     The chaff button, added after round 2, had the same path and gets the same fix. Test
+     `Disarm_HeldButtonActsOnlyAfterARelease`.
+  - Wording gaps acted on: the parity row's fallback sentence and the note now say the fallback applies only while
+    no profile has ever matched, and the note describes the ripcord and chaff buttons with the disarm on launch.
+
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 1
+
+- Record: [summary](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/summary.md), [receipt](patch-review-2026-11-25T22-50-00Z-allegiancecore-hotas-bindings-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `ff8e8a6..b32f0e6`, head `b32f0e6`, tree `83727f8`, in a standalone clone with no remote. Reviewer
+  `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Findings and dispositions:
+  1. Medium: losing the throttle device while the stick stays froze the throttle at 0 and shut out the keyboard
+     throttle. Fixed: the frame reports `ThrottleBound`, and the flight path resets the throttle latch when it goes
+     false. Tests: `ThrottleBound_FollowsTheThrottleDevice`, `ThrottleUnplugged_ResetGivesTheKeyboardThrottleBack`.
+  2. Medium: `null` entries in `joystick.json` parsed silently and crashed the first flight update. Fixed: `Parse`
+     rejects them with a reason, rejects numeric enum values and bad thresholds, and the file read catches the
+     other read failures. `BadFile_IsRejectedWithAReason` gains the cases; with the null check removed, the case
+     fails.
+  3. Low: armed state could survive one device leaving while another arrives in the same update. Disputed with
+     evidence: the arriving device's key enters the table before the prune, so a departed key always makes the
+     table larger than the set seen. With the round 1 condition restored, the new test
+     `DeviceSwappedInOneUpdate_StillForgetsTheArmedState` passes. The prune is now written by membership anyway,
+     which is simpler, and the test stays.
+  4. Low: after the HOTAS goes away, the fallback could read leftover pedals as a stick. Fixed: the fallback is used
+     only while no profile has ever matched. Test `AfterAProfileMatched_LeftoverPedalsAreNotReadAsAStick` fails
+     without the fix.
+  5. Low: untested paths. Fixed: tests for the button-count change, the swap, the throttle loss and the pedals.
+
 ## 2026-11-25: PR #11 sky at infinity in each eye, round 1
 
 - Record: [summary](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/summary.md), [receipt](patch-review-2026-11-25T22-00-00Z-allegiancecore-sky-stereo-r1/receipt.md)
