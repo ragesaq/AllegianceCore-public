@@ -1437,6 +1437,11 @@ public sealed partial class Game1
         // can never double-fire.
         HandleTeamPaneControls(ks, composing);
         _targetJoystickFrame = CurrentJoystickFrame(gameTime);
+        // The VR recenter works docked and in flight, and while typing: a joystick
+        // button types no text.
+        bool recenter = _targetJoystickFrame.Holds(JoystickCommand.ViewRecenter);
+        if (recenter && !_vrRecenterWasDown) RecenterVr();
+        _vrRecenterWasDown = recenter;
         HandleRemainderTargetKeys(ks, composing);
         HandleCommandActionKeys(ks, composing);
         HandleP623TargetingKeys(ks, composing);

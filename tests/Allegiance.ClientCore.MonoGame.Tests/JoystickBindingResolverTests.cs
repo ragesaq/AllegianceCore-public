@@ -486,6 +486,7 @@ public class JoystickBindingResolverTests
         Assert.False(JoystickKeyActions.TryGet("Ripcord", out _));
         Assert.False(JoystickKeyActions.TryGet("DropChaff", out _));
         Assert.False(JoystickKeyActions.TryGet("FireMissile", out _));
+        Assert.False(JoystickKeyActions.TryGet("ViewRecenter", out _));
         Assert.True(JoystickKeyActions.TryGet("TargetCenter", out var c));
         Assert.Equal(JoystickCommand.TargetCenter, c);
     }

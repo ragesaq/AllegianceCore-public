@@ -20,7 +20,7 @@ public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 /// and are read through <see cref="JoystickKeyActions"/>.</para></summary>
 public enum JoystickCommand
 {
-    Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff,
+    Fire, FireMissile, Booster, StrafeLeft, StrafeRight, StrafeUp, StrafeDown, Ripcord, DropChaff, ViewRecenter,
     Target, TargetCenter, TargetNothing, TargetHostile, ToggleAutopilot,
     TargetEnemy, TargetEnemyNearest, TargetEnemyPrev,
     TargetFriendly, TargetFriendlyNearest, TargetFriendlyPrev,

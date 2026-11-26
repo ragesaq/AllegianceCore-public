@@ -209,6 +209,20 @@
         "knowledge/vr-client-survey.md"
       ],
       "updated": "2026-11-25"
+    },
+    {
+      "id": "ragesaq-014",
+      "title": "VR: a joystick button recenters the seated view",
+      "owner": "ragesaq",
+      "status": "waiting",
+      "needs": [
+        "ragesaq-006"
+      ],
+      "next": "Asked by ragesaq 2026-11-25 after the combined headset test of PR #15 and PR #14: the view was not perfectly aligned. Branch port/vr-recenter, stacked on port/hotas-bindings (PR #14), adds the joystick command ViewRecenter and the presenter's recenter (knowledge/joystick-input.md, \"VR recenter button\"). Waits on ragesaq choosing the button, which then needs a capture and a binding in the built-in profile; then a cross-family review and a headset test. Owner of the work: Port.",
+      "links": [
+        "knowledge/joystick-input.md"
+      ],
+      "updated": "2026-11-25"
     }
   ]
 }

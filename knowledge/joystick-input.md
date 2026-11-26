@@ -241,9 +241,23 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   behaviour for a setup that worked before.
 - The log names each device and whether it uses a profile, the earlier layout, or is ignored.
 
+## VR recenter button
+
+- ragesaq asked for "a button to reset the worldpsace around the headset, this is a common button to use in sims, it
+  wasnt perfectly aligned" *(observed 2026-11-25, headset test of the combined build of PR #15 and PR #14)*.
+- The joystick command `ViewRecenter` asks the VR client to make the head's current position and facing the seated
+  origin. Only the turn about the vertical axis is taken from the head, so the horizon stays level with the runtime's
+  gravity *(derived: a seated sim recenters the turn, not the tilt)*. It works docked and in flight and needs no key
+  action, because native has no VR *(read, the code on branch `port/vr-recenter`)*.
+- It is done in the presenter by replacing the OpenXR `LOCAL` space the frame is placed in with one offset to the
+  head, located against a second `LOCAL` space and a `VIEW` space kept for that purpose *(read, same code)*. The
+  eye views, the HUD layer and the flat quad all follow it.
+- The built-in throttle profile does not bind it yet: ragesaq picks the button. Until then a player can bind it in
+  `joystick.json` as `{ "command": "ViewRecenter", "button": <n> }`.
+
 ## Open questions
 
-
+- Which throttle or stick button recenters the VR view (ragesaq to choose; the button then needs a capture).
 - Which button pair is which rotary encoder on the throttle.
 - Whether native's `defaultinputmap.mdl` binds joystick axes and buttons by default, and which.
 
@@ -261,6 +275,8 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   axis and settled the rest states; only the encoders' button pairs remain open.
 - 2026-11-25 — the first binding PR: per-device profiles by name, built-in stick and throttle profiles, a player
   file, the earlier layout as the fallback, held buttons ignored until released.
+- 2026-11-25 — ragesaq asked for a VR recenter button after the combined headset test; Port added the
+  `ViewRecenter` command on branch `port/vr-recenter`, not yet bound to a button.
 
 ## Boundary
 

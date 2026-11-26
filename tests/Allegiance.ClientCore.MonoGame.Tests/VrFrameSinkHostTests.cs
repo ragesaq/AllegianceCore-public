@@ -26,7 +26,15 @@ public sealed class VrFrameSinkHostTests
         public int Begun;
         public int Submitted;
         public int Disposed;
+        public int Recentered;
+        public bool ThrowOnRecenter;
         public bool Failed { get; private set; }
+
+        public void Recenter()
+        {
+            Recentered++;
+            if (ThrowOnRecenter) throw new InvalidOperationException("boom");
+        }
 
         public VrStereoFrame? BeginFrame()
         {
@@ -51,6 +59,47 @@ public sealed class VrFrameSinkHostTests
         new VrEyeView(Microsoft.Xna.Framework.Quaternion.Identity, new(-0.032f, 0, 0), -0.8f, 0.7f, 0.75f, -0.75f),
         new VrEyeView(Microsoft.Xna.Framework.Quaternion.Identity, new(0.032f, 0, 0), -0.7f, 0.8f, 0.75f, -0.75f),
         1440, 1600);
+
+    private sealed class PlainSink : IVrFrameSink
+    {
+        public bool Failed => false;
+        public VrStereoFrame? BeginFrame() => null;
+        public void SubmitFrame(int backBufferWidth, int backBufferHeight, VrEyeImages eyes) { }
+        public void Dispose() { }
+    }
+
+    [Fact]
+    public void Recenter_ReachesTheAttachedSink()
+    {
+        var (host, _, _) = Make();
+        var sink = new Sink();
+        host.Attach(sink);
+        host.Recenter();
+        Assert.Equal(1, sink.Recentered);
+        Assert.True(host.Attached);
+    }
+
+    [Fact]
+    public void Recenter_WithoutASink_OrOnASinkWithoutRecenter_DoesNothing()
+    {
+        var (host, _, _) = Make();
+        host.Recenter();
+        host.Attach(new PlainSink());
+        host.Recenter();
+        Assert.True(host.Attached);
+    }
+
+    [Fact]
+    public void Recenter_ThatThrows_DropsTheSink()
+    {
+        var (host, _, log) = Make();
+        var sink = new Sink { ThrowOnRecenter = true };
+        host.Attach(sink);
+        host.Recenter();
+        Assert.False(host.Attached);
+        Assert.Equal(1, sink.Disposed);
+        Assert.Contains(log, l => l.Contains("recenter failed"));
+    }
 
     private static (VrFrameSinkHost Host, Pacing Pacing, List<string> Log) Make()
     {
