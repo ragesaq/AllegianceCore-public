@@ -506,30 +506,118 @@ public sealed class VrHudGeometryTests
         MathHelper.ToDegrees(MathF.Acos(Math.Clamp(Vector3.Dot(Vector3.Normalize(a), Vector3.Normalize(b)), -1f, 1f)));
 
     [Fact]
-    public void The_flight_block_is_36_degrees_across_and_centred_on_the_nose_by_default()
+    public void The_flight_block_is_40_degrees_across_and_centred_on_the_nose_by_default()
     {
         var block = VrHudGeometry.FlightBlock.Default;
-        Assert.Equal(36f, MathHelper.ToDegrees(block.WidthRadians), 3);
+        Assert.Equal(40f, MathHelper.ToDegrees(block.WidthRadians), 3);
         Assert.Equal(0f, block.PitchDownRadians);
+    }
+
+    /// <summary>A pixel of the HUD image on the flight block's quad, from the
+    /// quad's corners and texture coordinates.</summary>
+    private static Vector3 OnQuad((Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+        Vector2 UvTopLeft, Vector2 UvBottomRight) q, float u, float v)
+    {
+        float fu = (u - q.UvTopLeft.X) / (q.UvBottomRight.X - q.UvTopLeft.X);
+        float fv = (v - q.UvTopLeft.Y) / (q.UvBottomRight.Y - q.UvTopLeft.Y);
+        return q.TopLeft + (q.TopRight - q.TopLeft) * fu + (q.BottomLeft - q.TopLeft) * fv;
     }
 
     [Theory]
     [InlineData(0f)]
     [InlineData(12f)]
-    public void The_flight_block_rectangle_covers_its_angle_across_at_its_pitch(float pitchDegrees)
+    public void The_flight_block_puts_the_ring_centre_on_its_axis_and_covers_its_angle_across(float pitchDegrees)
     {
-        var block = new VrHudGeometry.FlightBlock(MathHelper.ToRadians(36f), MathHelper.ToRadians(pitchDegrees));
-        var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrHudGeometry.FlightBlockPanel(block), Width, Height);
-        var left = (tl + bl) / 2f;
-        var right = (tr + br) / 2f;
-        Assert.Equal(36f, Degrees(left, right), 2);
-        // 16:9: about 20.25° tall at the centre column.
-        Assert.Equal(2f * MathHelper.ToDegrees(MathF.Atan(MathF.Tan(MathHelper.ToRadians(18f)) * 9f / 16f)),
-            Degrees((tl + tr) / 2f, (bl + br) / 2f), 2);
-        var centre = (tl + tr + bl + br) / 4f;
+        var block = new VrHudGeometry.FlightBlock(MathHelper.ToRadians(40f), MathHelper.ToRadians(pitchDegrees));
+        var box = VrHudGeometry.CentreGroupBox(Height);
+        var q = VrHudGeometry.FlightBlockQuad(block, box, Width, Height);
+        // The image centre, where Classic centres its ring, is on the axis.
+        var axis = new Vector3(0f, -MathF.Sin(block.PitchDownRadians), -MathF.Cos(block.PitchDownRadians));
+        var centre = OnQuad(q, 0.5f, 0.5f);
+        Assert.True(Degrees(centre, axis) < 0.01f, $"ring centre {centre} off the axis {axis}");
         Assert.Equal(pitchDegrees, Degrees(centre, Vector3.Forward), 2);
-        Assert.True(centre.Y <= 1e-4f);
         Assert.Equal(VrHudGeometry.FlightBlockDistanceMetres, centre.Length(), 3);
+        // The reference span about the centre, level with it, is 40° across.
+        float half = VrHudGeometry.FlightBlockReferencePixels / 2f;
+        var left = OnQuad(q, (Width / 2f - half) / Width, 0.5f);
+        var right = OnQuad(q, (Width / 2f + half) / Width, 0.5f);
+        Assert.Equal(40f, Degrees(left, right), 2);
+        // The quad keeps the box's shape: square pixels.
+        float across = Vector3.Distance(q.TopLeft, q.TopRight), down = Vector3.Distance(q.TopLeft, q.BottomLeft);
+        Assert.Equal(box.Width / box.Height, across / down, 3);
+        // Upright and facing the head.
+        Assert.True(q.TopLeft.Y > q.BottomLeft.Y);
+        Assert.True(q.TopRight.X > q.TopLeft.X);
+    }
+
+    [Fact]
+    public void The_flight_block_crops_the_centre_group_box_out_of_the_image()
+    {
+        var box = VrHudGeometry.CentreGroupBox(1080);
+        var q = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default, box, 1920, 1080);
+        Assert.Equal((960f + box.Left) / 1920f, q.UvTopLeft.X, 5);
+        Assert.Equal((540f + box.Top) / 1080f, q.UvTopLeft.Y, 5);
+        Assert.Equal((960f + box.Right) / 1920f, q.UvBottomRight.X, 5);
+        Assert.Equal((540f + box.Bottom) / 1080f, q.UvBottomRight.Y, 5);
+        // The ring's pixels keep their size whatever the image size: the same
+        // box in a bigger image covers the same angle.
+        var big = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default, box, 2560, 1440);
+        Near3(q.TopLeft, big.TopLeft, 1e-4f);
+        Near3(q.BottomRight, big.BottomRight, 1e-4f);
+    }
+
+    [Fact]
+    public void An_image_smaller_than_the_box_is_cropped_not_enlarged()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        var box = VrHudGeometry.CentreGroupBox(Height);
+        var full = VrHudGeometry.FlightBlockQuad(block, box, Width, Height);
+        var small = VrHudGeometry.FlightBlockQuad(block, box, 300, 200);
+        Assert.Equal(Vector2.Zero, small.UvTopLeft);
+        Assert.Equal(Vector2.One, small.UvBottomRight);
+        float metresPerPixel = Vector3.Distance(full.TopLeft, full.TopRight) / box.Width;
+        Assert.Equal(300f * metresPerPixel, Vector3.Distance(small.TopLeft, small.TopRight), 3);
+        Assert.Equal(200f * metresPerPixel, Vector3.Distance(small.TopLeft, small.BottomLeft), 3);
+    }
+
+    [Theory]
+    [InlineData(720)]
+    [InlineData(1080)]
+    [InlineData(1440)]
+    [InlineData(2160)]
+    public void The_centre_group_box_holds_the_ring_the_speed_and_every_own_status_point(int height)
+    {
+        var box = VrHudGeometry.CentreGroupBox(height);
+        int width = height * 16 / 9;
+        float spread = Allegiance.ClientCore.MonoGame.Rendering.OwnStatusLayout.Spread(height);
+        string[] ids = { "Kill bonus", "Signature percentage", "Detection eye", "Cloak active",
+            "Cloak strength and drained state", "Autopilot status", "Vector lock status", "Carried flag", "Carried artifact" };
+        foreach (var id in ids)
+        {
+            var at = Allegiance.ClientCore.MonoGame.Rendering.OwnStatusLayout.ScreenPos(id, width, height)
+                - new Vector2(width / 2f, height / 2f);
+            // A status point is an icon's lower-left corner or a text's
+            // upper-left one: keep 32 pixels of icon or text around it.
+            Assert.True(at.X - 8f >= box.Left && at.X + 32f <= box.Right, $"{id} at {at} outside {box} (spread {spread})");
+            Assert.True(at.Y - 40f >= box.Top && at.Y + 24f <= box.Bottom, $"{id} at {at} outside {box} (spread {spread})");
+        }
+        // The ring (about 215 pixels across) and the speed readout below it.
+        Assert.True(box.Left <= -120f && box.Right >= 120f && box.Top <= -120f);
+        Assert.True(box.Bottom >= Allegiance.ClientCore.MonoGame.Rendering.HudRenderer.FlightReferenceSpeedBelowCentre + 30f);
+        // And the box fits in the image.
+        Assert.True(-box.Left <= width / 2f && box.Right <= width / 2f && -box.Top <= height / 2f && box.Bottom <= height / 2f);
+    }
+
+    [Fact]
+    public void The_ring_looks_the_same_size_whatever_the_box_or_image()
+    {
+        var block = VrHudGeometry.FlightBlock.Default;
+        var small = VrHudGeometry.FlightBlockQuad(block, VrHudGeometry.CentreGroupBox(720), 1280, 720);
+        var big = VrHudGeometry.FlightBlockQuad(block, VrHudGeometry.CentreGroupBox(1440), 2560, 1440);
+        float MetresPerPixel((Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+            Vector2 UvTopLeft, Vector2 UvBottomRight) q, int w) =>
+            Vector3.Distance(q.TopLeft, q.TopRight) / ((q.UvBottomRight.X - q.UvTopLeft.X) * w);
+        Assert.Equal(MetresPerPixel(small, 1280), MetresPerPixel(big, 2560), 5);
     }
 
     [Fact]
@@ -537,8 +625,8 @@ public sealed class VrHudGeometryTests
     {
         var turn = Quaternion.CreateFromYawPitchRoll(0.3f, -0.1f, 0.05f);
         var proj = VrHudGeometry.SeatProjection(GameProjection);
-        var (tl, _, _, br) = VrHudGeometry.PanelCorners(VrHudGeometry.FlightBlockPanel(VrHudGeometry.FlightBlock.Default),
-            Width, Height);
+        var (tl, _, _, br, _, _) = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default,
+            VrHudGeometry.CentreGroupBox(Height), Width, Height);
         var leftEye = VrHudGeometry.SeatView(Eye(turn, -0.032f));
         var rightEye = VrHudGeometry.SeatView(Eye(turn, 0.032f));
         var movedHead = VrHudGeometry.SeatView(new VrEyeView(turn, new Vector3(0.2f, -0.1f, 0.3f), -0.9f, 0.85f, 0.9f, -0.95f));

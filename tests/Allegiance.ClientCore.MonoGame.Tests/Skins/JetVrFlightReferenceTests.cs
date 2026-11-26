@@ -9,16 +9,13 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Allegiance.ClientCore.MonoGame.Tests.Skins;
 
 /// <summary>VR HUD build step 2 (knowledge/vr-hud-design.md, layer 3): in a
-/// stereo frame the Jet skin's speed and throttle tapes leave the main HUD pass,
-/// which the VR client shows on the near panel, and are drawn on their own for
-/// the block at infinity. The horizon cues (heading tape, pitch ladder, roll
-/// pointer, recorded as "hdg" and "ladder") are drawn in neither pass in VR.
-/// A flat frame is unchanged.</summary>
+/// stereo frame the Jet skin leaves its speed and throttle tapes and its horizon
+/// cues (heading tape, pitch ladder, roll pointer, recorded as "hdg" and
+/// "ladder") off the main HUD pass, because the VR client shows the Classic
+/// centre group at infinity in their place. A flat frame is unchanged.</summary>
 public sealed class JetVrFlightReferenceTests
 {
     private static readonly string[] FlightElements = { "hdg", "ladder", "spd", "thr" };
-    private static readonly string[] BlockElements = { "spd", "thr" };
-    private static readonly string[] HorizonElements = { "hdg", "ladder" };
     private static readonly HudDrawFrame Screen = new(new Viewport(0, 0, 1920, 1080), null, false);
 
     [Fact]
@@ -37,52 +34,6 @@ public sealed class JetVrFlightReferenceTests
         foreach (var id in FlightElements) Assert.Equal(0, surface.Lines(id));
         // The rest of the HUD stays on the panel.
         Assert.True(surface.TotalLines > 0);
-    }
-
-    [Fact]
-    public void In_vr_the_flight_reference_is_drawn_on_its_own()
-    {
-        var surface = new Recorder();
-        var jet = Jet(surface);
-        var model = Model(inWorld: true);
-        jet.Draw(model, Screen);
-        surface.Clear();
-        jet.DrawFlightReference(model, Screen);
-        foreach (var id in BlockElements) Assert.True(surface.Lines(id) > 0, $"{id} missing from the flight block");
-        foreach (var id in HorizonElements) Assert.Equal(0, surface.Lines(id));
-        Assert.Equal(1, surface.Begins);
-        Assert.Equal(1, surface.Ends);
-    }
-
-    [Fact]
-    public void The_flight_block_draws_nothing_while_the_instruments_are_hidden()
-    {
-        var surface = new Recorder();
-        var model = HudModelAdapter.Create(Frame(), CameraMode.Cockpit, docked: true,
-            flightReference: Reference(5f, 10f, 45f), centreReticleInWorld: true, flightReferenceInWorld: true);
-        Jet(surface).DrawFlightReference(model, Screen);
-        Assert.Equal(0, surface.TotalLines);
-        Assert.Equal(0, surface.Begins);
-    }
-
-    [Fact]
-    public void The_palette_wrapper_passes_the_flight_block_to_the_active_palette()
-    {
-        var surface = new Recorder();
-        var definition = HudSkinResolver.Catalog.TryGet(HudSkinIds.Jet)!;
-        var settings = new HudSettings { Skin = HudSkinIds.Jet };
-        var amberDefinition = HudSkinResolver.Catalog.TryGetVariant(HudSkinIds.Jet, JetPaletteIds.Amber)!;
-        var green = new JetHudRenderer(surface, settings, Resources(), definition);
-        var amber = new JetHudRenderer(surface, settings, Resources(), amberDefinition);
-        var palettes = new JetPaletteSwitcher(settings,
-            new ResolvedJetPalette(definition, green), new ResolvedJetPalette(amberDefinition, amber));
-        var wrapper = new JetPaletteRenderer(palettes);
-        var model = Model(inWorld: true);
-        // As in the game: the main pass first, which resolves the attitude.
-        wrapper.Draw(model, Screen);
-        surface.Clear();
-        ((IHudFlightReferenceRenderer)wrapper).DrawFlightReference(model, Screen);
-        Assert.True(surface.Lines("spd") > 0);
     }
 
     private static HudModel Model(bool inWorld) =>

@@ -443,41 +443,21 @@ public class HudRenderer
             // the batch is restored to alpha blend for the rest of the HUD.
             // The MODERN skin is a port invention (not native), so its gauges
             // keep the normal alpha-blended batch.
-            bool classicGaugesLoaded = !UsesModernGauges && _gauges is { } g && g.AllLoaded;
             // P805 (row 470) — native ShowCenterHUD (WinTrek.cpp:2898,3300;
             // dialog.mdl:5195-5197 VisibleImage(CenterHudDisplay, ShowCenterHUD))
             // hides the whole centre group: gauges, speed, afterburner, own-ship
             // status. The F1 global hide (Context.Hidden) stays on top of it.
-            if (classicGaugesLoaded && model.CentreHudVisible)
-            {
-                _sb.End();
-                // HUD-14c — gauge textures are premultiplied (GaugeTextures.cs
-                // ToPremultipliedRgba) and so are the SpriteFont glyphs, so
-                // BlendState.Additive (SrcAlpha/One) would apply alpha twice;
-                // native BlendModeAdd SRCALPHA/ONE on straight-alpha == One/One
-                // here (engine/RasterD3D9.cpp:295-302).
-                _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne);
-                DrawGauges(model, viewport);
-                _sb.End();
-                _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            }
-            else if (UsesModernGauges || _gauges is { } mg && mg.AllLoaded)
-            {
-                if (model.CentreHudVisible) DrawGauges(model, viewport);
-            }
-            else if (model.CentreHudVisible)
-            {
-                DrawStatusPanel(f, w);
-                DrawThrottleGauge(f.Throttle, w, h);
-            }
-            if (model.CentreHudVisible)
+            // VR draws the gauges, speed and own-ship status on their own
+            // (DrawFlightReference); the afterburner readout stays here.
+            bool centreHere = CentreGroupOnMainPass(model);
+            if (centreHere)
             {
                 float speedCy = model.TargetPaneVisible ? paneTop - 40f
                     : model.PodVisible && !UsesModernGauges ? h - 238f : h - 108f;
-                DrawSpeed(f.Speed, model.SpeedUnit, w, speedCy);
-                ElementDrawn("Speed");
-                DrawAfterburner(f.AfterburnerActive, f.Power, w);
+                DrawCentreGauges(model, f, viewport, speedCy);
             }
+            if (model.CentreHudVisible)
+                DrawAfterburner(f.AfterburnerActive, f.Power, w);
             {
                 DrawWeaponMode(f, w);
                 ElementDrawn("Equipment selected and active state");
@@ -499,7 +479,7 @@ public class HudRenderer
             // HUD-6 — native centre-HUD own-ship status icons/readouts at their
             // dialog.mdl anchors (kill bonus, signature, detection eye, cloak,
             // autopilot, vector lock, carried flag/artifact).
-            if (model.CentreHudVisible) DrawOwnStatus(model, viewport);
+            if (centreHere) DrawOwnStatus(model, viewport);
             DrawRoll(f.RollDegrees, w, h);
             // HUD-10 — native has no in-flight money readout: moneyPane lives only
             // inside MergedInvestmentsPaneImage under ofInvestment
@@ -552,6 +532,71 @@ public class HudRenderer
         {
             _sb.End();
         }
+    }
+
+    /// <summary>Whether the main pass draws the centre group's gauges, speed and
+    /// own-ship status: when the centre HUD is shown, except in a VR eye frame,
+    /// which draws them on their own at infinity (<see cref="DrawFlightReference"/>).</summary>
+    public static bool CentreGroupOnMainPass(HudModel model) =>
+        model.CentreHudVisible && !model.Context.FlightReferenceInWorld;
+
+    /// <summary>Where VR puts the speed readout: this many pixels below the
+    /// gauge ring's centre, under the own-ship status, as native draws it inside
+    /// the ring (the flat port draws it at the screen's foot).</summary>
+    public const float FlightReferenceSpeedBelowCentre = 195f;
+
+    /// <summary>VR: only the centre group's gauges, speed and own-ship status,
+    /// around the viewport's centre, for the VR client to show at infinity. The
+    /// main pass leaves them out while <see cref="HudContext.FlightReferenceInWorld"/>
+    /// is set. Self-contained like <see cref="Draw(HudModel, Viewport)"/>.</summary>
+    public void DrawFlightReference(HudModel model, Viewport viewport)
+    {
+        if (!model.Visible || !model.CentreHudVisible || !model.InstrumentsVisible || model.Telemetry is not { } f) return;
+        _viewportWidth = viewport.Width;
+        _viewportHeight = viewport.Height;
+        Layout.Reset(viewport.Width, viewport.Height);
+        BeginBatch();
+        try
+        {
+            DrawCentreGauges(model, f, viewport, viewport.Height / 2f + FlightReferenceSpeedBelowCentre);
+            DrawOwnStatus(model, viewport);
+        }
+        finally
+        {
+            _sb.End();
+        }
+    }
+
+    /// <summary>The centre group's gauges and speed readout, inside an
+    /// alpha-blended batch (the classic gauges take their own additive pass).</summary>
+    private void DrawCentreGauges(HudModel model, HudFrame f, Viewport viewport, float speedCy)
+    {
+        float w = viewport.Width, h = viewport.Height;
+        bool classicGaugesLoaded = !UsesModernGauges && _gauges is { } g && g.AllLoaded;
+        if (classicGaugesLoaded)
+        {
+            _sb.End();
+            // HUD-14c — gauge textures are premultiplied (GaugeTextures.cs
+            // ToPremultipliedRgba) and so are the SpriteFont glyphs, so
+            // BlendState.Additive (SrcAlpha/One) would apply alpha twice;
+            // native BlendModeAdd SRCALPHA/ONE on straight-alpha == One/One
+            // here (engine/RasterD3D9.cpp:295-302).
+            _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne);
+            DrawGauges(model, viewport);
+            _sb.End();
+            _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+        }
+        else if (UsesModernGauges || _gauges is { } mg && mg.AllLoaded)
+        {
+            DrawGauges(model, viewport);
+        }
+        else
+        {
+            DrawStatusPanel(f, w);
+            DrawThrottleGauge(f.Throttle, w, h);
+        }
+        DrawSpeed(f.Speed, model.SpeedUnit, w, speedCy);
+        ElementDrawn("Speed");
     }
 
     public HudTextLayout Layout { get; } = new();

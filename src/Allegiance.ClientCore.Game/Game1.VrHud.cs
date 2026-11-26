@@ -144,13 +144,12 @@ public sealed partial class Game1
     private void KeepVrHudModel(HudModel model) => _vrHudModel = _vrEyesDrawn ? model : null;
 
     /// <summary>The flight reference block (layer 3) drawn into its own image,
-    /// the size of the HUD image, so the skin lays it out as in the flat game.
-    /// Null when the active skin has no flight reference renderer or the
-    /// instruments are hidden.</summary>
+    /// the size of the HUD image: the Classic centre group (gauge ring, speed,
+    /// own-ship status), drawn by the Classic renderer whatever skin is active,
+    /// laid out as in the flat game. Null when the instruments are hidden.</summary>
     private RenderTarget2D? DrawVrFlightImage(GraphicsDevice gd, int width, int height)
     {
-        if (_vrHudModel is not { InstrumentsVisible: true } model || ActiveHud is not Rendering.Skins.IHudFlightReferenceRenderer flight)
-            return null;
+        if (_vrHudModel is not { InstrumentsVisible: true } model) return null;
         if (_vrFlightImage is null || _vrFlightImage.Width != width || _vrFlightImage.Height != height)
         {
             _vrFlightImage?.Dispose();
@@ -161,7 +160,7 @@ public sealed partial class Game1
         }
         gd.SetRenderTarget(_vrFlightImage);
         gd.Clear(Color.Transparent);
-        flight.DrawFlightReference(model, new(gd.Viewport, _hudTargetModelPreview, _hudSettings.SelectionBracketOn));
+        _hudRenderer.DrawFlightReference(model, gd.Viewport);
         return _vrFlightImage;
     }
 
@@ -332,7 +331,6 @@ public sealed partial class Game1
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
         var flightImage = _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
-        var flightPanel = VrHudGeometry.FlightBlockPanel(VrFlightBlock);
         for (int pass = 0; pass < 2; pass++)
         {
             var target = pass == 0 ? left : right;
@@ -345,7 +343,7 @@ public sealed partial class Game1
             // The flight reference block first: it is at infinity, so everything
             // else in the HUD is nearer and draws over it.
             if (flightImage is not null)
-                DrawVrPanel(flightImage, flightPanel, VrHudGeometry.AtInfinity(seatView), VrHudGeometry.SeatProjection(proj));
+                DrawVrFlightBlock(flightImage, VrHudGeometry.AtInfinity(seatView), VrHudGeometry.SeatProjection(proj));
 
             // The aim reticle (at infinity, or at the depth of a target under it)
             // and the off-view arrows (on a ring 3 m out) draw over the scene.
@@ -530,10 +528,25 @@ public sealed partial class Game1
     private void DrawVrPanel(Texture2D hud, in VrHudGeometry.Panel panel, Matrix seatView, Matrix proj)
     {
         var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(panel, hud.Width, hud.Height);
-        _vrPanelVertices[0] = new VertexPositionTexture(tl, new Vector2(0, 0));
-        _vrPanelVertices[1] = new VertexPositionTexture(tr, new Vector2(1, 0));
-        _vrPanelVertices[2] = new VertexPositionTexture(bl, new Vector2(0, 1));
-        _vrPanelVertices[3] = new VertexPositionTexture(br, new Vector2(1, 1));
+        DrawVrQuad(hud, tl, tr, bl, br, Vector2.Zero, Vector2.One, seatView, proj);
+    }
+
+    /// <summary>The Classic centre group cropped out of its image and shown as
+    /// the flight block.</summary>
+    private void DrawVrFlightBlock(Texture2D image, Matrix seatView, Matrix proj)
+    {
+        var (tl, tr, bl, br, uv0, uv1) = VrHudGeometry.FlightBlockQuad(VrFlightBlock, VrHudGeometry.CentreGroupBox(image.Height),
+            image.Width, image.Height);
+        DrawVrQuad(image, tl, tr, bl, br, uv0, uv1, seatView, proj);
+    }
+
+    private void DrawVrQuad(Texture2D hud, Vector3 tl, Vector3 tr, Vector3 bl, Vector3 br, Vector2 uv0, Vector2 uv1,
+        Matrix seatView, Matrix proj)
+    {
+        _vrPanelVertices[0] = new VertexPositionTexture(tl, uv0);
+        _vrPanelVertices[1] = new VertexPositionTexture(tr, new Vector2(uv1.X, uv0.Y));
+        _vrPanelVertices[2] = new VertexPositionTexture(bl, new Vector2(uv0.X, uv1.Y));
+        _vrPanelVertices[3] = new VertexPositionTexture(br, uv1);
         var gd = GraphicsDevice;
         // The HUD image holds premultiplied colour over transparent, as the
         // SpriteBatch HUD wrote it; AlphaBlend is XNA's premultiplied blend.

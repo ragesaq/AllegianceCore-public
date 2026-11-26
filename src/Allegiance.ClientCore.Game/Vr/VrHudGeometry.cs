@@ -66,16 +66,17 @@ public static class VrHudGeometry
     }
 
     /// <summary>The flight reference block (layer 3), seen at infinity: the angle
-    /// it covers across, and how far its centre is below the nose.</summary>
+    /// its crop covers across, and how far the gauge ring's centre is below the
+    /// nose.</summary>
     public readonly record struct FlightBlock(float WidthRadians, float PitchDownRadians)
     {
-        /// <summary>36° across, so about 20° tall for a 16:9 image: the spec's
-        /// 30° by 20° field, with room for the tapes Jet puts at the image's
-        /// edges. Centred on the nose, because Jet centres its pitch ladder on
-        /// the boresight.</summary>
-        public static FlightBlock Default => new(MathHelper.ToRadians(36f), 0f);
+        /// <summary>40° across the crop, so the Classic gauge ring (about 215 of
+        /// the crop's 400 pixels) is about 21.5° wide: the spec's 30° by 20°
+        /// field holds it with its readouts. Centred on the nose, where native
+        /// draws the ring around the boresight.</summary>
+        public static FlightBlock Default => new(MathHelper.ToRadians(40f), 0f);
 
-        /// <summary>Reads "widthDegrees,pitchDegrees" (for example "36,0"), as set
+        /// <summary>Reads "widthDegrees,pitchDegrees" (for example "40,0"), as set
         /// in ALLEGIANCE_VR_FLIGHT_BLOCK for headset tuning. Anything that does not
         /// parse to a width of 10° to 90° and a pitch of -30° to 45° is the
         /// default.</summary>
@@ -93,16 +94,68 @@ public static class VrHudGeometry
         }
     }
 
+    /// <summary>A box in an image, in pixels from the image's centre (x right,
+    /// y down): left and top are negative.</summary>
+    public readonly record struct PixelBox(float Left, float Top, float Right, float Bottom)
+    {
+        public float Width => Right - Left;
+        public float Height => Bottom - Top;
+    }
+
+    /// <summary>The span, in pixels, that <see cref="FlightBlock.WidthRadians"/>
+    /// covers: the Classic ring (about 215 pixels, at the fixed native pane
+    /// scale) with room around it.</summary>
+    public const float FlightBlockReferencePixels = 400f;
+
+    /// <summary>The Classic centre group around the image centre, for an image
+    /// this tall: the gauge ring (fixed pixels, about 215 across), the speed
+    /// readout <see cref="Rendering.HudRenderer.FlightReferenceSpeedBelowCentre"/>
+    /// pixels down, and the own-ship status, whose native points
+    /// (<see cref="Rendering.OwnStatusLayout"/>: x from -200 to 122, y from -110
+    /// to 185) are spread with the image height. The margins hold the icons and
+    /// text drawn from those points; the image is transparent around the group,
+    /// so a margin costs nothing.</summary>
+    public static PixelBox CentreGroupBox(int imageHeight)
+    {
+        float s = Rendering.OwnStatusLayout.Spread(imageHeight);
+        return new(-(200f * s + 60f), -(110f * s + 90f), 122f * s + 100f,
+            MathF.Max(Rendering.HudRenderer.FlightReferenceSpeedBelowCentre + 45f, 185f * s + 60f));
+    }
+
     /// <summary>How far out the flight block's rectangle is placed. Drawn with
     /// <see cref="AtInfinity"/>, this only has to sit inside the seat depth
     /// planes; it sets no disparity.</summary>
     public const float FlightBlockDistanceMetres = 10f;
 
-    /// <summary>The rectangle that shows a flight block: at
-    /// <see cref="FlightBlockDistanceMetres"/>, as wide as its angle needs.</summary>
-    public static Panel FlightBlockPanel(in FlightBlock block) =>
-        new(FlightBlockDistanceMetres, block.PitchDownRadians,
-            2f * FlightBlockDistanceMetres * MathF.Tan(block.WidthRadians / 2f));
+    /// <summary>The quad that shows <paramref name="box"/> of an image as the
+    /// flight block: corners in seat space (top-left, top-right, bottom-left,
+    /// bottom-right) at <see cref="FlightBlockDistanceMetres"/>, so
+    /// <see cref="FlightBlockReferencePixels"/> about the image centre cover the
+    /// block's angle and the image centre lies on the block's axis, and the
+    /// matching texture coordinates. The box is clamped to the image.</summary>
+    public static (Vector3 TopLeft, Vector3 TopRight, Vector3 BottomLeft, Vector3 BottomRight,
+        Vector2 UvTopLeft, Vector2 UvBottomRight) FlightBlockQuad(in FlightBlock block, PixelBox box,
+        int pixelWidth, int pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0) throw new ArgumentOutOfRangeException(nameof(pixelWidth), "The HUD image has no area.");
+        float cx = pixelWidth / 2f, cy = pixelHeight / 2f;
+        // Metres per pixel from the fixed reference span, so neither the box nor
+        // the image's size changes how large the ring looks.
+        float scale = 2f * FlightBlockDistanceMetres * MathF.Tan(block.WidthRadians / 2f) / FlightBlockReferencePixels;
+        box = new PixelBox(MathF.Max(box.Left, -cx), MathF.Max(box.Top, -cy),
+            MathF.Min(box.Right, cx), MathF.Min(box.Bottom, cy));
+        float sin = MathF.Sin(block.PitchDownRadians), cos = MathF.Cos(block.PitchDownRadians);
+        Vector3 At(float px, float py)
+        {
+            // Unpitched: x right, y up, the plane 10 m ahead; then turned down
+            // about x by the pitch, as PanelCorners turns a panel.
+            float x = px * scale, y = -py * scale, z = -FlightBlockDistanceMetres;
+            return new Vector3(x, y * cos + z * sin, -y * sin + z * cos);
+        }
+        return (At(box.Left, box.Top), At(box.Right, box.Top), At(box.Left, box.Bottom), At(box.Right, box.Bottom),
+            new Vector2((cx + box.Left) / pixelWidth, (cy + box.Top) / pixelHeight),
+            new Vector2((cx + box.Right) / pixelWidth, (cy + box.Bottom) / pixelHeight));
+    }
 
     /// <summary>A view with its translation removed, so only the eye's turn is
     /// left. Both eyes see what is drawn with it in the same direction: it is at

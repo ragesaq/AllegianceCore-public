@@ -30,7 +30,7 @@ namespace Allegiance.ClientCore.MonoGame.Rendering.Jet;
 /// keeps the tapes (pod speed) and shows the ladder/heading only as its data
 /// allows.</para>
 /// </summary>
-public sealed partial class JetHudRenderer : IHudSkinRenderer, IHudFlightReferenceRenderer
+public sealed partial class JetHudRenderer : IHudSkinRenderer
 {
     /// <summary>The green variant's WIP tag (P1035's shipped text). HUD fonts are
     /// ASCII (<see cref="HudFormat.Printable"/>), so the P972 em dash is a hyphen.
@@ -503,38 +503,6 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer, IHudFlightReferen
         }
 
         _resources.PodDeath(model);
-    }
-
-    /// <summary>VR: only the speed and throttle tapes, laid out for the frame's
-    /// viewport, which the VR client shows at infinity. While
-    /// <see cref="HudContext.FlightReferenceInWorld"/> is set the main pass leaves
-    /// out the tapes and the horizon cues (heading tape, pitch ladder, roll pointer),
-    /// and this pass does not draw the horizon cues either: space has no horizon.
-    /// The viewport fields <see cref="DrawConsole"/> reads are left as the main pass
-    /// set them.</summary>
-    public void DrawFlightReference(HudModel model, in HudDrawFrame frame)
-    {
-        if (!model.InstrumentsVisible) return;
-        float w = frame.Viewport.Width;
-        float h = frame.Viewport.Height;
-        if (w <= 0f || h <= 0f) return;
-        float scale = ModernHudScale.Core(_displayScale, _settings.Size, h);
-        _painter.Scale = scale;
-        _trainingBox = default;
-        ClearFurniture();
-        _surface.Begin();
-        try
-        {
-            if (model.Telemetry is { } own)
-            {
-                DrawSpeedTape(own.Speed, w, h, scale);
-                DrawThrottleTape(own.Throttle, w, h, scale);
-            }
-        }
-        finally
-        {
-            _surface.End();
-        }
     }
 
     /// <summary>P1040 — the Jet command composition: the native command-camera chrome
