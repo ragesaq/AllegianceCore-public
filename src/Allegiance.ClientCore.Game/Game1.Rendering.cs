@@ -1217,8 +1217,13 @@ public sealed partial class Game1
                 // (id + position + heading + pool clock), so it can emit the
                 // fire/smoke pair each frame and estimate each missile's velocity
                 // by finite difference of the successive samples.
+                // Each missile is drawn moved on from its last server position
+                // (MissileMotionSmoother); a VR frame's second eye reuses the
+                // first eye's positions.
                 _drawMissiles.Clear();
                 _drawTrailMissiles.Clear();
+                if (!VrRepeatPass)
+                    _missileMotion.BeginFrame(System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
                 lock (_session.Gate)
                 {
                     long mNow = ClientNowMilliseconds;
@@ -1234,13 +1239,16 @@ public sealed partial class Game1
                             // ToXnaRotation maps model +Z -> -forward, so negate
                             // the heading to point the nose along real Forward.
                             mo.Set(-ms.Forward);
+                            var shown = VrRepeatPass ? _missileMotion.Shown(ms.MissileId, ms.Position)
+                                : _missileMotion.Observe(ms.MissileId, ms.Position);
                             // P288 — per-type imported content model, else null (native demo).
-                            _drawMissiles.Add((ms.TypeId, ms.Position, mo, PickMissileModel(ms.TypeId)));
+                            _drawMissiles.Add((ms.TypeId, shown, mo, PickMissileModel(ms.TypeId)));
                             _drawTrailMissiles.Add(new TrailMissile(
-                                ms.MissileId, ms.Position, ms.Forward, _trailNowSec));
+                                ms.MissileId, shown, ms.Forward, _trailNowSec));
                         }
                     }
                 }
+                if (!VrRepeatPass) _missileMotion.EndFrame();
                 foreach (var (mType, mPos, mOri, mModel) in _drawMissiles)
                 {
                     var mXna = PoseConverter.ToXna(mPos);
@@ -3235,8 +3243,10 @@ public sealed partial class Game1
                     // lag-free, and during autopilot it shows the cruise speed
                     // the ship will return to on disengage (autopilot sends its
                     // own throttle). The gauge's fraction mapping is
-                    // 0.5*(1+throttle) = % of max cruise speed.
-                    Throttle: _throttle,
+                    // 0.5*(1+throttle) = % of max cruise speed. A bound
+                    // joystick throttle shows the throttle sent (HudThrottle).
+                    Throttle: HudThrottle.Gauge(_throttle, _lastSentControls.Throttle, _joystickThrottleWasBound,
+                        _autoPilotEngaged),
                     AfterburnerActive: afterburnerActive,
                     // P221 — firing readout: true while StateM carries a fire
                     // bit. Group-fire ORs AllWeapons; single-weapon mode (P225)

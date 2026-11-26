@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace Allegiance.ClientCore.MonoGame.Vr;
@@ -14,8 +15,10 @@ namespace Allegiance.ClientCore.MonoGame.Vr;
 /// frame, so the local space's -Z is the camera's forward).</summary>
 public static class VrHudGeometry
 {
-    /// <summary>The smallest angle a bracket covers, across (spec: about 2°).</summary>
-    public static readonly float BracketFloorRadians = MathHelper.ToRadians(2f);
+    /// <summary>The smallest angle a bracket covers, across: 1.4°, the spec's
+    /// 2° less 30% after ragesaq's headset look (2026-11-26), so a far or small
+    /// object's box is told apart from a near or large one's.</summary>
+    public static readonly float BracketFloorRadians = MathHelper.ToRadians(1.4f);
 
     /// <summary>The smallest height of marker text (spec: about 0.6°).</summary>
     public static readonly float TextFloorRadians = MathHelper.ToRadians(0.6f);
@@ -65,7 +68,7 @@ public static class VrHudGeometry
         return (centre - right + upHalf, centre + right + upHalf, centre - right - upHalf, centre + right - upHalf);
     }
 
-    /// <summary>The flight reference block (layer 3), seen at infinity: the angle
+    /// <summary>The flight reference block (layer 3), 10 m out in the seat: the angle
     /// that <see cref="FlightBlockReferencePixels"/> about the image centre cover
     /// (the crop itself is wider: <see cref="CentreGroupBox"/>), and how far the
     /// gauge ring's centre is below the nose.</summary>
@@ -123,9 +126,9 @@ public static class VrHudGeometry
             MathF.Max(Rendering.HudRenderer.FlightReferenceSpeedBelowCentre + 45f, 185f * s + 60f));
     }
 
-    /// <summary>How far out the flight block's rectangle is placed. Drawn with
-    /// <see cref="AtInfinity"/>, this only has to sit inside the seat depth
-    /// planes; it sets no disparity.</summary>
+    /// <summary>How far out the flight block is drawn, in seat space: 10 m, so
+    /// both eyes see it at that depth (ragesaq, 2026-11-26: at infinity it
+    /// "feels a little fake").</summary>
     public const float FlightBlockDistanceMetres = 10f;
 
     /// <summary>The quad that shows <paramref name="box"/> of an image as the
@@ -158,39 +161,58 @@ public static class VrHudGeometry
             new Vector2((cx + box.Right) / pixelWidth, (cy + box.Bottom) / pixelHeight));
     }
 
-    /// <summary>How far VR lifts the port's weapons and cargo text lines on the
-    /// HUD panel, in pixels: up to the image's middle, which VR leaves empty
-    /// (the centre group is at infinity), so they no longer run across the
-    /// target pane at the foot of the image. A flat frame does not move them.
-    /// <paramref name="flatTop"/> is the upper line's flat top edge.</summary>
-    public static float PortTextLift(bool vrEyeFrame, float imageHeight, float flatTop) =>
-        vrEyeFrame ? MathF.Max(0f, flatTop - imageHeight / 2f) : 0f;
+    /// <summary>Where VR puts the top of the port's weapons and cargo text
+    /// lines on the HUD panel, in pixels from the image's top: under the chat
+    /// pane (top centre, its foot at about 125) and the keys hint below it, at
+    /// the left. At the foot they ran across the target pane, and in the
+    /// middle across the panel's centre (ragesaq, 2026-11-26).</summary>
+    public const float PortTextTopPixels = 152f;
 
-    /// <summary>A view with its translation removed, so only the eye's turn is
-    /// left. Both eyes see what is drawn with it in the same direction: it is at
-    /// infinity, with no disparity, and does not move when the head moves.</summary>
-    public static Matrix AtInfinity(Matrix view)
+    /// <summary>How wide VR lets the port's text lines run before they wrap:
+    /// about two thirds of the image, short of the weapons pane at the right.</summary>
+    public static float PortTextWrapWidth(float imageWidth) => imageWidth * 0.65f;
+
+    /// <summary>A line broken at its spaces into lines no wider than
+    /// <paramref name="maxWidth"/> by <paramref name="measure"/>. A word wider
+    /// than that has a line of its own. Each line's text is the original's,
+    /// runs of spaces kept, less the space it was broken at.</summary>
+    public static IReadOnlyList<string> WrapLine(string text, float maxWidth, Func<string, float> measure)
     {
-        view.Translation = Vector3.Zero;
-        return view;
+        var lines = new List<string>();
+        string current = "";
+        bool started = false;
+        foreach (var word in text.Split(' '))
+        {
+            string joined = started ? current + " " + word : word;
+            if (started && word.Length > 0 && current.Trim().Length > 0 && measure(joined) > maxWidth)
+            {
+                lines.Add(current.TrimEnd());
+                current = word;
+            }
+            else current = joined;
+            started = true;
+        }
+        if (current.Trim().Length > 0 || lines.Count == 0) lines.Add(current.TrimEnd());
+        return lines;
     }
 
     /// <summary>A targeting marker's plane in the world: two vectors from its
     /// anchor, at right angles to the line from the head to the anchor, upright
-    /// to the head (<paramref name="headUp"/>), each half the marker's width
+    /// to <paramref name="upright"/> (in VR the seat's up, so a marker does not
+    /// roll with the head), each half the marker's width
     /// (<paramref name="angleRadians"/> as seen from the head). A marker drawn
     /// from points anchor + Right·x − Up·y (x right, y down, ±1 at its edges)
     /// is a flat shape at the anchor's depth, facing the head: each eye projects
     /// the same points, so every edge has the anchor's disparity. A shape drawn
     /// as pixel offsets in each eye's image does not, because the eyes' images
     /// stretch differently at the anchor's pixel.</summary>
-    public static (Vector3 Right, Vector3 Up) MarkerBillboard(Vector3 headToAnchor, Vector3 headUp, float angleRadians)
+    public static (Vector3 Right, Vector3 Up) MarkerBillboard(Vector3 headToAnchor, Vector3 upright, float angleRadians)
     {
         float distance = headToAnchor.Length();
         if (!(distance > 0f)) return (Vector3.Zero, Vector3.Zero);
         var forward = headToAnchor / distance;
-        var right = Vector3.Cross(forward, headUp);
-        // Straight up or down the head's up: any right angle to the line will do.
+        var right = Vector3.Cross(forward, upright);
+        // Straight along the upright: any right angle to the line will do.
         if (right.LengthSquared() < 1e-8f) right = Vector3.Cross(forward, MathF.Abs(forward.X) < 0.9f ? Vector3.UnitX : Vector3.UnitZ);
         right = Vector3.Normalize(right);
         var up = Vector3.Cross(right, forward);

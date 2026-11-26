@@ -165,16 +165,29 @@ public sealed partial class Game1
     {
         if (!model.Visible || model.Context.CargoLine is not { } line) return;
         float h = GraphicsDevice.Viewport.Height;
-        var sz = _hudSmall.MeasureString(line);
-        float x = 20f, y = h - CargoLineFromFoot
-            - Vr.VrHudGeometry.PortTextLift(model.Context.FlightReferenceInWorld, h, h - FlightPartsLineFromFoot);
+        float x = 20f, y = h - CargoLineFromFoot;
+        IReadOnlyList<string> lines = new[] { line };
+        if (model.Context.FlightReferenceInWorld)
+        {
+            // VR: under the weapons line, both wrapped (DrawFlightPartsHud).
+            y = Vr.VrHudGeometry.PortTextTopPixels;
+            if (model.Context.FlightPartsLine is { } parts) y += VrPortTextLines(parts).Count * _hudSmall.LineSpacing + 10f;
+            lines = VrPortTextLines(line);
+        }
+        float width = 0f;
+        foreach (var l in lines) width = MathF.Max(width, _hudSmall.MeasureString(l).X);
+        float height = lines.Count == 1 ? _hudSmall.MeasureString(line).Y : lines.Count * _hudSmall.LineSpacing;
         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
         try
         {
-            _spriteBatch.Draw(_whitePixel, new Microsoft.Xna.Framework.Rectangle((int)x - 6, (int)y - 4, (int)(sz.X + 12), (int)(sz.Y + 8)),
+            _spriteBatch.Draw(_whitePixel, new Microsoft.Xna.Framework.Rectangle((int)x - 6, (int)y - 4, (int)(width + 12), (int)(height + 8)),
                 new Microsoft.Xna.Framework.Color(0.008f, 0.025f, 0.028f, 0.6f));
-            _spriteBatch.DrawString(_hudSmall, line, new Microsoft.Xna.Framework.Vector2(x, y),
-                new Microsoft.Xna.Framework.Color(0.78f, 0.88f, 0.85f));
+            foreach (var l in lines)
+            {
+                _spriteBatch.DrawString(_hudSmall, l, new Microsoft.Xna.Framework.Vector2(x, y),
+                    new Microsoft.Xna.Framework.Color(0.78f, 0.88f, 0.85f));
+                y += _hudSmall.LineSpacing;
+            }
         }
         finally
         {

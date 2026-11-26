@@ -111,9 +111,19 @@ public sealed class NativeFonts
     public const float HighDensityThreshold = 1.25f;
 
     private readonly IReadOnlyDictionary<NativeFont, (SpriteFont One, SpriteFont Two)> _fonts;
+    private readonly Dictionary<SpriteFont, SpriteFont> _denser = new(ReferenceEqualityComparer.Instance);
 
     public NativeFonts(IReadOnlyDictionary<NativeFont, (SpriteFont One, SpriteFont Two)> fonts)
-        => _fonts = fonts;
+    {
+        _fonts = fonts;
+        foreach (var pair in fonts.Values)
+            if (!ReferenceEquals(pair.One, pair.Two)) _denser.TryAdd(pair.One, pair.Two);
+    }
+
+    /// <summary>The 2× bake of a 1× bake, for text drawn into an image of twice
+    /// the pixels: drawn at half the scale it has the same size, with every
+    /// glyph pixel its own. False for a 2× bake or a font that is not a bake.</summary>
+    public bool TryDenser(SpriteFont font, out SpriteFont denser) => _denser.TryGetValue(font, out denser!);
 
     /// <summary>The pure bake-density decision: which density to use and the
     /// residual draw scale, given the pane's position scale (floored at 1).</summary>

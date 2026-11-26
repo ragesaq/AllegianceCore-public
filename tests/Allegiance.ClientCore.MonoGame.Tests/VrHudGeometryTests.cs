@@ -110,7 +110,7 @@ public sealed class VrHudGeometryTests
     [InlineData(5000f)]
     public void A_far_marker_covers_the_floor_angle_whatever_its_distance(float distance)
     {
-        // A 0.5 m object is under 2° across from 50 m on.
+        // A 0.5 m object is under 1.4° across from 50 m on.
         Assert.Equal(VrHudGeometry.BracketFloorRadians, VrHudGeometry.BracketAngle(0.5f, distance), 6);
     }
 
@@ -125,9 +125,10 @@ public sealed class VrHudGeometryTests
     }
 
     [Fact]
-    public void The_floor_is_about_two_degrees_for_brackets_and_six_tenths_for_text()
+    public void The_floor_is_one_and_four_tenths_degrees_for_brackets_and_six_tenths_for_text()
     {
-        Assert.Equal(2f, MathHelper.ToDegrees(VrHudGeometry.BracketFloorRadians), 4);
+        // ragesaq, 2026-11-26: the spec's 2° less 30%.
+        Assert.Equal(1.4f, MathHelper.ToDegrees(VrHudGeometry.BracketFloorRadians), 4);
         Assert.Equal(0.6f, MathHelper.ToDegrees(VrHudGeometry.TextFloorRadians), 4);
     }
 
@@ -621,38 +622,21 @@ public sealed class VrHudGeometryTests
     }
 
     [Fact]
-    public void A_view_at_infinity_shows_a_point_in_the_same_direction_to_both_eyes_and_to_a_moved_head()
+    public void The_flight_block_is_ten_metres_out_and_both_eyes_see_it_at_that_depth()
     {
-        var turn = Quaternion.CreateFromYawPitchRoll(0.3f, -0.1f, 0.05f);
         var proj = VrHudGeometry.SeatProjection(GameProjection);
-        var (tl, _, _, br, _, _) = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default,
+        var (tl, tr, bl, br, _, _) = VrHudGeometry.FlightBlockQuad(VrHudGeometry.FlightBlock.Default,
             VrHudGeometry.CentreGroupBox(Height), Width, Height);
-        var leftEye = VrHudGeometry.SeatView(Eye(turn, -0.032f));
-        var rightEye = VrHudGeometry.SeatView(Eye(turn, 0.032f));
-        var movedHead = VrHudGeometry.SeatView(new VrEyeView(turn, new Vector3(0.2f, -0.1f, 0.3f), -0.9f, 0.85f, 0.9f, -0.95f));
-        foreach (var corner in new[] { tl, br })
-        {
-            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(leftEye), proj, Width, Height, out var l));
-            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(rightEye), proj, Width, Height, out var r));
-            Assert.True(VrHudGeometry.TryProject(corner, VrHudGeometry.AtInfinity(movedHead), proj, Width, Height, out var m));
-            Assert.True(Vector2.Distance(l, r) < 0.01f, $"disparity {l} against {r}");
-            Assert.True(Vector2.Distance(l, m) < 0.01f, $"moved with the head: {l} against {m}");
-            // Control: the same corner through the full seat view has disparity.
-            Assert.True(VrHudGeometry.TryProject(corner, leftEye, proj, Width, Height, out var fl));
-            Assert.True(VrHudGeometry.TryProject(corner, rightEye, proj, Width, Height, out var fr));
-            Assert.True(Vector2.Distance(fl, fr) > 1f, $"no disparity without AtInfinity: {fl} against {fr}");
-        }
-    }
-
-    [Fact]
-    public void A_view_at_infinity_keeps_the_eyes_turn()
-    {
-        var turn = Quaternion.CreateFromYawPitchRoll(0.4f, 0.2f, -0.1f);
-        var view = VrHudGeometry.SeatView(Eye(turn, 0.032f));
-        var atInfinity = VrHudGeometry.AtInfinity(view);
-        Assert.Equal(Vector3.Zero, atInfinity.Translation);
-        var direction = Vector3.Normalize(new Vector3(0.3f, -0.2f, -1f));
-        Near3(Vector3.TransformNormal(direction, view), Vector3.TransformNormal(direction, atInfinity), 1e-5f);
+        foreach (var corner in new[] { tl, tr, bl, br }) Assert.Equal(-10f, corner.Z, 4);
+        // Seen by eyes 64 mm apart, a point's disparity is the IPD over its depth:
+        // a 10 m point's, not a far point's (none) and not the 1 m panel's.
+        var leftEye = VrHudGeometry.SeatView(Eye(Quaternion.Identity, -0.032f));
+        var rightEye = VrHudGeometry.SeatView(Eye(Quaternion.Identity, 0.032f));
+        var centre = (tl + br) / 2f;
+        Assert.True(VrHudGeometry.TryProject(centre, leftEye, proj, Width, Height, out var l));
+        Assert.True(VrHudGeometry.TryProject(centre, rightEye, proj, Width, Height, out var r));
+        float expected = VrHudGeometry.PixelsForAngle(2f * MathF.Atan(0.032f / 10f), proj, Height);
+        Assert.Equal(expected, l.X - r.X, 0);
     }
 
     [Theory]
@@ -821,20 +805,39 @@ public sealed class VrHudGeometryTests
         Near3(corner, p1, 0.05f);
     }
 
-    [Theory]
-    [InlineData(720f)]
-    [InlineData(1080f)]
-    [InlineData(1440f)]
-    public void The_port_text_lines_rise_to_the_middle_in_vr_and_stay_put_in_the_flat_game(float height)
+    // Each character 10 units wide, as a monospaced font measures.
+    private static float Mono(string s) => s.Length * 10f;
+
+    [Fact]
+    public void A_port_text_line_wraps_at_spaces_within_the_width()
     {
-        float flatTop = height - 158f;
-        Assert.Equal(0f, VrHudGeometry.PortTextLift(false, height, flatTop));
-        Assert.Equal(height / 2f, flatTop - VrHudGeometry.PortTextLift(true, height, flatTop), 3);
+        var lines = VrHudGeometry.WrapLine("CARGO: @-1#14x1 @-2#25x20 @-3#25x20", 200f, Mono);
+        Assert.Equal(new[] { "CARGO: @-1#14x1", "@-2#25x20 @-3#25x20" }, lines);
+        foreach (var line in lines) Assert.True(Mono(line) <= 200f, line);
     }
 
     [Fact]
-    public void The_port_text_lines_never_move_down()
+    public void A_line_that_fits_is_one_line_unchanged_with_its_double_spaces()
     {
-        Assert.Equal(0f, VrHudGeometry.PortTextLift(true, 300f, 142f));
+        const string text = "WEAPONS: GROUP  BOOST: OFF  [1:Gun]";
+        Assert.Equal(new[] { text }, VrHudGeometry.WrapLine(text, 1000f, Mono));
+    }
+
+    [Fact]
+    public void A_wrap_keeps_every_word_in_order_and_a_long_word_gets_its_own_line()
+    {
+        const string text = "A  BB CCCCCCCCCCCCCCCCCCCCCCC D";
+        var lines = VrHudGeometry.WrapLine(text, 60f, Mono);
+        Assert.Equal(new[] { "A  BB", "CCCCCCCCCCCCCCCCCCCCCCC", "D" }, lines);
+        Assert.Equal(text.Replace(" ", ""), string.Concat(lines).Replace(" ", ""));
+    }
+
+    [Fact]
+    public void Vr_puts_the_port_text_under_the_chat_pane_and_short_of_the_weapons_pane()
+    {
+        // The chat pane's foot is at about 125 px, the keys hint's at about 146.
+        Assert.InRange(VrHudGeometry.PortTextTopPixels, 146f, 200f);
+        // At 1280 the weapons pane starts at about 882.
+        Assert.InRange(VrHudGeometry.PortTextWrapWidth(1280f) + 20f, 500f, 870f);
     }
 }

@@ -143,24 +143,30 @@ public sealed partial class Game1
     /// block from the same data; a flat frame keeps none.</summary>
     private void KeepVrHudModel(HudModel model) => _vrHudModel = _vrEyesDrawn ? model : null;
 
+    /// <summary>How many times the HUD image's pixels, each way, the flight
+    /// reference image has, so its text and lines stay sharp at 10 m.</summary>
+    private const int VrFlightImageDensity = 2;
+
     /// <summary>The flight reference block (layer 3) drawn into its own image,
-    /// the size of the HUD image: the Classic centre group (gauge ring, speed,
+    /// laid out at the size of the HUD image and drawn at
+    /// <see cref="VrFlightImageDensity"/> times its pixels: the Classic centre group (gauge ring, speed,
     /// own-ship status), drawn by the Classic renderer whatever skin is active,
     /// laid out as in the flat game. Null when the instruments are hidden.</summary>
     private RenderTarget2D? DrawVrFlightImage(GraphicsDevice gd, int width, int height)
     {
         if (_vrHudModel is not { InstrumentsVisible: true } model) return null;
-        if (_vrFlightImage is null || _vrFlightImage.Width != width || _vrFlightImage.Height != height)
+        int pixelWidth = width * VrFlightImageDensity, pixelHeight = height * VrFlightImageDensity;
+        if (_vrFlightImage is null || _vrFlightImage.Width != pixelWidth || _vrFlightImage.Height != pixelHeight)
         {
             _vrFlightImage?.Dispose();
             // Preserve, as the HUD image: an excursion to another target that
             // comes back must not find it cleared.
-            _vrFlightImage = new RenderTarget2D(gd, width, height, false, SurfaceFormat.Color,
+            _vrFlightImage = new RenderTarget2D(gd, pixelWidth, pixelHeight, false, SurfaceFormat.Color,
                 DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
         }
         gd.SetRenderTarget(_vrFlightImage);
         gd.Clear(Color.Transparent);
-        _hudRenderer.DrawFlightReference(model, gd.Viewport);
+        _hudRenderer.DrawFlightReference(model, new Viewport(0, 0, width, height), VrFlightImageDensity);
         return _vrFlightImage;
     }
 
@@ -327,8 +333,9 @@ public sealed partial class Game1
         // The head: midway between the eyes. Markers and arrows are placed from
         // it, so both eyes see one point and its disparity.
         var head = (_vrEyeCameras[0].Eye + _vrEyeCameras[1].Eye) / 2f;
-        // The head's up in the world, for the markers' planes.
-        var headUp = Vector3.Normalize(Matrix.Invert(_vrEyeCameras[0].View).Up + Matrix.Invert(_vrEyeCameras[1].View).Up);
+        // The seat's up in the world, for the markers' planes: a marker stays
+        // upright to the ship and does not roll when the head rolls.
+        var seatUp = VrSeatUpInWorld(frame.Left);
         GatherVrArrows(head, left.Width, left.Height);
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
@@ -342,10 +349,10 @@ public sealed partial class Game1
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
             if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
 
-            // The flight reference block first: it is at infinity, so everything
-            // else in the HUD is nearer and draws over it.
+            // The flight reference block first, 10 m out in the seat: the
+            // reticle, the arrows and the markers draw over it.
             if (flightImage is not null)
-                DrawVrFlightBlock(flightImage, VrHudGeometry.AtInfinity(seatView), VrHudGeometry.SeatProjection(proj));
+                DrawVrFlightBlock(flightImage, seatView, VrHudGeometry.SeatProjection(proj));
 
             // The aim reticle (at infinity, or at the depth of a target under it)
             // and the off-view arrows (on a ring 3 m out) draw over the scene.
@@ -386,7 +393,7 @@ public sealed partial class Game1
                         marker.RadiusMetres);
                     _vrMarkerDepth = Math.Clamp(VrHudGeometry.MarkerTestDepth(anchor, marker.World - eyeWorld, sphere, view, proj),
                         0f, 1f);
-                    var (planeRight, planeUp) = VrHudGeometry.MarkerBillboard(anchorWorld - head, headUp, marker.AngleRadians);
+                    var (planeRight, planeUp) = VrHudGeometry.MarkerBillboard(anchorWorld - head, seatUp, marker.AngleRadians);
                     DrawVrMarker(marker, new VrMarkerPlane(anchor, planeRight, planeUp, view, proj, target.Width, target.Height));
                 }
             }
@@ -428,6 +435,14 @@ public sealed partial class Game1
     private Vector3 VrNoseInWorld(in VrEyeView eye)
     {
         var inEye = Vector3.TransformNormal(Vector3.Forward, VrHudGeometry.SeatView(eye));
+        return Vector3.Normalize(Vector3.TransformNormal(inEye, Matrix.Invert(_vrEyeCameras[0].View)));
+    }
+
+    /// <summary>The seat's up in the world, taken as <see cref="VrNoseInWorld"/>
+    /// takes its forward.</summary>
+    private Vector3 VrSeatUpInWorld(in VrEyeView eye)
+    {
+        var inEye = Vector3.TransformNormal(Vector3.Up, VrHudGeometry.SeatView(eye));
         return Vector3.Normalize(Vector3.TransformNormal(inEye, Matrix.Invert(_vrEyeCameras[0].View)));
     }
 
@@ -538,8 +553,10 @@ public sealed partial class Game1
     /// the flight block.</summary>
     private void DrawVrFlightBlock(Texture2D image, Matrix seatView, Matrix proj)
     {
-        var (tl, tr, bl, br, uv0, uv1) = VrHudGeometry.FlightBlockQuad(VrFlightBlock, VrHudGeometry.CentreGroupBox(image.Height),
-            image.Width, image.Height);
+        // The quad is laid out in the image's layout pixels, not its own.
+        int width = image.Width / VrFlightImageDensity, height = image.Height / VrFlightImageDensity;
+        var (tl, tr, bl, br, uv0, uv1) = VrHudGeometry.FlightBlockQuad(VrFlightBlock, VrHudGeometry.CentreGroupBox(height),
+            width, height);
         DrawVrQuad(image, tl, tr, bl, br, uv0, uv1, seatView, proj);
     }
 

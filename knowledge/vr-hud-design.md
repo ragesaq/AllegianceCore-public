@@ -114,7 +114,7 @@ refocus from the fight. ragesaq accepted it on 2026-11-25.
 
 - One block of readouts in a field of about 30° by 20°, centred a little below the nose, fixed to the ship, drawn at
   infinity with depth testing off. It is the fighter's head-up display: it stays put in the cockpit when the head
-  turns.
+  turns. **Revised 2026-11-26 by ragesaq:** 10 m out instead of at infinity (decision table).
 - Its content is today's central gauges and readouts, laid out again for a smaller field rather than scaled down:
   the flat layout spreads across the whole 1280x720 screen.
 - **Revised 2026-11-26 by ragesaq:** no horizon cues. Space has no horizon, so the pitch ladder, the heading tape and
@@ -188,10 +188,10 @@ service with upstream, not two.
 | Where the HUD is composited | into each eye image | its own composition layer (milestone 2), fixing capture in the capture tool | ragesaq, 2026-11 | 2026-11-25 |
 | Aiming reticle depth | infinity, except that a selected or locked target under the reticle (within 3°, or half its bracket) gives it that target's depth, held between 15 and 100 m and eased over 0.2 s ("your recommendation for the smaller version sounds like a plan to me") | always at infinity (the step 1 build; ragesaq kept it after the first headset test); snapping to the target's distance wherever it is, with a 25 m rest distance (a prompt from another assistant: the reticle shows where the guns point, so an off-axis target must not set its depth, and a 25 m rest brings it back toward the near HUD); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; revised 2026-11-25 | 2026-11-25 |
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
-| Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
+| Information panels | 2 m out, angled like cockpit displays ("1m is a little too close") | one flat sheet (milestone 2); panels fixed to the head; about 1 m (the first choice, 2026-11) | ragesaq, 2026-11; distance revised 2026-11-26 | 2026-11-26 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
-| Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-26 |
+| Flight reference block (layer 3) | accepted, 10 m out in the seat ("the classic hud circular lines shouldnt be drawn to infinity, it feels a little fake that way, maybe closer like 10m") | all non-marker elements on close panels; the block at infinity (built first, 2026-11-25 to 26) | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25); depth revised 2026-11-26 | 2026-11-26 |
 | Horizon cues in VR | none: the pitch ladder, the heading tape (a 360° compass) and the roll pointer are left out of the VR HUD, and Classic's ROLL dial with them; the flight-path marker stays (the block itself is Classic's ring, next row). Follow space-game HUDs (Elite Dangerous, Star Citizen) and stay close to original Allegiance, which has none of these; the flat Jet skin keeps them ("i dont know that a ladder makes a lot of sense in space, we dont have a horizon to worry about, the same with a 360' compass, so we should remove those elements") | Jet's full fighter-jet flight reference at infinity (the first step 2 build) | ragesaq, 2026-11-26 | 2026-11-26 |
 | What the VR HUD is built from | the flight block at infinity is the Classic centre group (the ring gauge, the speed, the own-ship status), drawn by the Classic renderer whatever skin is active; the other skins stay in the game, and each leaves its own centre instruments off its VR panel. ragesaq showed original Allegiance's ring ("i think we can have it be simple like that"), chose "Use Classic's ring", and added "these other UIs can be in i just want to use the classic one" | the Jet skin's speed and throttle tapes as the block (accepted 2026-11-25 and built first in step 2); laying out the whole Classic HUD again for VR | ragesaq, 2026-11-26 (revisits the 2026-11-25 choice of Jet) | 2026-11-26 |
 
@@ -466,7 +466,8 @@ ragesaq's look at the build at `6737eaa` *(Port's working session, 2026-11-26)*,
   little higher and increased in size by 150%". **Cause** *(observed in a dump of the VR panel image, 1280 by 720,
   with a target selected)*: the port's own weapons and cargo text lines (`DrawFlightPartsHud`, `DrawCargoHud`; not
   in native) run across the target pane at the image's foot. **Fix, VR only:** the two lines move up to the image's
-  middle, which VR leaves empty since the centre group went to infinity (`VrHudGeometry.PortTextLift`); the target
+  middle, which VR leaves empty since the centre group went to infinity (`VrHudGeometry.PortTextLift`, replaced
+  in the third look); the target
   preview is drawn 1.5 times its native size with its bottom edge kept, so it also sits higher
   (`HudRenderer.TargetPreviewEnlargement`, `TargetModelPreview.PaneRect`). "Increased by 150%" was read as 1.5
   times the size; the flat game is unchanged.
@@ -476,8 +477,128 @@ ragesaq's look at the build at `6737eaa` *(Port's working session, 2026-11-26)*,
   dial off the panel. A cyan separator still runs through one "NOT READY" weapons row in the panel dump; not
   changed here.
 
+## Step 2 in the headset (2026-11-26, third look)
+
+ragesaq's look at the build at `0314c5e` *(Port's working session, 2026-11-26)*, with its cause and what was done on
+`port/vr-hud-step2`:
+
+- "target boxes look good" and the flight-path marker "is grey, so that part is good".
+- Box sizes: "we need to have a scaling on how big they should be, a maximum and minimum size ... the minimum size im
+  seeing right now is close, lets reduce its size by 30%". **Cause:** sizes already scale with the object's size and
+  distance between a floor of 2° and a cap of 20°, but most objects at fighting range sit at the floor, so most boxes
+  look the same. **Fix:** the floor is 1.4°, 30% less; the cap stays 20° (`VrHudGeometry.BracketFloorRadians`).
+- "the targeting boxes rotate if you rotate your head ... they should stay static". **Cause:** a box's plane was
+  upright to the head, so it rolled with the head. **Fix:** upright to the seat (the ship); it still faces the head,
+  so its edges keep the anchor's depth (`VrSeatUpInWorld`, `VrHudGeometry.MarkerBillboard`).
+- "the weapon and cargo area is kind of overlapping other elements ... like the chat, so this needs to move up
+  higher". **Fix, VR only:** the two lines start under the chat pane and the keys hint, at the panel's left (152 of
+  720 pixels down), and wrap at 65% of its width, short of the weapons pane (`VrHudGeometry.PortTextTopPixels`,
+  `PortTextWrapWidth`, `WrapLine`). The flat game is unchanged.
+- "the classic hud circular lines shouldnt be drawn to infinity, it feels a little fake that way, maybe closer like
+  10m". **Fix:** the flight block is drawn 10 m out in the seat, at the same angle as before. Its quad was already
+  placed 10 m out; the view no longer drops the eye's offset. The decision table row is changed.
+- "the thrust bar isnt animating with thrust amount, just when the afterburner is on". **Cause:** the gauge showed
+  the keyboard throttle (P445), which a joystick throttle axis never moves: the axis goes straight into the controls
+  sent. **Fix:** with a joystick throttle bound and no autopilot, the gauge shows the throttle sent, as native shows
+  the applied controls (`HudThrottle.Gauge`). Keyboard flight and autopilot keep P445's value. This changes the flat
+  game too, on purpose.
+- "the text inside the classic hud circle area is pretty low resolution". **Cause:** the block's image had the HUD
+  image's pixels (1280 by 720), and 40° across 400 of them is 0.1° a pixel, coarser than the headset's eye images.
+  **Fix:** the block's image has twice the pixels each way; it is laid out as before and drawn scaled up, and its
+  text takes the 2x font bakes at half the scale (`HudRenderer.DrawFlightReference` with a density,
+  `NativeFonts.TryDenser`, `HudRenderer.DenseText`). The gauge art is the same bitmaps, sampled finer. The flat
+  game draws at density 1, unchanged.
+- "when missiles launch i see them either at really low framerate or kind of double vision". **Cause** *(derived
+  from `Game1.Rendering.cs`, not measured in the headset)*: a missile was drawn at its last server position, which
+  changes about 20 times a second, so at the headset's frame rate it stood still and jumped; an update that landed
+  between the two eyes' passes put it in two places. **Fix:** a missile is drawn moved on from its last position
+  along the velocity measured between updates, at most 0.1 s, and the second eye uses the first eye's positions
+  (`MissileMotionSmoother`). The exhaust trail follows the same positions. This changes the flat game too.
+
+## Layout criteria for the VR HUD (accepted 2026-11-26)
+
+*(decided 2026-11 by ragesaq: proposed by Port, approved in Port's working session on 2026-11-26 as "Approve,
+new PR": the zones below, built as layer 4 in its own pull request stacked on PR #22.)*
+
+ragesaq's third look at step 2 *(Port's working session, 2026-11-26)*: "a lot of the text is on top of the circle hud,
+we need to have primary hud UI non overlapping. the text chat needs to go above the circle hud. we need a more
+comprehensive UI design criteria that accounts for all of the elements and their position."
+
+**Cause** *(derived from `VrHudGeometry.PanelCorners`, `FlightBlockQuad` and a dump of the panel image; script-free
+arithmetic, not measured in the headset)*: the flight block is centred on the nose and its group reaches 20.6° below
+it (the own-ship status and the speed readout under the ring). The panel is one sheet 1 m out, 25° below the nose,
+whose top edge is 6.9° below the nose. So the panel's top third lands inside the flight block, at 1 m against 10 m:
+
+| Element | Across (az) | Up and down (el) | Overlaps |
+|---|---|---|---|
+| Ring gauge | -11.0° .. 11.0° | -10.8° .. 10.8° | |
+| Own-ship status and speed | -22.7° .. 14.3° | -20.6° .. 12.0° | |
+| Chat pane | -7.6° .. 9.6° | -13.4° .. -8.1° | ring, status |
+| Keys hint (transient) | -12.6° .. 12.6° | -14.2° .. -13.5° | status |
+| Port weapons and cargo lines | -28.5° .. 10.9° | -18.8° .. -13.1° | status, speed |
+| Afterburner and weapon mode | 11.9° .. 17.9° | -15.6° .. -13.6° | status |
+| Weapons pane | 12.0° .. 30.1° | -20.2° .. -14.5° | status |
+| Location | 22.2° .. 26.8° | -9.5° .. -8.8° | |
+| Target pane | -8.1° .. 8.5° | -39.5° .. -31.7° | |
+| Minimap | 16.3° .. 34.5° | -36.1° .. -29.8° | |
+
+### The rules
+
+1. **One owner per place.** The view is divided into zones, and every HUD element belongs to exactly one zone. A
+   zone is a region of directions from the seat (degrees across and up), with its depth.
+2. **No two zones overlap, with a gap of at least 1.5°** between them. The aim and targeting symbols (layers 1 and 2:
+   reticle, flight-path marker, brackets, lock, lead, arrows) are exempt: they sit on their objects in the world.
+3. **No depth conflict.** Two things at different depths never share a direction, because the eyes cannot focus on
+   both: the 10 m flight block and a 1 m panel must not overlap even by a margin.
+4. **Placement by how often it is read.** The flight block keeps the centre. What is read in a fight (target, weapons,
+   energy) sits nearest the centre, below it. What is read now and then (chat, location, map, inventory) sits
+   further out. What is read in a fight stays within 26° across and 40° down; nothing to be read goes beyond 42°,
+   where reading needs a head turn.
+5. **The forward view stays clear** above the ring, except the chat zone ragesaq asked for there.
+6. **Text size floor:** text is at least 0.6° tall where it is read; a zone that cannot fit its text at that size
+   wraps or drops it, never shrinks it.
+7. **Transient messages have a reserved zone** (keys hint, training callouts, warnings), so they never land on
+   another element.
+8. **The flat game keeps its layout.** Zones apply to the VR eye frame only.
+9. **Checked by a test.** The zone table lives in code; a test fails when two zones overlap or when an element's
+   rectangle leaves its zone.
+
+### The zones
+
+Degrees from the seat: across is positive to the right, up is positive above the nose. Each zone's quad is sized so
+1° covers about 20 pixels of the HUD image's layout (1280 by 720), whatever its distance, so the small font's line
+is about 0.64° tall. The panels are 2 m out (ragesaq, 2026-11-26: "i think purple panels should be at 2m, 1m is a
+little too close"), so each quad is twice the size it would be at 1 m.
+
+| Zone | Across | Up and down | Depth | What it holds |
+|---|---|---|---|---|
+| A, flight block | -26° .. 26° | -22° .. 14° | 10 m | the ring gauge, the own-ship status, the speed (as now) |
+| B, comms | -16° .. 16° | 16° .. 30° | 2 m, facing the head | chat history and compose box, vote banner, critical and ordinary tips, warnings, base objectives, "NO X IN SECTOR", the keys hint, training callouts, the skin-switch toast |
+| C, target | -14° .. 14° | -24° .. -40° | 2 m | the target pane with its preview, the port's weapons and cargo lines (wrapped to the zone), the commandee and leader lines, the mouse-stick indicator and its notice |
+| D, navigation | -42° .. -16° | -24° .. -42° | 2 m | the minimap, the location and turret lines, current orders, the lives and kills badges, the camera label, the command ship summary |
+| E, ship systems | 16° .. 42° | -24° .. -42° | 2 m | afterburner and power, weapon mode, mining, time dilation, the weapon status list or the inventory pane (F4) in its place |
+| Modal | centre | centre | 2 m | the expanded starmap (Tab), the death and lifepod overlays, the ripcord countdown, the command bar and command view, the scoreboard: shown alone, and the flight block is hidden while one is open |
+| Tint | whole view | whole view | none | the damage and warp flashes, as a tint over the eye image, not a panel |
+
+Gaps: 2° between A and B, A and C, A and D or E, and between C and D or E. Reading reach: what is read in a
+fight is within 26° across and 40° down (A, C, the inner half of E); what is read now and then may reach 42°.
+
+The aim and targeting symbols are not zoned: the reticle, the flight-path marker, the selection, lock and lead
+markers, the contact brackets and tags, the off-view arrows and the order arrows sit on their objects. The target
+bearing arrow (bottom right of the flat HUD) is redundant with the off-view arrows in VR and is left out.
+
+### How it would be built (layer 4)
+
+The single panel is replaced. In a VR eye frame the HUD pass lays each element out in its zone's own region of the
+HUD image (an anchor per element, taken from the zone table instead of the flat screen), and each zone's region is
+drawn on its own quad at the zone's direction and depth, as the flight block is now. The flat layout stays as it is.
+A geometry test checks the zone table (no overlaps, the gaps, the reach) and each element's rectangle against its
+zone at 1280 by 720.
+
 ## Open questions
 
+- Whether ragesaq accepts the layout criteria and zones above, and where layer 4 builds them. *(Answered
+  2026-11-26: accepted, in its own pull request stacked on PR #22.)*
 - Which skin the VR HUD is built from. *(Answered 2026-11-26 by ragesaq: Classic's ring, decision table.)*
 - Why a replay frame capture (`ALLEGIANCE_BENCHMARK_FRAME` with `--benchmark replay:...`) draws the same HUD
   whatever skin `hud.json` names, though the game reads and saves that file *(observed 2026-11-26)*. Until it is
@@ -507,6 +628,10 @@ ragesaq's look at the build at `6737eaa` *(Port's working session, 2026-11-26)*,
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-26: ragesaq found the panel's text on the ring and asked for layout criteria covering every element;
+  ragesaq accepted Port's zones with the panels at 2 m, to be built as layer 4 in its own pull request.
+- 2026-11-26: ragesaq's third look at step 2 (above): the box floor lowered, boxes upright to the ship, the
+  ring 10 m out and sharper, the port's lines under the chat pane, the thrust gauge and missiles fixed.
 - 2026-11-26: ragesaq's headset look at step 2 (above): the ring kept; the flight-path marker, the targeting
   boxes, the port's text lines and the target preview changed for VR.
 - 2026-11-26: PR #17 merged; ragesaq's headset look at it "looked good".

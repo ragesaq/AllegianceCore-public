@@ -561,26 +561,43 @@ public class HudRenderer
     public const float FlightReferenceSpeedBelowCentre = 195f;
 
     /// <summary>VR: only the centre group's gauges, speed and own-ship status,
-    /// around the viewport's centre, for the VR client to show at infinity. The
-    /// main pass leaves them out while <see cref="HudContext.FlightReferenceInWorld"/>
-    /// is set. Self-contained like <see cref="Draw(HudModel, Viewport)"/>.</summary>
-    public void DrawFlightReference(HudModel model, Viewport viewport)
+    /// around the viewport's centre, for the VR client to show in front of the
+    /// seat. The main pass leaves them out while <see cref="HudContext.FlightReferenceInWorld"/>
+    /// is set. Self-contained like <see cref="Draw(HudModel, Viewport)"/>.
+    /// <paramref name="viewport"/> is the layout's size; with
+    /// <paramref name="density"/> above 1 the target has that many times its
+    /// pixels each way, everything is drawn scaled up to fill it, and text uses
+    /// the denser bake where there is one (<see cref="NativeFonts.TryDenser"/>).</summary>
+    public void DrawFlightReference(HudModel model, Viewport viewport, float density = 1f)
     {
         if (!model.Visible || !model.CentreHudVisible || !model.InstrumentsVisible || model.Telemetry is not { } f) return;
         _viewportWidth = viewport.Width;
         _viewportHeight = viewport.Height;
         Layout.Reset(viewport.Width, viewport.Height);
-        BeginBatch();
+        _density = density;
         try
         {
-            DrawCentreGauges(model, f, viewport, viewport.Height / 2f + FlightReferenceSpeedBelowCentre);
-            DrawOwnStatus(model, viewport);
+            BeginBatch();
+            try
+            {
+                DrawCentreGauges(model, f, viewport, viewport.Height / 2f + FlightReferenceSpeedBelowCentre);
+                DrawOwnStatus(model, viewport);
+            }
+            finally
+            {
+                _sb.End();
+            }
         }
         finally
         {
-            _sb.End();
+            _density = 1f;
         }
     }
+
+    // Pixels per layout pixel in the image being drawn: 1 except inside a
+    // DrawFlightReference with a density.
+    private float _density = 1f;
+    private Matrix? DensityTransform => _density == 1f ? null : Matrix.CreateScale(_density, _density, 1f);
 
     /// <summary>The centre group's gauges and speed readout, inside an
     /// alpha-blended batch (the classic gauges take their own additive pass).</summary>
@@ -596,10 +613,10 @@ public class HudRenderer
             // BlendState.Additive (SrcAlpha/One) would apply alpha twice;
             // native BlendModeAdd SRCALPHA/ONE on straight-alpha == One/One
             // here (engine/RasterD3D9.cpp:295-302).
-            _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne);
+            _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne, transformMatrix: DensityTransform);
             DrawGauges(model, viewport);
             _sb.End();
-            _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, transformMatrix: DensityTransform);
         }
         else if (UsesModernGauges || _gauges is { } mg && mg.AllLoaded)
         {
@@ -663,9 +680,20 @@ public class HudRenderer
     protected virtual void ElementDrawn(params string[] ids) { }
     protected virtual bool UsesModernGauges => false;
     protected virtual bool DeferWarpFlash => false;
-    protected virtual void BeginBatch() => _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+    protected virtual void BeginBatch() =>
+        _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, transformMatrix: DensityTransform);
     protected virtual void RenderText(SpriteFont font, string text, Vector2 position, Color color, float scale)
-        => _sb.DrawString(font, text, position, color, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+    {
+        var (drawn, drawnScale) = DenseText(_nativeFonts, _density, font, scale);
+        _sb.DrawString(drawn, text, position, color, 0, Vector2.Zero, drawnScale, SpriteEffects.None, 0);
+    }
+
+    /// <summary>The font and scale text is drawn with: at a density of 2, a 1×
+    /// bake's 2× bake at half the scale (the same size, twice the glyph
+    /// pixels); otherwise the font as given.</summary>
+    internal static (SpriteFont Font, float Scale) DenseText(NativeFonts? fonts, float density, SpriteFont font, float scale) =>
+        density >= 2f && fonts is { } native && native.TryDenser(font, out var dense)
+            ? (dense, scale / 2f) : (font, scale);
 
     /// <summary>HUD-7 — fit a pane column string to a measured on-screen width by
     /// truncating with an ellipsis (the same binary-search fit as
