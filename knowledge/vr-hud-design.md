@@ -117,6 +117,9 @@ refocus from the fight. ragesaq accepted it on 2026-11-25.
   turns.
 - Its content is today's central gauges and readouts, laid out again for a smaller field rather than scaled down:
   the flat layout spreads across the whole 1280x720 screen.
+- **Revised 2026-11-26 by ragesaq:** no horizon cues. Space has no horizon, so the pitch ladder, the heading tape and
+  the roll pointer are left out; the block is the speed and throttle readouts, in the manner of Elite Dangerous and
+  Star Citizen and of original Allegiance (decision table).
 
 ### Layer 4: cockpit displays
 
@@ -149,12 +152,14 @@ and the two geometry files on `master`)*. Its elements map onto the layers like 
 |---|---|
 | broken gun cross; round flight-path marker | 1, aim at infinity |
 | target designator (corner brackets at 1.05 times the target's radius), missile lock, lead marker, order arrows | 2, at the target's depth |
-| pitch ladder on the sector plane, heading tape, speed and throttle tapes | 3, flight reference at infinity |
+| speed and throttle tapes | 3, flight reference at infinity |
+| pitch ladder on the sector plane, heading tape, roll pointer | not shown in VR (decided 2026-11-26: no horizon in space) |
 | stores block (hull, shield, energy, fuel, ammunition), master caution, console and chat, inventory pane, radar | 4, cockpit displays |
 
 Layer 3 is the part a fighter HUD is built around. In Jet, the pitch ladder is drawn against the sector plane,
 not against the screen. A ladder like that only lines up with the world when it is drawn at infinity, which supports
-layer 3 *(derived)*.
+layer 3 *(derived)*. ragesaq decided on 2026-11-26 that VR shows no horizon cues at all (decision table), so this
+argument no longer applies.
 
 **Build the VR HUD by placing Jet's elements, not by laying out Classic again** *(proposed by Port, accepted by ragesaq 2026-11-25)*. The work becomes a VR
 placement for each Jet element group, chosen by layer. Classic and Modern keep their flat layouts in VR, on one
@@ -182,7 +187,8 @@ service with upstream, not two.
 | Information panels | close (about 1 m), angled like cockpit displays | one flat sheet (milestone 2); panels fixed to the head | ragesaq, 2026-11 | 2026-11-25 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
-| Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
+| Flight reference block at infinity (layer 3) | accepted | all non-marker elements on close panels | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-26 |
+| Horizon cues in VR | none: the pitch ladder, the heading tape (a 360° compass) and the roll pointer are left out of the VR HUD; the block keeps speed and throttle, and the flight-path marker stays. Follow space-game HUDs (Elite Dangerous, Star Citizen) and stay close to original Allegiance, which has none of these; the flat Jet skin keeps them ("i dont know that a ladder makes a lot of sense in space, we dont have a horizon to worry about, the same with a 360' compass, so we should remove those elements") | Jet's full fighter-jet flight reference at infinity (the first step 2 build) | ragesaq, 2026-11-26 | 2026-11-26 |
 | What the VR HUD is built from | the Jet skin's elements, placed by layer; Classic and Modern on one fallback panel | laying out the Classic HUD again for VR | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
 
 ## Disagreements between sources
@@ -329,6 +335,49 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 - Final VR smoke run of the reviewed code in the battle replay under SteamVR: renders at about 6.7 ms a frame, no
   exceptions.
 - Not yet checked in the headset: whether the bracket confusion is gone, and how the reticle's depth change feels.
+  *(Checked: see below.)*
+- Merged in PR #17 (merge commit `de0c1ce`, 2026-11-26).
+
+## The layer 2 follow-up in the headset (2026-11-26)
+
+ragesaq looked at PR #17 in the headset: "i did the PR17 headset review, it looked good" *(ragesaq, Port's working
+session 2026-11-26)*. No problem was reported with the bracket depth, the off-view arrows or the reticle's depth.
+
+## Step 2 as built (branch `port/vr-hud-step2`)
+
+Layers 1 and 3, for the Jet skin only. What it changes, all in the eye images and none of it in a flat frame:
+
+- **The flight reference block is at infinity (layer 3).** With Jet active in a stereo frame, the speed and throttle
+  tapes leave the 1 m panel (`HudContext.FlightReferenceInWorld`). Jet draws them again, once a frame, into their own
+  image the size of the HUD image (`IHudFlightReferenceRenderer.DrawFlightReference`).
+- **No horizon cues.** The heading tape, the pitch ladder (with its `PITCH` readout) and the roll pointer leave the
+  panel too and are not drawn in VR at all (ragesaq, 2026-11-26, decision table). The first build drew them in the
+  block; a VR smoke run showed them there before the decision. The flat Jet skin still draws them. Each eye shows that image on a rectangle 10 m out, placed with
+  the seat view's translation zeroed (`VrHudGeometry.AtInfinity`), so both eyes see the same pixels: no disparity,
+  and no movement when the head moves, which is what infinity looks like. It is fixed to the ship: turning the head
+  looks away from it.
+- **Size and place:** 36° wide by default, so about 20° tall at the image's 16:9, centred on the nose. The tapes sit
+  at the image's edges, so they flank the nose about 16° to each side. For headset tuning, set `ALLEGIANCE_VR_FLIGHT_BLOCK` to "width degrees,pitch down
+  degrees" (for example `36,0`); values outside 10° to 90° or -30° to 45° fall back to the default
+  (`VrHudGeometry.FlightBlock.Parse`).
+- **The flight-path marker is at infinity (layer 1).** A Jet-styled circle (0.6° radius) with wings and a tail, in
+  the reticle's colour, drawn along the ship's velocity in each eye as a direction. It is the space cue that
+  replaces the horizon cues: original Allegiance shows the velocity direction too, and Star Citizen has the same
+  marker. It is drawn with the same gate
+  as the aim reticle and only when the speed rounds to at least 1 m/s (`VrHudGeometry.FlightPathDirection`).
+- **Draw order in each eye:** the flight block first, then the aim reticle, the flight-path marker and the arrows,
+  then the markers with the depth test, then the panel.
+- **Classic and Modern are unchanged in VR:** everything stays on the panel, the spec's fallback. The flat game is
+  unchanged: the flag defaults to false and only the eye passes set it.
+- **Not built:** the crosshair fade under 30 m (layer 1); the stores block and the other layer 4 displays stay on the
+  panel.
+- Tests: `JetVrFlightReferenceTests` (the flat pass draws the flight elements; in VR the main pass leaves them out,
+  and `DrawFlightReference` draws the speed and throttle tapes and no horizon cue; hidden instruments draw nothing;
+  the palette wrapper passes the call on) and `VrHudGeometryTests` (the block's rectangle, `AtInfinity`, `Parse`, the
+  flight-path rule). Each deliberate break of the new code made a test fail.
+- Checked: the flat game with Jet is unchanged, as replay frames 300, 1500, 3600, 6000 and 9000 of `battle.alr`
+  are byte-identical to `master`'s *(observed 2026-11-26, with `hud.jetSkin=on` and the Jet skin selected)*. A
+  60-second VR smoke run of the replay under SteamVR raised no exceptions.
 
 ## Open questions
 
@@ -351,6 +400,10 @@ Stacked on step 1 (PR #15). What it changes, all in the eye images and none of i
 - 2026-11-25: ragesaq accepted the target information split: the marker, lock, lead and short label at the target's
   depth, with an angular floor; the target's details on a close panel.
 - 2026-11-25: ragesaq accepted the spec as it stands, including layer 3 and building on the Jet skin.
+- 2026-11-26: ragesaq decided the VR HUD shows no horizon cues (pitch ladder, heading tape, roll pointer) and
+  follows space-game HUDs and original Allegiance; step 2 was changed to match.
+- 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
+- 2026-11-26: PR #17 merged; ragesaq's headset look at it "looked good".
 - 2026-11-25: Port built the layer 2 follow-up on `port/vr-hud-bracket-depth` (above). ragesaq accepted Port's
   smaller version of a reticle-depth prompt from another assistant: a target under the reticle gives it depth.
 - 2026-11-25: ragesaq tested step 1 in the headset (above): the brackets' depth confused, the boresight was right;

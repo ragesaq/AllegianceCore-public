@@ -505,12 +505,13 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer, IHudFlightReferen
         _resources.PodDeath(model);
     }
 
-    /// <summary>VR: only the flight reference (heading tape, pitch ladder, roll
-    /// pointer, speed and throttle tapes), laid out for the frame's viewport, which
-    /// the VR client shows at infinity. The main pass leaves these out while
-    /// <see cref="HudContext.FlightReferenceInWorld"/> is set, and reads the
-    /// attitude it resolved. The viewport fields <see cref="DrawConsole"/> reads
-    /// are left as the main pass set them.</summary>
+    /// <summary>VR: only the speed and throttle tapes, laid out for the frame's
+    /// viewport, which the VR client shows at infinity. While
+    /// <see cref="HudContext.FlightReferenceInWorld"/> is set the main pass leaves
+    /// out the tapes and the horizon cues (heading tape, pitch ladder, roll pointer),
+    /// and this pass does not draw the horizon cues either: space has no horizon.
+    /// The viewport fields <see cref="DrawConsole"/> reads are left as the main pass
+    /// set them.</summary>
     public void DrawFlightReference(HudModel model, in HudDrawFrame frame)
     {
         if (!model.InstrumentsVisible) return;
@@ -524,14 +525,11 @@ public sealed partial class JetHudRenderer : IHudSkinRenderer, IHudFlightReferen
         _surface.Begin();
         try
         {
-            DrawHeadingTape(w, h, scale);
-            DrawPitchLadder(w, h, scale);
             if (model.Telemetry is { } own)
             {
                 DrawSpeedTape(own.Speed, w, h, scale);
                 DrawThrottleTape(own.Throttle, w, h, scale);
             }
-            DrawRollPointer(w, h, scale);
         }
         finally
         {

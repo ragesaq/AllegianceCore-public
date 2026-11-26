@@ -9,13 +9,16 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Allegiance.ClientCore.MonoGame.Tests.Skins;
 
 /// <summary>VR HUD build step 2 (knowledge/vr-hud-design.md, layer 3): in a
-/// stereo frame the Jet skin's flight reference (heading tape, pitch ladder,
-/// roll pointer, speed and throttle tapes) leaves the main HUD pass, which the
-/// VR client shows on the near panel, and is drawn on its own for the block at
-/// infinity. A flat frame is unchanged.</summary>
+/// stereo frame the Jet skin's speed and throttle tapes leave the main HUD pass,
+/// which the VR client shows on the near panel, and are drawn on their own for
+/// the block at infinity. The horizon cues (heading tape, pitch ladder, roll
+/// pointer, recorded as "hdg" and "ladder") are drawn in neither pass in VR.
+/// A flat frame is unchanged.</summary>
 public sealed class JetVrFlightReferenceTests
 {
     private static readonly string[] FlightElements = { "hdg", "ladder", "spd", "thr" };
+    private static readonly string[] BlockElements = { "spd", "thr" };
+    private static readonly string[] HorizonElements = { "hdg", "ladder" };
     private static readonly HudDrawFrame Screen = new(new Viewport(0, 0, 1920, 1080), null, false);
 
     [Fact]
@@ -45,7 +48,8 @@ public sealed class JetVrFlightReferenceTests
         jet.Draw(model, Screen);
         surface.Clear();
         jet.DrawFlightReference(model, Screen);
-        foreach (var id in FlightElements) Assert.True(surface.Lines(id) > 0, $"{id} missing from the flight block");
+        foreach (var id in BlockElements) Assert.True(surface.Lines(id) > 0, $"{id} missing from the flight block");
+        foreach (var id in HorizonElements) Assert.Equal(0, surface.Lines(id));
         Assert.Equal(1, surface.Begins);
         Assert.Equal(1, surface.Ends);
     }
@@ -78,7 +82,7 @@ public sealed class JetVrFlightReferenceTests
         wrapper.Draw(model, Screen);
         surface.Clear();
         ((IHudFlightReferenceRenderer)wrapper).DrawFlightReference(model, Screen);
-        Assert.True(surface.Lines("ladder") > 0);
+        Assert.True(surface.Lines("spd") > 0);
     }
 
     private static HudModel Model(bool inWorld) =>
