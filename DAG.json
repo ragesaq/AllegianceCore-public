@@ -162,9 +162,9 @@
       "id": "ragesaq-009",
       "title": "VR: draw the sky at infinity in each eye",
       "owner": "ragesaq",
-      "status": "review",
+      "status": "done",
       "needs": [],
-      "next": "In review as PR #11 (https://github.com/ragesaq/AllegianceCore-public/pull/11, branch port/vr-sky-stereo, stacked on port/m2-headset-result, PR #10): NativeSkyPlacement.SkyProjection keeps an off-centre projection's frustum (M31, M32) and takes only the sky's depth range; flat projections keep the old rebuild. Code head 9db16a4 passed the cross-family review, round 1, with no findings (.hyperreview/README.md). Evidence: a failing-first unit test, the MonoGame test project's fast filter failing the same 7 tests before and after on Windows, flat replay frames unchanged, a clean 60 s stereo run (knowledge/vr-client-survey.md). In the headset the starfield, planets and galaxies now converge (ragesaq, 2026-11-25). Next: merge approval after PR #10, then retarget to master and a green build-and-test.",
+      "next": "Done: PR #11 (https://github.com/ragesaq/AllegianceCore-public/pull/11) merged on 2026-11-25 as merge commit 4330ed7, at head 02e52fb, with build-and-test green on that head. NativeSkyPlacement.SkyProjection keeps an off-centre projection's frustum (M31, M32) and takes only the sky's depth range; flat projections keep the old rebuild. Code head 9db16a4 passed the cross-family review, round 1, with no findings (.hyperreview/README.md); the later commits change records only. In the headset the starfield, planets and galaxies converge (ragesaq, 2026-11-25). ragesaq approved the merge in Port's working session (\"Merge #10, then #11\").",
       "links": [
         "knowledge/vr-client-survey.md"
       ],
