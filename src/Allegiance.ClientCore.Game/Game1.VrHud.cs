@@ -23,10 +23,12 @@ public sealed partial class Game1
     /// <summary>One targeting marker: where its object is in the world (absolute
     /// XNA coordinates), how wide it is drawn as an angle, and its short label.
     /// <paramref name="WrapRadians"/> is the object's own wrap angle, not
-    /// capped (0 when only the drawn angle is known): the marker's anchor
-    /// stays in front of the object with it.</summary>
+    /// capped, as seen where the marker was made (0 when unknown), and
+    /// <paramref name="RadiusMetres"/> its world radius when known: the
+    /// marker's anchor stays in front of the object with them
+    /// (<see cref="VrHudGeometry.AnchorAngle"/>).</summary>
     private readonly record struct VrMarker(Vector3 World, float AngleRadians, Color Colour, VrMarkerShape Shape,
-        string? Name, string? Range, float WrapRadians = 0f);
+        string? Name, string? Range, float WrapRadians = 0f, float? RadiusMetres = null);
 
     // The headset sees more than the game camera's 50° frame and the head can
     // turn, so the radar contacts are gathered again for the markers through a
@@ -197,8 +199,7 @@ public sealed partial class Game1
         float distance = ownKnown ? (simPos - ownPos).Length() : 0f;
         string? range = ownKnown ? RadarLabelModel.RangeLineText((int)MathF.Round(distance)) : null;
         _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.15f, VrHudGeometry.BracketCapRadians),
-            sideColour is { } c ? ToColour(c) : VrSelectionColour, VrMarkerShape.Selection, name, range,
-            VrHudGeometry.WrapAngle(radius, distance)));
+            sideColour is { } c ? ToColour(c) : VrSelectionColour, VrMarkerShape.Selection, name, range, RadiusMetres: radius));
     }
 
     private float? TargetWorldRadius(ClientWorld world, AutopilotTarget target) => target.Kind switch
@@ -236,7 +237,7 @@ public sealed partial class Game1
         float distance = TryOwnPose(out var own, out _, out _) ? (position - PoseConverter.ToXna(own)).Length() : 0f;
         _vrMarkers.Add(new VrMarker(position, MathF.Min(VrHudGeometry.BracketAngle(radius, distance) * 1.3f, VrHudGeometry.BracketCapRadians),
             state == MissileLockFeedback.LockState.Full ? VrLockFullColour : VrLockPartialColour, VrMarkerShape.Lock, null, null,
-            VrHudGeometry.WrapAngle(radius, distance)));
+            RadiusMetres: radius));
     }
 
     /// <summary>The cockpit lead marker: the solved lead direction (the flat
@@ -351,8 +352,12 @@ public sealed partial class Game1
     /// <summary>A marker's anchor in the world: on the line from the head to its
     /// object, in front of the object and at most 100 m away
     /// (<see cref="VrHudGeometry.MarkerAnchor"/>).</summary>
-    private static Vector3 VrMarkerAnchor(in VrMarker marker, Vector3 head) =>
-        head + VrHudGeometry.MarkerAnchor(marker.World - head, MathF.Max(marker.AngleRadians, marker.WrapRadians));
+    private static Vector3 VrMarkerAnchor(in VrMarker marker, Vector3 head)
+    {
+        var relative = marker.World - head;
+        return head + VrHudGeometry.MarkerAnchor(relative,
+            VrHudGeometry.AnchorAngle(relative, marker.AngleRadians, marker.WrapRadians, marker.RadiusMetres));
+    }
 
     /// <summary>The boresight's direction in the world: the seat's forward,
     /// taken through the eye's seat view and back out of its world view.</summary>
@@ -372,7 +377,7 @@ public sealed partial class Game1
             foreach (var marker in _vrMarkers)
                 if (marker.Shape is VrMarkerShape.Selection or VrMarkerShape.Lock)
                     target = MathF.Max(target, VrHudGeometry.ReticleInverseDistance(nose, marker.World - head, marker.AngleRadians,
-                        marker.WrapRadians));
+                        marker.WrapRadians, marker.RadiusMetres));
         long now = System.Diagnostics.Stopwatch.GetTimestamp();
         float seconds = _vrReticleStepTicks == 0 ? 0f
             : MathF.Min(0.1f, (float)((now - _vrReticleStepTicks) / (double)System.Diagnostics.Stopwatch.Frequency));

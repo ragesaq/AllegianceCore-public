@@ -434,4 +434,38 @@ public sealed class VrHudGeometryTests
         var point = Vector3.TransformNormal(new Vector3(0.3f * distance, -0.2f * distance, -distance), Matrix.Invert(view));
         Assert.InRange(VrHudGeometry.BufferDepth(point, view, GameProjection), expected - 1e-5f, expected + 1e-5f);
     }
+
+    [Fact]
+    public void A_markers_anchor_uses_its_radius_seen_from_the_head_not_from_the_ships_centre()
+    {
+        // The cockpit eye is 14 m ahead of the ship's centre. A 20 m radius
+        // object 40 m from the ship is 26 m from the head: a wrap angle measured
+        // from the ship would put the anchor inside the hull as the head sees it.
+        const float fromShip = 40f, fromHead = 26f, radius = 20f;
+        var relative = new Vector3(0f, 0f, -fromHead);
+        float drawn = VrHudGeometry.BracketAngle(radius, fromShip);
+        float angle = VrHudGeometry.AnchorAngle(relative, drawn, 0f, radius);
+        float anchor = VrHudGeometry.MarkerAnchor(relative, angle).Length();
+        Assert.True(anchor < fromHead - radius, $"anchor {anchor} m, hull from {fromHead - radius} m");
+        float fromShipWrap = VrHudGeometry.MarkerAnchor(relative, VrHudGeometry.WrapAngle(radius, fromShip)).Length();
+        Assert.True(fromShipWrap > fromHead - radius, "a wrap measured from the ship would be inside the hull");
+
+        // A locked 30 m hull 85 m from the ship, 71 m from the head (the reviewer's case).
+        var locked = new Vector3(0f, 0f, -71f);
+        float lockAngle = VrHudGeometry.AnchorAngle(locked, VrHudGeometry.BracketAngle(15f, 85f), 0f, 15f);
+        Assert.True(VrHudGeometry.MarkerAnchor(locked, lockAngle).Length() < 71f - 15f);
+    }
+
+    [Fact]
+    public void A_large_objects_hull_under_the_reticle_gives_it_depth_though_its_bracket_is_capped()
+    {
+        // 60 m from the head, 50 m radius, centre 25 degrees off the boresight:
+        // the hull is under the reticle, the drawn bracket is capped at 20 degrees.
+        var nose = Vector3.Forward;
+        var off = Vector3.Transform(nose, Matrix.CreateRotationY(MathHelper.ToRadians(25f)));
+        float drawn = VrHudGeometry.BracketAngle(50f, 60f);
+        Assert.Equal(VrHudGeometry.BracketCapRadians, drawn);
+        Assert.True(VrHudGeometry.ReticleInverseDistance(nose, off * 60f, drawn, 0f, 50f) > 0f);
+        Assert.Equal(0f, VrHudGeometry.ReticleInverseDistance(nose, off * 60f, drawn));
+    }
 }

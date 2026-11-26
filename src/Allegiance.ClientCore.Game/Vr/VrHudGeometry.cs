@@ -212,16 +212,28 @@ public static class VrHudGeometry
     /// frame. A target off the boresight, or behind, gives none (0). Otherwise
     /// the reticle takes the target's marker anchor
     /// (<see cref="MarkerAnchor"/>), held between 15 and 100 m.</summary>
-    public static float ReticleInverseDistance(Vector3 nose, Vector3 relative, float bracketRadians, float wrapRadians = 0f)
+    public static float ReticleInverseDistance(Vector3 nose, Vector3 relative, float bracketRadians, float wrapRadians = 0f,
+        float? radiusMetres = null)
     {
         float distance = relative.Length();
         if (!(distance > 1e-4f) || nose.LengthSquared() < 1e-8f) return 0f;
         float cosOff = Vector3.Dot(Vector3.Normalize(nose), relative / distance);
-        float cone = MathF.Max(ReticleConeRadians, bracketRadians / 2f);
+        float angle = AnchorAngle(relative, bracketRadians, wrapRadians, radiusMetres);
+        float cone = MathF.Max(ReticleConeRadians, angle / 2f);
         if (cosOff < MathF.Cos(cone)) return 0f;
-        float depth = MarkerAnchor(relative, MathF.Max(bracketRadians, wrapRadians), ReticleFarthestMetres).Length();
+        float depth = MarkerAnchor(relative, angle, ReticleFarthestMetres).Length();
         return 1f / Math.Clamp(depth, ReticleNearestMetres, ReticleFarthestMetres);
     }
+
+    /// <summary>The angle a marker's anchor is set from: the widest of the drawn
+    /// bracket, a wrap angle measured where the marker was made, and the wrap of
+    /// <paramref name="radiusMetres"/> measured along <paramref name="relative"/>
+    /// itself. Pass the radius whenever it is known: the head (the cockpit eye
+    /// is 14 m ahead of the ship's centre) sees a near object wider than the
+    /// ship's centre does, and a wrap measured from the ship would put the
+    /// anchor inside the hull.</summary>
+    public static float AnchorAngle(Vector3 relative, float bracketRadians, float wrapRadians, float? radiusMetres) =>
+        MathF.Max(MathF.Max(bracketRadians, wrapRadians), WrapAngle(radiusMetres, relative.Length()));
 
     /// <summary>How fast the reticle's depth follows its target: an
     /// exponential approach with this time constant, in seconds.</summary>

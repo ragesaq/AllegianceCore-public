@@ -4,6 +4,26 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #17 VR HUD bracket depth, round 2
+
+- Record: [summary](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/summary.md), [receipt](patch-review-2026-11-26T03-00-00Z-allegiancecore-vr-hud-bracket-depth-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `47133cb..e2825d5`, head `e2825d5`, tree `c9fe1ba`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. F2 closed. Findings:
+  1. High (N1, round 1 F1 still open): the selection and lock measured their wrap angle from the ship's centre and the
+     anchor applied it from the head, which the cockpit camera puts 14 m ahead. A target dead ahead inside about
+     300 m was still anchored inside its hull (a 30 m hull locked 85 m away: 1.8 m inside), and the round 1 test used
+     one vector for both, so it could not see it. Accepted and fixed: the selection and lock carry the object's world
+     radius, and `VrHudGeometry.AnchorAngle` measures its wrap along the head-relative vector the anchor uses. New
+     test at that seam, with the reviewer's numbers (40 m from the ship, 26 m from the head, 20 m radius; and the
+     locked 30 m hull); it fails when the radius term is dropped.
+  - F2 wording: the note now says the probe bounds any difference between the sprite path's and the scene's depth to
+    the probe's window, not that they are equal, and that the contacts it lands on vary from run to run.
+  - Observations taken: the reticle's cone now uses the same anchor angle, so a large object's hull under the reticle
+    gives it depth even when its bracket is capped (new test); the contact anchor's limit near very close asteroids
+    (the radar caps the screen radius) is recorded in the note.
+
 ## 2026-11-25: PR #17 VR HUD bracket depth, round 1
 
 - Record: [summary](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/summary.md), [receipt](patch-review-2026-11-26T02-30-00Z-allegiancecore-vr-hud-bracket-depth-r1/receipt.md)
@@ -15,7 +35,7 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
   reticle's boresight, easing and reset. Findings:
   1. High (F1): a bracket capped at 20 degrees was anchored from the capped angle, so near a large object (an Outpost
      inside about 1.7 km, a 30 m ship locked inside about 85 m) the anchor fell inside the hull and the depth test hid
-     the marker. Accepted and fixed: each marker carries its object's uncapped wrap angle
+     the marker. Accepted; this first fix was incomplete (round 2, N1): each marker carries its object's uncapped wrap angle
      (`VrHudGeometry.WrapAngle`, `WrapAngleFromScreenRadius`), and the anchor and the reticle's depth use it; the drawn
      size and the reticle cone keep the cap. New test with the reviewer's capped case (40 m away, 20 m radius); it fails
      when the wrap is capped again.
