@@ -13,8 +13,8 @@ public enum JoystickRole { Yaw, Pitch, Roll, Throttle }
 /// drive. Native's <c>buttonCommandMap</c> binds joystick buttons to TK commands
 /// (<c>trekinput.cpp:675-730</c>): TK_FireWeapon (55), TK_FireMissile (56),
 /// TK_FireBooster, the four side thrusters TK_ThrustLeft/Right/Up/Down, TK_Ripcord
-/// and TK_DropChaff. <see cref="Ripcord"/> and <see cref="DropChaff"/> act once per
-/// press, like their keys; the others are held.
+/// and TK_DropChaff. Of these flight commands, <see cref="Ripcord"/> and
+/// <see cref="DropChaff"/> act once per press, like their keys; the others are held.
 /// <para>The commands from <see cref="Target"/> on are named exactly like the key
 /// actions they press (<c>InputActionCatalog</c>), act once per press like those keys,
 /// and are read through <see cref="JoystickKeyActions"/>.</para></summary>

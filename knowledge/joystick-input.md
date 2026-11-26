@@ -172,7 +172,7 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   shows a hint (`Flight/RipcordKey.cs` `RequestFor`, `Game1.FlightInput.cs` TK_Ripcord block). The joystick
   button feeds the same press detection, so it behaves the same *(observed in the code)*. On entering flight every
   joystick button is disarmed, so a button held through launch acts only after it is released once *(review round
-  2, finding N1)*.
+  2, finding N1)*. Undocking from the hangar disarms them the same way *(review round 3, finding R3-1)*.
 - A profile can bind any command to an axis past a threshold (`axisCommands` in `joystick.json`), and the commands
   now include the four side thrusters, ripcord and chaff.
 - Targeting goes on the throttle grip *(decided 2026-11 by ragesaq, in Port's working session 2026-11-25: "i want
@@ -205,7 +205,8 @@ departs from the proposal above *(observed in the code and its tests, `JoystickB
   press through the same press detection as its key, so a joystick press and the key behave the same
   (`Game1.TargetCommands.cs` `RemainderTargetEdgeDown`, `Game1.Targeting.cs` `TargetEdgeDown`, and the
   TargetNothing, TargetCenter and autopilot checks in `Game1.FlightInput.cs`) *(observed in the code)*. A test
-  checks every such command is a catalog action the game dispatches.
+  checks every such command is a catalog action the game dispatches. A joystick targeting press respects the
+  same action filter a training lesson puts on the keys *(review round 3)*.
 - A desktop app that shows which physical control is which button on both devices, and rebinds them, is a later
   goal *(ragesaq, Port's working session 2026-11-25: "an app is a future goal, for now we should just map out
   some bindings")*. ragesaq's HOTAS is on a sim rig with no monitor, viewed through VR, which is why the app

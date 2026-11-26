@@ -4,6 +4,28 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 3
+
+- Record: [summary](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/summary.md), [receipt](patch-review-2026-11-26T00-30-00Z-allegiancecore-hotas-bindings-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `a25c734..8e225d2`, head `8e225d2`, tree `4136c7e`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 2's N1 is fixed. New, all low, all fixed after round 3:
+  1. R3-1: only the launch from the ready screen disarmed the joystick, not an undock from the hangar, so a
+     button held through the undock could ripcord, drop chaff or toggle autopilot on the first flight frame. The
+     first frame after a docked one now disarms the joystick and drops the frame already resolved for that update.
+     Test `DisarmThenResolveAgain_SameSamples_DropsTheHeldButton` covers the resolver half; the call site is read
+     only.
+  2. R3-2: two comment defects (a doc comment attached to the wrong member, and "the others are held" read as
+     covering the targeting commands). Both corrected.
+  3. R3-3: the parity row's list of bindable commands was stale. It now names the targeting commands and says the
+     5-way switches are bound as buttons.
+  - Observations acted on: a joystick targeting press now respects the action filter a training lesson sets on the
+    keys (the reviewer noted the autopilot button bypassed it); the held-mask test checks each value's bit instead
+    of the count; the flight-commands test also covers `DropChaff` and `FireMissile`.
+  - Left as is: the autopilot key's cloak-key reservation in training concerns the native G key, not a joystick
+    button.
+
 ## 2026-11-25: PR #14 joystick bindings for a split HOTAS, round 2
 
 - Record: [summary](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/summary.md), [receipt](patch-review-2026-11-25T23-40-00Z-allegiancecore-hotas-bindings-r2/receipt.md)

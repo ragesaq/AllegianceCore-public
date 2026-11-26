@@ -31,7 +31,20 @@ namespace Allegiance.ClientCore.MonoGame;
 /// </summary>
 public sealed partial class Game1
 {
+    /// <summary>A joystick button bound to the key action <paramref name="action"/> is held in
+    /// this flight frame (<see cref="_targetJoystickFrame"/>, set before the targeting keys run),
+    /// and the action is not filtered out, as a training lesson does for its keys.</summary>
+    private bool JoystickHoldsAction(string action)
+        => _targetJoystickFrame.HoldsAction(action)
+            && Rendering.KeyBindingStore.Instance.Map.ActionFilter?.Invoke(action) != false;
 
+    /// <summary>Every joystick button counts again only after it is seen released, and the
+    /// frame cached for this update is dropped so the next read already sees that.</summary>
+    private void DisarmJoystick()
+    {
+        _joystickBindings?.Disarm();
+        _joystickFrameTicks = -1;
+    }
 
     /// <summary>
     /// The bound joystick input for this update: every connected joystick is
@@ -41,10 +54,6 @@ public sealed partial class Game1
     /// the keyboard-only flight path is then untouched. Hot-plug is picked up on the
     /// next update because the device list is re-read each time.
     /// </summary>
-    /// <summary>A joystick button bound to the key action <paramref name="action"/> is held in
-    /// this flight frame (<see cref="_targetJoystickFrame"/>, set before the targeting keys run).</summary>
-    private bool JoystickHoldsAction(string action) => _targetJoystickFrame.HoldsAction(action);
-
     private JoystickBindingFrame CurrentJoystickFrame(GameTime gameTime)
     {
         long ticks = gameTime.TotalGameTime.Ticks;
@@ -881,7 +890,7 @@ public sealed partial class Game1
         _lKeyWasDown                = ActionDown(ks, "Ripcord");
         // Joystick buttons held through launch count only after a release, which
         // primes the joystick halves of the latches above without a stale frame.
-        _joystickBindings?.Disarm();
+        DisarmJoystick();
         _nKeyWasDown                = ActionDown(ks, "DropMine");
         _gfireKeyWasDown            = ActionDown(ks, "ToggleGroupFire");
         _prevWKeyWasDown            = ActionDown(ks, "PrevWeapon");
@@ -1496,7 +1505,15 @@ public sealed partial class Game1
             // The space scene is not heard from the hangar: stop every space ambient
             // loop (they are otherwise only updated by the flight path skipped here).
             SilenceWorldAmbientLoops();
+            _joystickDockedLastFrame = true;
             return;
+        }
+        // Undocking keeps the Flying state, so the launch prime above never runs: a
+        // joystick button held through the undock acts only after a release.
+        if (_joystickDockedLastFrame)
+        {
+            _joystickDockedLastFrame = false;
+            DisarmJoystick();
         }
 
 

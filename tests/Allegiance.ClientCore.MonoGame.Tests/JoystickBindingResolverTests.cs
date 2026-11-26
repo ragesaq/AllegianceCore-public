@@ -463,7 +463,7 @@ public class JoystickBindingResolverTests
 
     [Fact]
     public void Commands_FitTheHeldMask()
-        => Assert.True(Enum.GetValues<JoystickCommand>().Length <= 31);
+        => Assert.All(Enum.GetValues<JoystickCommand>(), c => Assert.InRange((int)c, 0, 31));
 
     [Fact]
     public void KeyActionCommands_AreCatalogActionsTheGameDispatches()
@@ -484,6 +484,8 @@ public class JoystickBindingResolverTests
     {
         Assert.False(JoystickKeyActions.TryGet("Fire", out _));
         Assert.False(JoystickKeyActions.TryGet("Ripcord", out _));
+        Assert.False(JoystickKeyActions.TryGet("DropChaff", out _));
+        Assert.False(JoystickKeyActions.TryGet("FireMissile", out _));
         Assert.True(JoystickKeyActions.TryGet("TargetCenter", out var c));
         Assert.Equal(JoystickCommand.TargetCenter, c);
     }
@@ -511,6 +513,19 @@ public class JoystickBindingResolverTests
         Assert.True(f.HoldsAction(action));
         Assert.True(JoystickKeyActions.TryGet(action, out var command));
         Assert.Equal(1 << (int)command, f.HeldMask);
+    }
+
+    // Review r3 R3-1: undocking disarms and drops the frame already resolved for that
+    // update, so the same samples resolved again no longer hold the button.
+    [Fact]
+    public void DisarmThenResolveAgain_SameSamples_DropsTheHeldButton()
+    {
+        var r = new JoystickBindingResolver();
+        r.Resolve([StickAt(0), ThrottleAt(1)]);
+        Assert.True(r.Resolve([StickAt(0, pressed: [5]), ThrottleAt(1, pressed: [20])]).Ripcord);
+        r.Disarm();
+        var again = r.Resolve([StickAt(0, pressed: [5]), ThrottleAt(1, pressed: [20])]);
+        Assert.Equal(0, again.HeldMask);
     }
 
     [Fact]
