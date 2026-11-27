@@ -4,6 +4,27 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-27: PR #23 VR HUD layer 4 (the zones), round 6
+
+- Record: [summary](patch-review-2026-11-27T08-40-00Z-allegiancecore-vr-hud-zones-r6/summary.md), [receipt](patch-review-2026-11-27T08-40-00Z-allegiancecore-vr-hud-zones-r6/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2fac59a..94b4b3a` (the sharper target pane and the round 5 fixes), head `94b4b3a`, tree
+  `dbfe898`, in a standalone clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`,
+  explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 5's findings are fixed, and the pane leaves the HUD image in exactly the
+  frames that draw it from its own image.
+  1. Low (the notices stay above the pane's place in every VR eye frame, also when the HUD is one panel, with no
+     cut-outs): confirmed, recorded as a known gap, not changed. In that fallback (another skin, or an image size
+     the zones do not hold) and with no target, the mouse-stick indicator and the leader and commandee lines sit
+     part way up the panel instead of at its foot. The head was in ragesaq's headset when the finding came in, so
+     the fix, gating the placement on the frame being zoned, waits for his look rather than moving the head under it.
+  2. Low (the tests pin the helpers, not the game's wiring of the pane-apart flag, the dense image and the
+     density transform): agreed. The note's evidence now says that wiring is read and probed in a VR run, not
+     tested.
+  3. Low, note (the dense image's cost, and that `PreserveContents` is not needed): no action; the flight block's
+     image is made the same way.
+- Only records changed, so there is no round 7.
+
 ## 2026-11-27: PR #23 VR HUD layer 4 (the zones), round 5
 
 - Record: [summary](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/summary.md), [receipt](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/receipt.md)

@@ -1,0 +1,40 @@
+# Patch review: VR HUD zones, round 6 (delta)
+
+- Head `94b4b3adda0abeb62c72d19a476febb1bdef7795`, tree `dbfe8986e7d6b54351b4f25773b998ebbeb07d73` (`git write-tree`). Change `2fac59aa..94b4b3ad`, one commit; standalone clone detached at `port/vr-hud-zones` (PR #23, stacked on #22 at `601a46ae`). The tree matched and the worktree held nothing but this review's artifact directory.
+- Reviewer: DeepSeek family, `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection; matrix 4.14.0 (sha256 `74618f22...c8a63267`). Cross-family; author seat Port (Claude Opus 5.5). Route source: the target's `AGENTS.md`, "Cross-family review route".
+- Verdict: **PASS-WITH-CONDITIONS**. Round 5's F1 and F2 are fixed; the split between "pane leaves the HUD image" and "pane is drawn from its own image" is consistent in every frame I traced. Two low findings (one behavior/record, one test evidence) and one low cost note.
+
+## Findings
+
+### F1, low: the VR notice placement also applies where no cut-out exists
+
+`HudRenderer.NoticesAbovePane` (`Rendering/HudRenderer.cs:572`) is `TargetPaneVisible || FlightReferenceInWorld`, and the four call sites use its result (`:387`, `:393`, `:520`, `:529`). In a zoned VR frame that is right. But `FlightReferenceInWorld` is true in every VR eye frame, including the single-panel fallback: a Classic image size outside the zone range (1920 by 1080, the note's own known gap) or any Modern frame, whose `Draw` calls this same Classic base (`Rendering/ModernHudRenderer.cs:111-123`). No cut-out exists there, and the pane is not drawn apart, yet with no target the mouse-stick indicator, its sensitivity caption and any leader/commandee line move from the foot to about `TopY - 90` / `- 140`, mid-panel. Concrete: Classic in VR at 1920 by 1080, mouse flight, no target selected; the joystick circle and caption move from the image foot to roughly 60 percent height. The flat game is genuinely unchanged: `TargetPaneVisible` already requires `TargetPane` present (`Rendering/HudModel.cs:404`), so both arms equal the old expression.
+
+Fix: carry the game's `VrHudZoned` result into the model/context and gate the VR branch on it, or record the wider behavior in `knowledge/vr-hud-design.md`'s known gaps. The record's wording, "a VR eye frame keeps them there", is accurate but does not say it also moves in panel frames.
+
+### F2, low (test evidence): the tests pin the helpers, not the wiring or the draw
+
+All 14 cases exercise pure functions. `VrTargetPaneImageTests.cs:20-29` checks `TargetPaneOnMainPass`; `:46-57` restates the density-2 UV formula (it would catch a dropped inset but copies the expression); `:65-81` is the only independent check, that the target cut-out holds the enlarged preview and meets the notices; `:84-94` checks `NoticesAbovePane` alone. Nothing pins that the game sets `TargetPaneApart` from exactly the predicate compose uses (`Game1.Rendering.cs:3385`), that the dense image reaches `DrawVrZones` (`Game1.VrHud.cs:399`, `:673`), or that the density transform reaches the sprite batch (`HudRenderer.cs:632-661`, `:2790-2801`). A later edit to one side of that wiring would leave every new test green while the pane was drawn twice (HUD cut-out plus dense image) or not at all. The author's local probe covers one frame, not this class. Fix: record in the evidence that the wiring is read and probed, not tested; a seam test is only worth it if the HUD recording harness can build a model without a device.
+
+### F3, low (note, no action): the dense target's cost
+
+`Game1.VrHud.cs:202-207` allocates a second image at twice the HUD image's pixels, with `Depth24Stencil8` and `RenderTargetUsage.PreserveContents`, cleared every frame. At the accepted zone sizes (at most about 1552 by 760) that is roughly 19 MB colour plus a like depth, one clear and about 90 sprite draws per stereo frame: fine. `PreserveContents` is unnecessary (the target is never re-bound inside the draw); `DiscardContents` would do, as it would for the flight image.
+
+## What the change gets right
+
+- Frame consistency. `TargetPaneApart` is set before `ActiveHud.Draw` from `_vrEyesDrawn && VrHudZoned(model)` (`Game1.Rendering.cs:3385`), and compose asks `VrHudZoned(_vrHudModel)` (`Game1.VrHud.cs:397`). Both see the same model snapshot (`KeepVrHudModel`), the same HUD image (bound and cleared in `EndVrScenePasses`, recreated in `VrHudImage`), and the same cached layout (`VrZonesFit`, keyed by size). Compose only runs when the eyes were drawn. A modal screen, another skin or an image the zones do not hold makes both false, so the pane stays in the image; Modern's own flag stays false because only the Classic instance is set; leaving VR is a flat pass that sets it false; a frame that skips the HUD pass leaves `_vrHudModel` null, so compose draws no pane and no flight block (`Game1.VrHud.cs:473`). No frame doubles or loses the pane.
+- `DrawTargetPaneImage` (`HudRenderer.cs:632`). It sets the layout viewport, resets `Layout`, sets `_targetPreviewEnlargement` (1.5), sets `_density`, and begins through `BeginBatch`, which takes `DensityTransform`. Every sprite `Begin` in the pane path takes the transform too (the oval-art hook; the flight block's gauges already passed it inline at `:672`). `DrawPaneTexture` and `DrawTargetModelPreview` keep layout-space rectangles, scaled by the transform; text measures with the same `HudFont` pair it draws with, and `DenseText` swaps the documented exactly-double 2x bake at half scale. `TargetModelPreview` and `TargetPaneSlide` come from the same model and frame, and the pane path consults no `Layout` reservation, so skipping `PrepareLayout` changes nothing.
+- The dense quad. `SourceUv` keeps the half-texel inset and maps the same layout rectangle at density 2; the dense quad uses the same corners as the HUD cut-out and is drawn after it, both premultiplied `AlphaBlend`, so the composite matches the old pane-in-the-HUD-image path (premultiplied blending is associative); at density 1 the transform is null and the flat game is the old path.
+- F1. `TargetPaneTopPixels` is `min(floor(TopY), PaneRect(..., 1.5).Top)` (`Vr/VrHudZones.cs:194`). `PaneRect` grows the preview upward about its centre column, so its x range stays inside the 300 s cut-out; at 534, 720 and 760 px high the preview top is about 8 to 11 px above the name line, and the notices cut-out ends exactly at the target cut-out's top.
+- F2. The four lines at `TopY - 70/-96/-90/-140` sit inside `paneTop..paneTextTop` at the accepted edges, because the margin is `max(144, 144 s)` and the tightest case (760 high) still leaves the mouse-stick caption about 22 px above the split. The flat game is unchanged.
+- Records. The zone table, cut-out table, known gaps and the fifth-look section match the code: the preview top, the dense image, the softened bitmaps and preview, and the ordinary tips grown with C. `DAG.json` and the round-5 entry say review round 6 is next.
+
+## Verified by execution versus by reading
+
+- Executed (read-only): `git write-tree` (matched), `git status` (only this artifact directory), `git log`/`show`/`diff`/`ls-files --eol`, `git grep`, `git diff --check`, publish guard `601a46ae HEAD` (OK, 7 commits), `tools/check_data_boundary.py` (OK), and a path/address scan of the changed files (no machine paths, host names or private addresses).
+- By reading: all cited source, test and note lines; the edge geometry recomputed from the pure formulas at 534, 720 and 760 px high, not by running the game.
+- Limits: no `dotnet` build, no test run, no HUD image and no headset. The author's 0-warning build, 300 tests, 31 caught mutants and the 45 s probe are accepted as reported and not reproduced. The residual risks are the untested wiring (F2) and the panel-frame notice placement (F1).
+
+## Next action
+
+Record or gate the panel-frame notice placement, and record that the pane-apart wiring is read and probed rather than tested. Then ragesaq's headset look at this head decides whether the pane's text is sharp enough.

@@ -695,7 +695,9 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
     twice the pixels over the same rectangle, half a texel of that image inside it (`VrTargetPaneImageTests`, with
     the round 5 checks: zone C holds the enlarged preview and the notices end where it begins, at five sizes, and VR
     keeps the notices above the pane's place without a target; 14 cases, run with the zone, geometry, centre-group,
-    dense-text and pane paint-order tests: 300 of 300).
+    dense-text and pane paint-order tests: 300 of 300). These test the helpers. The game's wiring (the pane-apart
+    flag set from the same test the compose step uses, the pane's image reaching zone C, the density transform
+    reaching the sprite batch) is read and was seen working in a VR run, but no test covers it *(review round 6)*.
 - The zone and geometry tests: 241 of 241, after the fourth look. The whole suite: 8 failures, in shader hashes, the voice catalog,
   the mouse wheel, profile storage and the screenshot path, none in the VR HUD code; the same 8 as before
   layer 4.
@@ -730,6 +732,9 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
   The joined systems cut-outs end at the minimap's top, y 486 at 1280 by 720 and y 355 at 1280 by 534. So with
   about seven or more systems at 720 px high, or four or more at 534, the lower rows are not shown in zone E
   *(review round 4, read from `HudRenderer.DrawWeaponStatusList` with a 17 px line, not seen in a capture)*.
+- In a VR eye frame the leader, commandee and mouse-stick lines stay above the pane's place even when the HUD is
+  one panel (another skin, or an image size the zones do not hold), so with no target they sit part way up that
+  panel, not at its foot *(review round 6)*. Gating this on the frame being zoned would fix it.
 - The ordinary tips at the foot of the image are cut out with the target zone, not with comms, so zone C grows them
   with the pane, about two times the size of the other HUD lines, and from the HUD image's pixels, softer than the
   pane's text. They are drawn below the pane's art *(review round 5)*.
@@ -816,6 +821,8 @@ ragesaq's notes at `2fac59a`, and what the same branch changed:
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-27: review round 6 of layer 4 (PASS-WITH-CONDITIONS): round 5's findings fixed; the notices' place in
+  VR's one-panel fallback and the untested wiring are recorded as known gaps (`.hyperreview/README.md`).
 - 2026-11-27: review round 5 of layer 4 (WARN): zone C's cut-out now starts at the top of the enlarged preview, and
   a VR eye frame keeps the notices above the pane's place without a target (`.hyperreview/README.md`).
 - 2026-11-27: ragesaq's fifth headset look (layer 4): the target pane is drawn at twice the pixels for zone C
