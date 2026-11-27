@@ -4,6 +4,32 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-27: PR #23 VR HUD layer 4 (the zones), round 5
+
+- Record: [summary](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/summary.md), [receipt](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `c82dea6..2fac59a` (ragesaq's fourth headset look), head `2fac59a`, tree `e43ea39`, in a
+  standalone clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection,
+  matrix 4.14.0.
+- Verdict: WARN. Port checked each finding against the code before acting.
+  1. Medium (the target cut-out starts at the pane's name line, but VR draws the model preview 1.5 times its size,
+     grown upward, so its top rows fell in the notices' cut-out in zone B): confirmed and fixed. The cut-out now
+     starts at the higher of the two (`VrHudZones.TargetPaneTopPixels`). A test checks at five sizes, the range's
+     edges among them, that the target cut-out holds the enlarged preview's rectangle and that the notices' cut-out
+     ends where it begins; a mutant that drops the preview's top fails it.
+  2. Medium (without a target pane the leader, commandee and mouse-stick lines are drawn at the image's foot, inside
+     the grown target cut-out): confirmed and fixed. In a VR eye frame they now keep their place above the pane's,
+     with or without a target (`HudRenderer.NoticesAbovePane`), so the notices' cut-out holds them; the flat game
+     is unchanged. Tests check both frames; a mutant that drops the VR case fails them.
+  3. Low (the ordinary tips at the foot are cut out with the pane and now grown with it, and the zone table put them
+     in zone B): the record is corrected, the layout kept. They are drawn below the pane's art, so they do not cover
+     it; the note's known gap now says zone C grows them about two times. The text ragesaq saw on the pane at the
+     fourth look was the port's weapons and cargo lines, which the HUD image dump placed 0.2° from it, not the tips.
+  4. Low (record: the systems cut-out's top is the notices' top, not the target cut-out's; an evidence line still put
+     the port lines in zone C): corrected in the note and the code comment.
+- The fixes change the game's code, with the sharper target pane from ragesaq's fifth headset look in the same
+  commit; round 6 reviews them.
+
 ## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 4
 
 - Record: [summary](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/summary.md), [receipt](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/receipt.md)

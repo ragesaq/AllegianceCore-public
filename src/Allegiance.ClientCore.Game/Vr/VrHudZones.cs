@@ -144,7 +144,7 @@ public static class VrHudZones
         // and "NO X IN SECTOR" (0.40 of the height, the top centre strip); the
         // port's text lines, which VR draws in the image's lower left.
         float s = Rendering.TargetPaneLayout.Scale(w, h);
-        int paneTextTop = (int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h));
+        int paneTextTop = TargetPaneTopPixels(w, h);
         int paneTop = (int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h) - TargetMarginPixels(s));
         int paneHalf = (int)MathF.Ceiling(150f * s);
         list.Add(new Cutout("target notices", ZoneId.Comms, 0,
@@ -175,7 +175,8 @@ public static class VrHudZones
         // to 220), the weapon status list or the inventory (F4) in its place.
         // It starts no further right than the weapon status list, so a narrow
         // image, where that would meet the comms strip, gets no zones. Below
-        // the target cut-out's top it starts right of that cut-out.
+        // the notices' cut-out's top it starts right of the notices and the
+        // target cut-out.
         int systemsLeft = Math.Min(cx + CommsHalfWidthPixels + 2, WeaponListLeft(w));
         int systemsSplit = paneTop - 2;
         list.Add(new Cutout("systems", ZoneId.Systems, 0,
@@ -184,6 +185,18 @@ public static class VrHudZones
         list.Add(new Cutout("systems low", ZoneId.Systems, 1,
             new Rectangle(lowLeft, systemsSplit, w - lowLeft, minimap.Top - 4 - systemsSplit)));
         return list;
+    }
+
+    /// <summary>The top row of what the target pane draws in a VR eye frame:
+    /// its name line (<see cref="Rendering.TargetPaneLayout.TopY"/>), or the top
+    /// of its model preview, drawn there <see cref="Rendering.HudRenderer.VrTargetPreviewEnlargement"/>
+    /// times its native size and grown upward, if that is higher.</summary>
+    public static int TargetPaneTopPixels(int w, int h)
+    {
+        float s = Rendering.TargetPaneLayout.Scale(w, h);
+        var preview = Rendering.TargetModelPreview.PaneRect(Rendering.TargetPaneLayout.OriginX(w, h),
+            Rendering.TargetPaneLayout.OriginY(w, h), s, Rendering.HudRenderer.VrTargetPreviewEnlargement);
+        return Math.Min((int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h)), preview.Top);
     }
 
     /// <summary>How far above the target pane's top its cut-out starts: the
@@ -345,6 +358,19 @@ public static class VrHudZones
     {
         float az = MathHelper.ToRadians(azimuthDegrees), el = MathHelper.ToRadians(elevationDegrees);
         return new Vector3(MathF.Sin(az) * MathF.Cos(el), MathF.Sin(el), -MathF.Cos(az) * MathF.Cos(el));
+    }
+
+    /// <summary>The texture coordinates of a cut-out's <paramref name="source"/>
+    /// rectangle (in the HUD image's layout pixels, <paramref name="width"/> by
+    /// <paramref name="height"/>) in an image of that layout drawn at
+    /// <paramref name="density"/> times its pixels each way: its top-left and
+    /// bottom-right corners, half a texel of that image in from each edge, so the
+    /// linear filter does not pick up the neighbouring element's pixels.</summary>
+    public static (Vector2 Uv0, Vector2 Uv1) SourceUv(Rectangle source, int width, int height, int density = 1)
+    {
+        float w = width * density, h = height * density;
+        return (new Vector2((source.Left * density + 0.5f) / w, (source.Top * density + 0.5f) / h),
+            new Vector2((source.Right * density - 0.5f) / w, (source.Bottom * density - 0.5f) / h));
     }
 
     /// <summary>A quad in seat space that shows <paramref name="rect"/> at
