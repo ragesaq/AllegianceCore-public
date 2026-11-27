@@ -620,7 +620,7 @@ The cut-outs, for a HUD image of width w and height h (pixels from the top left)
 | location | D | 200 px at the top right, from 30 to 106 | location and turret lines |
 | orders and badges | D | 330 px at the top left, from 24 to 196 | current orders, lives and kills badges |
 | camera | D | the foot's left 160 px | the camera label |
-| systems | E | from the comms strip's right edge, or the weapon status list's left edge if that is further left, from 120 down to the target cut-out's top | afterburner and power, weapon mode, mining, time dilation, the weapon status list |
+| systems | E | from the comms strip's right edge, or the weapon status list's left edge if that is further left, from 120 down to the target cut-out's top | afterburner and power, weapon mode, mining, time dilation, the weapon status list down to the minimap's top (see the known gaps) |
 | systems low | E | right of the target cut-out, down to the minimap's top | the rest of the weapons pane, or the inventory (F4) |
 
 A zone lays out its cut-outs in rows, pushed toward the flight block: comms down, the target zone up and centred,
@@ -644,8 +644,8 @@ for the image's size (`VrHudZones.ClassicLayout`): every cut-out lies in the ima
 scales its 14 px line under 0.6°. When the check fails, the whole HUD image is shown on one panel below the nose, as
 for another skin, and the game logs the reason once for that size (`[vr] HUD zones do not hold`). The default window,
 1280 by 720, gets zones. The check passes from 534 to 760 px high, and from 1275 px across up to between 1486 and
-1552 px (the limit grows with the height). Below 1275 px the systems cut-out, which starts no further right than
-the weapon status list so as not to cut it off, meets the comms strip. Above the limit the systems zone would
+1552 px (the limit grows with the height: 1486 px at 534 and 600 high, 1534 at 720, 1552 at 760). Below 1275 px the systems cut-out, which starts no further right than
+the weapon status list so as not to cut off its left side, meets the comms strip. Above the limit the systems zone would
 shrink its text. Under 534 px high comms meets the cut-outs below it, and over 760 px comms would shrink its
 text.
 
@@ -671,17 +671,21 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
   - At 1280 by 720 nothing is scaled.
   - The two systems parts join.
   - A zone too small for its content scales it to fit.
-  - `ClassicLayout` gives zones at the range's edges: 1275 by 720, 1280 by 534, 1280 by 760, 1440 by 740. It
-    refuses 1600 by 900, 1920 by 1080, 2560 by 1440, 1280 by 761 and 1280 by 768 for the text floor. It refuses
+  - `ClassicLayout` gives zones at the range's edges: 1275 by 720, 1280 by 534, 1280 by 760, 1440 by 740,
+    1486 by 534, 1534 by 720 and 1552 by 760. It refuses 1487 by 534, 1535 by 720, 1553 by 760, 1600 by 900,
+    1920 by 1080, 2560 by 1440, 1280 by 761 and 1280 by 768 for the text floor. It refuses
     800 by 480, 640 by 360, 1274 by 720 and 1280 by 533 for overlapping cut-outs, and 400 by 300 for a cut-out off
     the image.
   - Of 100 sizes from 640 by 360 to 1920 by 1080, the zones are used for exactly the 12 from 1280 to 1440 px
     across and 534 to 720 px high. Wherever they are used, no two cut-outs share pixels and a 14 px line keeps
     0.6°.
   - The afterburner, power, weapon mode, mining and time dilation lines, placed through the HUD's text layout with
-    its reserved boxes, land in the systems cut-out.
-  - The systems cut-out starts no further right than the weapon status list, or the zones are refused.
-- The zone and geometry tests: 237 of 237. The whole suite: 8 failures, in shader hashes, the voice catalog,
+    its reserved boxes, land in the systems cut-out. The test reserves only the two boxes next to the lines, the
+    chat pane's slot and the 320 by 120 box; the layout's other reservations are not modelled.
+  - The systems cut-out starts no further right than the weapon status list, or the zones are refused. No test
+    checks the list's height.
+  - There is no "status" cut-out (round 2's, withdrawn).
+- The zone and geometry tests: 237 of 237, with the round 4 pins. The whole suite: 8 failures, in shader hashes, the voice catalog,
   the mouse wheel, profile storage and the screenshot path, none in the VR HUD code; the same 8 as before
   layer 4.
 - 16 mutants of the zone code and the text layout, each caught by a test. Three remove one check of
@@ -702,6 +706,10 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
 - In the flat game too, the weapon status list's panel is drawn after the power, weapon mode, mining and time
   dilation lines that the text layout moves into its area, and its rows overlap them *(review round 3, read from
   the draw order, not seen in a capture)*. The systems cut-out shows that as it is.
+- The weapon status list's panel starts at y 150 and grows by three lines, about 51 px, for each mounted system.
+  The joined systems cut-outs end at the minimap's top, y 486 at 1280 by 720 and y 355 at 1280 by 534. So with
+  about seven or more systems at 720 px high, or four or more at 534, the lower rows are not shown in zone E
+  *(review round 4, read from `HudRenderer.DrawWeaponStatusList` with a 17 px line, not seen in a capture)*.
 - The ordinary tips at the foot of the image are cut out with the target zone, not with comms.
 - The objectives' bearing arrows fall in the systems cut-out.
 - A vote banner or critical tip wider than 480 px is clipped at the strip's edges.
@@ -746,6 +754,8 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-26: review round 4 of layer 4 (PASS-WITH-CONDITIONS): the upper width edge and the status cut-out's
+  removal are pinned by tests, and the note says how far down the weapon status list is shown (above).
 - 2026-11-26: review round 3 of layer 4 (WARN): round 2's finding was wrong, as the text layout moves those lines
   into the systems cut-out; the status cut-out is withdrawn, and the systems cut-out keeps the weapon status
   list whole (above).

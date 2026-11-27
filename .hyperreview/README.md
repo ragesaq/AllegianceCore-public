@@ -4,6 +4,32 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 4
+
+- Record: [summary](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/summary.md), [receipt](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `dafc2b3..dadc030`, head `dadc030`, tree `3e978b9`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 3's findings are resolved.
+  1. Low (the weapon status list is said to be kept whole, but only its left edge is checked): the claim is
+     corrected. The panel grows by three lines for each mounted system, and the systems cut-outs end at the
+     minimap's top, so with about seven or more systems at 720 px high, or four or more at 534, its lower rows are
+     not shown in zone E. The note gives this as a known gap, and the test is renamed to what it checks
+     (`The_systems_cutout_starts_no_further_right_than_the_weapon_status_list_or_the_zones_are_refused`). Moving
+     the minimap or the list is a layout change for ragesaq's headset look, not this fix.
+  2. Low (the upper width edge was not pinned, although round 3's entry said each edge was): fixed. A probe of
+     `ClassicLayout` found the widest accepted images: 1486 px at 534 high, 1534 at 720, 1552 at 760. The test now
+     accepts each and refuses one pixel wider for the floor. A mutant that lowers the floor to 0.595° makes
+     1487 by 534 get zones, and the new refusal fails.
+  3. Low (the layout test copies two reservations instead of calling `PrepareLayout`): answered, not changed. The
+     reviewer's re-implementation and the committed capture put the lines within 2 px of the test's boxes, and an
+     extracted seam would change `HudRenderer`, which the flat game shares. The note now says which reservations
+     the test models.
+  4. Note (no test pins the status cut-out's withdrawal): fixed, the zone table test asserts there is no
+     "status" cut-out.
+- The fixes change only tests and records, not the game's code. Port reviewed them inline (`hyperreview-reflex`:
+  no escalation trigger for test and record changes), so there is no round 5.
+
 ## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 3
 
 - Record: [summary](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/summary.md), [receipt](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/receipt.md)

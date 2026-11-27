@@ -162,6 +162,9 @@ public sealed class VrHudZonesTests
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["camera"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems low"]);
+        // Review round 3: the five status lines are in the systems cut-out, so
+        // a cut-out of their own at their nominal place would be empty.
+        Assert.DoesNotContain("status", byName.Keys);
     }
 
     [Fact]
@@ -287,9 +290,16 @@ public sealed class VrHudZonesTests
         Assert.Equal(new[] { "1280x534", "1280x600", "1280x680", "1280x720", "1366x534", "1366x600", "1366x680", "1366x720",
             "1440x534", "1440x600", "1440x680", "1440x720" }, used);
         // The edges: 1275 px across (the systems cut-out, kept left of the
-        // weapon status list, meets comms below it) and 534 to 760 px high.
-        foreach (var (w, h) in new[] { (1275, 720), (1280, 760), (1440, 740) })
+        // weapon status list, meets comms below it), 534 to 760 px high, and
+        // the widest image whose systems zone keeps the text floor, which
+        // grows with the height.
+        foreach (var (w, h) in new[] { (1275, 720), (1280, 760), (1440, 740), (1486, 534), (1534, 720), (1552, 760) })
             Assert.True(VrHudZones.ClassicLayout(w, h, out var reason) is not null, $"{w}x{h}: {reason}");
+        foreach (var (w, h) in new[] { (1487, 534), (1535, 720), (1553, 760) })
+        {
+            Assert.Null(VrHudZones.ClassicLayout(w, h, out var wide));
+            Assert.Contains("floor", wide);
+        }
         Assert.Null(VrHudZones.ClassicLayout(1274, 720, out var narrow));
         Assert.Contains("share pixels", narrow);
         Assert.Null(VrHudZones.ClassicLayout(1280, 533, out var low));
@@ -330,7 +340,7 @@ public sealed class VrHudZonesTests
     [InlineData(1366, 720)]
     [InlineData(1440, 740)]
     [InlineData(1180, 720)]
-    public void The_systems_cutout_holds_the_weapon_status_list_or_the_zones_are_refused(int width, int height)
+    public void The_systems_cutout_starts_no_further_right_than_the_weapon_status_list_or_the_zones_are_refused(int width, int height)
     {
         // The flat game draws the list's panel from here at 1280 across.
         Assert.Equal(1280 - 380 - 18, VrHudZones.WeaponListLeft(1280));
