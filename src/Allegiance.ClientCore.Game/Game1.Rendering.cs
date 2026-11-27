@@ -3382,6 +3382,7 @@ public sealed partial class Game1
             missionCountdown: _session.World.Mission is { } clockMission
                 && Rendering.MissionClock.IsCountdownGame(clockMission.GameLengthSeconds),
             buffers: _hudSnapshotBuffers);
+        _hudRenderer.TargetPaneApart = _vrEyesDrawn && VrHudZoned(model);
         ActiveHud.Draw(model, new(GraphicsDevice.Viewport, _hudTargetModelPreview, _hudSettings.SelectionBracketOn));
         KeepVrHudModel(model);
         DrawTargetNoMatchFeedback();

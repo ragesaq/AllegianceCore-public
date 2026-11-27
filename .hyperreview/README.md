@@ -4,6 +4,151 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-27: PR #23 VR HUD layer 4 (the zones), round 6
+
+- Record: [summary](patch-review-2026-11-27T08-40-00Z-allegiancecore-vr-hud-zones-r6/summary.md), [receipt](patch-review-2026-11-27T08-40-00Z-allegiancecore-vr-hud-zones-r6/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `2fac59a..94b4b3a` (the sharper target pane and the round 5 fixes), head `94b4b3a`, tree
+  `dbfe898`, in a standalone clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`,
+  explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 5's findings are fixed, and the pane leaves the HUD image in exactly the
+  frames that draw it from its own image.
+  1. Low (the notices stay above the pane's place in every VR eye frame, also when the HUD is one panel, with no
+     cut-outs): confirmed, recorded as a known gap, not changed. In that fallback (another skin, or an image size
+     the zones do not hold) and with no target, the mouse-stick indicator and the leader and commandee lines sit
+     part way up the panel instead of at its foot. The head was in ragesaq's headset when the finding came in, so
+     the fix, gating the placement on the frame being zoned, waits for his look rather than moving the head under it.
+  2. Low (the tests pin the helpers, not the game's wiring of the pane-apart flag, the dense image and the
+     density transform): agreed. The note's evidence now says that wiring is read and probed in a VR run, not
+     tested.
+  3. Low, note (the dense image's cost, and that `PreserveContents` is not needed): no action; the flight block's
+     image is made the same way.
+- Only records changed, so there is no round 7.
+
+## 2026-11-27: PR #23 VR HUD layer 4 (the zones), round 5
+
+- Record: [summary](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/summary.md), [receipt](patch-review-2026-11-27T08-00-00Z-allegiancecore-vr-hud-zones-r5/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `c82dea6..2fac59a` (ragesaq's fourth headset look), head `2fac59a`, tree `e43ea39`, in a
+  standalone clone with no remote. Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection,
+  matrix 4.14.0.
+- Verdict: WARN. Port checked each finding against the code before acting.
+  1. Medium (the target cut-out starts at the pane's name line, but VR draws the model preview 1.5 times its size,
+     grown upward, so its top rows fell in the notices' cut-out in zone B): confirmed and fixed. The cut-out now
+     starts at the higher of the two (`VrHudZones.TargetPaneTopPixels`). A test checks at five sizes, the range's
+     edges among them, that the target cut-out holds the enlarged preview's rectangle and that the notices' cut-out
+     ends where it begins; a mutant that drops the preview's top fails it.
+  2. Medium (without a target pane the leader, commandee and mouse-stick lines are drawn at the image's foot, inside
+     the grown target cut-out): confirmed and fixed. In a VR eye frame they now keep their place above the pane's,
+     with or without a target (`HudRenderer.NoticesAbovePane`), so the notices' cut-out holds them; the flat game
+     is unchanged. Tests check both frames; a mutant that drops the VR case fails them.
+  3. Low (the ordinary tips at the foot are cut out with the pane and now grown with it, and the zone table put them
+     in zone B): the record is corrected, the layout kept. They are drawn below the pane's art, so they do not cover
+     it; the note's known gap now says zone C grows them about two times. The text ragesaq saw on the pane at the
+     fourth look was the port's weapons and cargo lines, which the HUD image dump placed 0.2° from it, not the tips.
+  4. Low (record: the systems cut-out's top is the notices' top, not the target cut-out's; an evidence line still put
+     the port lines in zone C): corrected in the note and the code comment.
+- The fixes change the game's code, with the sharper target pane from ragesaq's fifth headset look in the same
+  commit; round 6 reviews them.
+
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 4
+
+- Record: [summary](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/summary.md), [receipt](patch-review-2026-11-27T01-00-00Z-allegiancecore-vr-hud-zones-r4/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `dafc2b3..dadc030`, head `dadc030`, tree `3e978b9`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: PASS-WITH-CONDITIONS. Round 3's findings are resolved.
+  1. Low (the weapon status list is said to be kept whole, but only its left edge is checked): the claim is
+     corrected. The panel grows by three lines for each mounted system, and the systems cut-outs end at the
+     minimap's top, so with about seven or more systems at 720 px high, or four or more at 534, its lower rows are
+     not shown in zone E. The note gives this as a known gap, and the test is renamed to what it checks
+     (`The_systems_cutout_starts_no_further_right_than_the_weapon_status_list_or_the_zones_are_refused`). Moving
+     the minimap or the list is a layout change for ragesaq's headset look, not this fix.
+  2. Low (the upper width edge was not pinned, although round 3's entry said each edge was): fixed. A probe of
+     `ClassicLayout` found the widest accepted images: 1486 px at 534 high, 1534 at 720, 1552 at 760. The test now
+     accepts each and refuses one pixel wider for the floor. A mutant that lowers the floor to 0.595° makes
+     1487 by 534 get zones, and the new refusal fails.
+  3. Low (the layout test copies two reservations instead of calling `PrepareLayout`): answered, not changed. The
+     reviewer's re-implementation and the committed capture put the lines within 2 px of the test's boxes, and an
+     extracted seam would change `HudRenderer`, which the flat game shares. The note now says which reservations
+     the test models.
+  4. Note (no test pins the status cut-out's withdrawal): fixed, the zone table test asserts there is no
+     "status" cut-out.
+- The fixes change only tests and records, not the game's code. Port reviewed them inline (`hyperreview-reflex`:
+  no escalation trigger for test and record changes), so there is no round 5.
+
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 3
+
+- Record: [summary](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/summary.md), [receipt](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `b4ba3d0..dafc2b3`, head `dafc2b3`, tree `0cab8c5`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN.
+  1. Round 2's N1, not resolved: its premise was wrong. The afterburner, power, weapon mode, mining and time
+     dilation lines are placed through the HUD's text layout, which keeps a 320 by 120 px box for them at the top
+     and then moves them out of it, to about y 130 to 220, inside the systems cut-out. Port checked this against
+     `HudTextLayout.Place` and the committed capture `docs/reports/P1075_assets/desktop-afterburner-classic.png`
+     (the lines at y 134 to 179). The round 2 change is withdrawn: the "status" cut-out showed an empty box and cost
+     zone E width. The comment at the systems cut-out says where the lines really are. A new test places the five
+     lines through `HudTextLayout` with the reserved boxes and asserts they land in the systems cut-out; a mutant
+     that lets the layout ignore its reserved boxes fails it. The reviewer's other suggestion, drawing the lines as
+     fixed anchors, is not taken: it would change the flat game.
+  2. Round 2's N2: resolved.
+  3. New, low (on images under 1280 px across the systems cut-out cut off the weapon status list's left edge):
+     fixed. The systems cut-out starts no further right than the list (`VrHudZones.WeaponListLeft`); where that
+     meets the comms strip, under 1275 px across, the zones are refused. Tested at four sizes.
+  4. New, low (the systems join test ran at no small height): fixed, it also runs at 1280 by 534.
+  5. Record note (the lowest accepted height): the note now gives the range's edges, 534 to 760 px high and
+     1275 px across up to about 1490 to 1550, each pinned by a test.
+  - Noted, outside the change: in the flat game the weapon status list's panel is drawn over the lines the text
+    layout moves into its area. Recorded as a known gap in the note.
+- The fixes change code, so they are re-reviewed in round 4.
+
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 2
+
+- Record: [summary](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/summary.md), [receipt](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `13614bf..b4ba3d0`, head `b4ba3d0`, tree `d81443d`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. Round 1's five findings resolved. Two new findings:
+  1. N1, medium (the afterburner and power, weapon mode, mining and time dilation lines, drawn at the image's top
+     right of the chat pane, were in no cut-out, so VR did not show them; the code comment and the note said the
+     systems cut-out held them): fixed. A "status" cut-out, 158 px centred where the Classic HUD draws those
+     lines (`VrHudZones.StatusLines`), is shown in the systems zone beside the systems cut-out. The zone has no
+     height to spare to put it above. The comment and the note's cut-out table are corrected. Tests: the status
+     cut-out holds the lines' rectangle, and its centre matches the HUD's own formula. The narrowest widths now
+     refuse the zones, because the status cut-out meets the location box there: of the sizes tried, zones are
+     used from 1200 to 1366 px across.
+  2. N2, low, tests (the sweep could not fail on a size it refused, and the note's range was untested): fixed.
+     A test asserts the exact list of sweep sizes that get zones, and the sizes just outside the range; the
+     sweep's name no longer claims more than it checks.
+- The fixes change code, so they are re-reviewed in round 3.
+
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 1
+
+- Record: [summary](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/summary.md), [receipt](patch-review-2026-11-26T23-30-00Z-allegiancecore-vr-hud-zones-r1/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Patch review of `601a46a..13614bf`, head `13614bf`, tree `c89b94f`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN. The 1280 by 720 image was sound; the defects were in other image sizes and the modal list.
+  1. F1, high (for an image larger than 1280 by 720 the zones shrank their text under the 0.6° floor, against
+     rule 6): fixed. `VrHudZones.ClassicLayout` gives the zones only when no zone scales its 14 px line under
+     0.6°; otherwise the whole image goes on one panel, and the game logs why. Making the HUD image a fixed
+     1280 by 720 in VR, the reviewer's other suggestion, was not taken: the HUD reads the back buffer's size in
+     18 places. Zones for every size need cut-outs from each element's drawn rectangle; the note records it as
+     a known gap.
+  2. F2, medium (for a smaller image the cut-outs overlapped, so an element showed in two zones): fixed by the
+     same check, which also refuses a cut-out that overlaps another or leaves the image.
+  3. F3, medium (the game-state pane, the player pings and the spectator's sector map were cut into zones):
+     fixed, with a fourth the review did not list, the investment pane, which also opens in flight full screen.
+     The suggested test of the modal list is declined: it would list the same flags as the code, and the flags
+     are `Game1` state that no pure function holds.
+  4. F4, low (the placement log named the fallback panel while the zones or the modal panel were drawn): fixed.
+     The log names the surface drawn.
+  5. F5, low, record: fixed. The note says which sizes get zones and why, and gives the mutant count: 14, each
+     caught (the record of the first run said 10 of 11, and the one left had since got its own test).
+- The fixes change code, so they are re-reviewed in round 2.
+
 ## 2026-11-26: PR #22 VR HUD step 2, round 4
 
 - Record: [summary](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/summary.md), [receipt](patch-review-2026-11-26T22-30-00Z-allegiancecore-vr-hud-step2-r4/receipt.md)

@@ -36,8 +36,13 @@ public sealed partial class Game1
     private const float VrRadarHalfWidthDegrees = 75f;
     private const float VrRadarHalfHeightDegrees = 70f;
 
+    // The whole HUD image on one panel, for a skin without zones (Modern,
+    // Jet): below the nose, 2 m out, unless ALLEGIANCE_VR_HUD_PANEL says
+    // otherwise for headset tuning.
     private static readonly VrHudGeometry.Panel VrPanel =
-        VrHudGeometry.Panel.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_HUD_PANEL"));
+        string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_HUD_PANEL"))
+            ? VrHudZones.FallbackPanel
+            : VrHudGeometry.Panel.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_HUD_PANEL"));
     private static readonly VrHudGeometry.FlightBlock VrFlightBlock =
         VrHudGeometry.FlightBlock.Parse(Environment.GetEnvironmentVariable("ALLEGIANCE_VR_FLIGHT_BLOCK"));
 
@@ -52,9 +57,19 @@ public sealed partial class Game1
     private static readonly Color VrReticleColour = new(120, 255, 140);
 
     private RenderTarget2D? _vrHudImage;
+    // Layer 4: each Classic cut-out's quad in seat space and its texture
+    // coordinates, for the HUD image size they were laid out for.
+    private readonly List<(Vector3 Tl, Vector3 Tr, Vector3 Bl, Vector3 Br, Vector2 Uv0, Vector2 Uv1)> _vrZoneQuads = new();
+    private (int Width, int Height) _vrZoneImageSize;
+    // Whether the zones hold the layout of an image that size.
+    private bool _vrZonesFit;
     // The flight reference block (layer 3) and the HUD model of the stereo
     // frame it is drawn from; the flight-path marker's world direction (layer 1).
     private RenderTarget2D? _vrFlightImage;
+    // The target pane alone at VrTargetImageDensity, for zone C.
+    private RenderTarget2D? _vrTargetImage;
+    // Zone C's quad, and where the pane's cut-out is in the dense image.
+    private (Vector3 Tl, Vector3 Tr, Vector3 Bl, Vector3 Br, Vector2 Uv0, Vector2 Uv1)? _vrTargetQuad;
     private HudModel? _vrHudModel;
     private Vector3? _vrFlightPath;
     private Texture2D? _vrPixel;
@@ -108,7 +123,7 @@ public sealed partial class Game1
         _vrAimReticle = indicators && _cameraMode == CameraMode.Cockpit;
         // The flight-path marker follows the flat velocity marker's gate: the
         // cockpit, and a rounded source speed that is not zero.
-        _vrFlightPath = _vrAimReticle && TrySourcePose(out _, out _, out var velocity)
+        _vrFlightPath = _vrAimReticle && VrFlightPathVelocity(out var velocity)
             ? VrHudGeometry.FlightPathDirection(PoseConverter.ToXna(velocity)) : null;
 
         if (flight)
@@ -169,6 +184,41 @@ public sealed partial class Game1
         _hudRenderer.DrawFlightReference(model, new Viewport(0, 0, width, height), VrFlightImageDensity);
         return _vrFlightImage;
     }
+
+    /// <summary>How many times the HUD image's pixels, each way, the target
+    /// pane's image has: zone C grows the pane up to <see cref="VrHudZones.TargetMaxScale"/>
+    /// times, so its text keeps a pixel per eye pixel.</summary>
+    private const int VrTargetImageDensity = 2;
+
+    /// <summary>The target pane drawn into its own image, laid out at the size of
+    /// the HUD image and drawn at <see cref="VrTargetImageDensity"/> times its
+    /// pixels, for zone C; the main HUD pass leaves it out
+    /// (<see cref="Rendering.HudRenderer.TargetPaneApart"/>). Null when no pane
+    /// is shown.</summary>
+    private RenderTarget2D? DrawVrTargetImage(GraphicsDevice gd, int width, int height)
+    {
+        if (_vrHudModel is not { } model || !model.TargetPaneVisible || model.Context.TargetPane is not { Present: true })
+            return null;
+        int pixelWidth = width * VrTargetImageDensity, pixelHeight = height * VrTargetImageDensity;
+        if (_vrTargetImage is null || _vrTargetImage.Width != pixelWidth || _vrTargetImage.Height != pixelHeight)
+        {
+            _vrTargetImage?.Dispose();
+            _vrTargetImage = new RenderTarget2D(gd, pixelWidth, pixelHeight, false, SurfaceFormat.Color,
+                DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+        }
+        gd.SetRenderTarget(_vrTargetImage);
+        gd.Clear(Color.Transparent);
+        _hudRenderer.DrawTargetPaneImage(model, new Viewport(0, 0, width, height), VrTargetImageDensity);
+        return _vrTargetImage;
+    }
+
+    /// <summary>Whether this frame shows Classic in its zones: no modal screen,
+    /// the Classic skin, and a HUD image whose layout the zones hold. The HUD pass
+    /// and <see cref="ComposeVrHud"/> both ask, so the pane leaves the HUD image
+    /// exactly when zone C draws it apart.</summary>
+    private bool VrHudZoned(HudModel? model) =>
+        !VrHudModalOpen(model) && _hudSkins?.Active.Definition.Id == Rendering.Skins.HudSkinIds.Classic
+        && _vrHudImage is { } zoneImage && VrZonesFit(zoneImage);
 
     private bool OwnShipInFlight()
     {
@@ -339,7 +389,14 @@ public sealed partial class Game1
         GatherVrArrows(head, left.Width, left.Height);
         var nose = VrNoseInWorld(frame.Left);
         StepVrReticleDepth(nose, head);
-        var flightImage = _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
+        // Layer 4: a modal screen is shown alone on one panel ahead, with the
+        // flight block hidden; otherwise Classic's elements go to their zones
+        // when they hold this image's layout, and the HUD image of another skin,
+        // or of a size the zones do not hold, hangs on one panel below the nose.
+        bool modal = VrHudModalOpen(_vrHudModel);
+        bool zoned = VrHudZoned(_vrHudModel);
+        var flightImage = !modal && _vrHudImage is { } hudSize ? DrawVrFlightImage(gd, hudSize.Width, hudSize.Height) : null;
+        var targetImage = zoned && _vrHudImage is { } paneSize ? DrawVrTargetImage(gd, paneSize.Width, paneSize.Height) : null;
         for (int pass = 0; pass < 2; pass++)
         {
             var target = pass == 0 ? left : right;
@@ -347,7 +404,8 @@ public sealed partial class Game1
             gd.SetRenderTarget(target);
             var seatView = VrHudGeometry.SeatView(eye);
             var (view, proj, eyeWorld) = _vrEyeCameras[pass];
-            if (pass == 0 && !_vrHudLogged) LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage);
+            if (pass == 0 && !_vrHudLogged)
+                LogVrHudPlacement(eye, seatView, proj, target, _vrHudImage, zoned, modal ? VrHudZones.ModalPanel : VrPanel);
 
             // The flight reference block first, 10 m out in the seat: the
             // reticle, the arrows and the markers draw over it.
@@ -403,8 +461,12 @@ public sealed partial class Game1
                 _vrMarkerDepth = 0f;
             }
 
-            // The panel last: at 1 m it is nearer than every marker.
-            if (_vrHudImage is { } hud) DrawVrPanel(hud, VrPanel, seatView, VrHudGeometry.SeatProjection(proj));
+            // The zones or the panel last: at 2 m they are nearer than the markers.
+            if (_vrHudImage is { } hud)
+            {
+                if (zoned) DrawVrZones(hud, targetImage, seatView, VrHudGeometry.SeatProjection(proj));
+                else DrawVrPanel(hud, modal ? VrHudZones.ModalPanel : VrPanel, seatView, VrHudGeometry.SeatProjection(proj));
+            }
         }
 
         // Each frame keeps its own model; one that skips the HUD pass draws no block.
@@ -519,21 +581,25 @@ public sealed partial class Game1
     /// <summary>One line on the first stereo frame: where the head looks in seat
     /// space and where the panel's centre falls in the left eye, so a log shows
     /// whether the panel was in view (a headset not worn points anywhere).</summary>
-    private void LogVrHudPlacement(in VrEyeView eye, Matrix seatView, Matrix proj, RenderTarget2D target, RenderTarget2D? hud)
+    private void LogVrHudPlacement(in VrEyeView eye, Matrix seatView, Matrix proj, RenderTarget2D target, RenderTarget2D? hud,
+        bool zoned, in VrHudGeometry.Panel panel)
     {
         _vrHudLogged = true;
         var look = Vector3.Transform(Vector3.Forward, Quaternion.Normalize(eye.Orientation));
-        string panel = "no HUD image";
-        if (hud is not null)
+        string surface;
+        if (hud is null) surface = "no HUD image";
+        else if (zoned) surface = $"HUD in its zones, {_vrZoneQuads.Count} cut-outs";
+        else
         {
-            var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(VrPanel, hud.Width, hud.Height);
+            var (tl, tr, bl, br) = VrHudGeometry.PanelCorners(panel, hud.Width, hud.Height);
             var centre = (tl + tr + bl + br) / 4f;
-            panel = VrHudGeometry.TryProject(centre, seatView, proj, target.Width, target.Height, out var px)
-                ? $"panel centre at pixel ({px.X:0},{px.Y:0}) of {target.Width}x{target.Height}"
-                : "panel centre behind the eye";
+            surface = (VrHudGeometry.TryProject(centre, seatView, proj, target.Width, target.Height, out var px)
+                    ? $"panel centre at pixel ({px.X:0},{px.Y:0}) of {target.Width}x{target.Height}"
+                    : "panel centre behind the eye")
+                + $"; panel {panel.DistanceMetres:0.##} m, {MathHelper.ToDegrees(panel.PitchDownRadians):0.#} deg below the nose, "
+                + $"{panel.WidthMetres:0.##} m wide";
         }
-        Console.WriteLine($"[vr] HUD in the eyes: head looks ({look.X:0.00},{look.Y:0.00},{look.Z:0.00}) in seat space; {panel}; "
-            + $"panel {VrPanel.DistanceMetres:0.##} m, {MathHelper.ToDegrees(VrPanel.PitchDownRadians):0.#} deg below the nose, {VrPanel.WidthMetres:0.##} m wide");
+        Console.WriteLine($"[vr] HUD in the eyes: head looks ({look.X:0.00},{look.Y:0.00},{look.Z:0.00}) in seat space; {surface}");
     }
 
     private static Texture2D CreateVrPixel(GraphicsDevice gd)
@@ -541,6 +607,70 @@ public sealed partial class Game1
         var pixel = new Texture2D(gd, 1, 1);
         pixel.SetData(new[] { Color.White });
         return pixel;
+    }
+
+    /// <summary>Whether the HUD image holds a modal screen, shown alone on
+    /// <see cref="VrHudZones.ModalPanel"/> with the flight block hidden: no
+    /// in-flight HUD this frame, or the expanded starmap, the scoreboard,
+    /// pilot info, the team pane, the game-state pane (F7), the player pings,
+    /// the spectator's sector map, the investment pane, the menus, command
+    /// view, the hangar, death or the lifepod, the ripcord countdown, the
+    /// briefing or the game-over panel. Their screens are laid out for the
+    /// whole image, so they are not cut.</summary>
+    private bool VrHudModalOpen(HudModel? model) =>
+        model is null || _minimapExpanded || _scoreboardVisible || _pilotInfoVisible || _teamPaneVisible
+        || _consolePanes.GameState || _playerPingsVisible || _spectatorMapOpen || _investActive
+        || _helpVisible || _creditsVisible || _mainMenuVisible || _keyBindVisible || _graphicsSettingsVisible
+        || _qcMenuOpen || CommandCameraActive || model.Context.Docked || model.Context.CommandView
+        || model.DeathVisible || model.PodVisible || _session.World.RipcordActive
+        || _session.World.GameOverResult is not null || IsBriefingVisible(out _);
+
+    /// <summary>Whether Classic's zones hold the layout of a HUD image this
+    /// size (<see cref="VrHudZones.ClassicLayout"/>), laying them out when the
+    /// size changes. When they do not, the game logs why, once per size.</summary>
+    private bool VrZonesFit(Texture2D hud)
+    {
+        if (_vrZoneImageSize != (hud.Width, hud.Height))
+        {
+            _vrZoneImageSize = (hud.Width, hud.Height);
+            _vrZoneQuads.Clear();
+            _vrTargetQuad = null;
+            var placements = VrHudZones.ClassicLayout(hud.Width, hud.Height, out var reason);
+            _vrZonesFit = placements is not null;
+            if (placements is null)
+            {
+                Console.WriteLine($"[vr] HUD zones do not hold a {hud.Width}x{hud.Height} image ({reason}); "
+                    + "the whole HUD image is shown on one panel");
+                return false;
+            }
+            foreach (var p in placements)
+            {
+                var (tl, tr, bl, br) = VrHudZones.Quad(p.Where, VrHudZones.Get(p.Cutout.Zone).DistanceMetres);
+                var (uv0, uv1) = VrHudZones.SourceUv(p.Cutout.Source, hud.Width, hud.Height);
+                _vrZoneQuads.Add((tl, tr, bl, br, uv0, uv1));
+                if (p.Cutout.Zone == VrHudZones.ZoneId.Target)
+                {
+                    var (dense0, dense1) = VrHudZones.SourceUv(p.Cutout.Source, hud.Width, hud.Height, VrTargetImageDensity);
+                    _vrTargetQuad = (tl, tr, bl, br, dense0, dense1);
+                }
+                if (p.Scale < 1f)
+                    Console.WriteLine($"[vr] HUD zone {p.Cutout.Zone}: '{p.Cutout.Name}' scaled {p.Scale:0.00} to fit a {hud.Width}x{hud.Height} image");
+            }
+            Console.WriteLine($"[vr] HUD zones: {placements.Count} cut-outs laid out for a {hud.Width}x{hud.Height} image");
+        }
+        return _vrZonesFit;
+    }
+
+    /// <summary>Layer 4: each Classic cut-out of the HUD image on its own quad
+    /// in its zone, at the zone's depth (<see cref="VrHudZones"/>), as
+    /// <see cref="VrZonesFit"/> laid them out. The target pane, which the HUD
+    /// image leaves out, is drawn over zone C's cut-out from its own image.</summary>
+    private void DrawVrZones(Texture2D hud, Texture2D? targetImage, Matrix seatView, Matrix proj)
+    {
+        foreach (var q in _vrZoneQuads)
+            DrawVrQuad(hud, q.Tl, q.Tr, q.Bl, q.Br, q.Uv0, q.Uv1, seatView, proj);
+        if (targetImage is not null && _vrTargetQuad is { } t)
+            DrawVrQuad(targetImage, t.Tl, t.Tr, t.Bl, t.Br, t.Uv0, t.Uv1, seatView, proj);
     }
 
     private void DrawVrPanel(Texture2D hud, in VrHudGeometry.Panel panel, Matrix seatView, Matrix proj)
@@ -683,32 +813,35 @@ public sealed partial class Game1
         VrLine(at + new Vector2(0, gap), at + new Vector2(0, half), line, VrReticleColour);
     }
 
-    // The flight-path marker's circle when the native art is missing: about
-    // the size of Jet's (7 px at scale 1).
-    private static readonly float VrFlightPathRadiusRadians = MathHelper.ToRadians(0.6f);
-    private static readonly Color VrFlightPathFallbackColour = new(160, 160, 160);
-
     /// <summary>The flight-path marker: the original game's velocity marker
-    /// (<c>directionbmp</c>, untinted, as the flat game draws it), at the flight
-    /// block's angle per pixel, so it keeps its size beside the ring. Without
-    /// the art, a grey circle with two side wings and a tail above.</summary>
+    /// (<c>directionbmp</c>, its grey brackets), at the flight block's angle per
+    /// pixel, so it keeps its size beside the ring. It is drawn as strokes at
+    /// the eye image's resolution (<see cref="VrHudGeometry.FlightPathMarkerStrokes"/>).</summary>
     private void DrawVrFlightPathMarker(Vector2 at, Matrix proj, int width, int height)
     {
-        if (_indicatorTextures?.VelocityMarker is { } art)
-        {
-            float radiansPerPixel = VrFlightBlock.WidthRadians / VrHudGeometry.FlightBlockReferencePixels;
-            float pixels = VrHudGeometry.PixelsForAngleAt(art.Width * radiansPerPixel, at, proj, width, height);
-            _spriteBatch.Draw(art, at, null, Color.White, 0f, new Vector2(art.Width / 2f, art.Height / 2f), pixels / art.Width,
-                SpriteEffects.None, 0f);
-            return;
-        }
-        float radius = VrHudGeometry.PixelsForAngleAt(VrFlightPathRadiusRadians, at, proj, width, height);
-        float line = VrLineWidth(proj, height);
-        float wing = radius * 12f / 7f, tail = radius * 9f / 7f;
-        VrPolygon(at, radius, 16, 0f, line, VrFlightPathFallbackColour);
-        VrLine(at - new Vector2(radius + wing, 0), at - new Vector2(radius, 0), line, VrFlightPathFallbackColour);
-        VrLine(at + new Vector2(radius, 0), at + new Vector2(radius + wing, 0), line, VrFlightPathFallbackColour);
-        VrLine(at - new Vector2(0, radius + tail), at - new Vector2(0, radius), line, VrFlightPathFallbackColour);
+        float radiansPerPixel = VrFlightBlock.WidthRadians / VrHudGeometry.FlightBlockReferencePixels;
+        float perArtPixel = VrHudGeometry.PixelsForAngleAt(VrHudGeometry.FlightPathArtPixels * radiansPerPixel, at, proj,
+            width, height) / VrHudGeometry.FlightPathArtPixels;
+        foreach (var (from, to, stroke) in VrHudGeometry.FlightPathMarkerStrokes())
+            VrLine(at + from * perArtPixel, at + to * perArtPixel, MathF.Max(1f, stroke * perArtPixel),
+                VrHudGeometry.FlightPathColour);
+    }
+
+    /// <summary>The velocity the flight-path marker follows: the local
+    /// prediction's, which the camera flies and which moves every frame, so the
+    /// marker moves with the view. The server's latest velocity, which the flat
+    /// marker reads, changes only when an update arrives, and the marker stepped
+    /// against the view (ragesaq's fourth headset look, 2026-11-27: "choppy").
+    /// A boarded gunner reads the carrier's, as the flat marker does.</summary>
+    private bool VrFlightPathVelocity(out Allegiance.Core.Collision.Vector3 velocity)
+    {
+        if (!TrySourcePose(out _, out _, out velocity)) return false;
+        bool boarded;
+        lock (_session.Gate)
+            boarded = RenderShipId(_session.World) is { } me && _session.World.Ships.TryGetValue(me, out var mine)
+                && mine.ParentId >= 0;
+        if (!boarded && TryOwnPose(out _, out _, out var own)) velocity = own;
+        return true;
     }
 
     private void VrPolygon(Vector2 centre, float radius, int sides, float phase, float line, Color colour)
@@ -736,6 +869,8 @@ public sealed partial class Game1
         _vrHudImage = null;
         _vrFlightImage?.Dispose();
         _vrFlightImage = null;
+        _vrTargetImage?.Dispose();
+        _vrTargetImage = null;
         _vrHudModel = null;
         _vrFlightPath = null;
         _vrPanelEffect?.Dispose();

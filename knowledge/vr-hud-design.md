@@ -188,6 +188,7 @@ service with upstream, not two.
 | Where the HUD is composited | into each eye image | its own composition layer (milestone 2), fixing capture in the capture tool | ragesaq, 2026-11 | 2026-11-25 |
 | Aiming reticle depth | infinity, except that a selected or locked target under the reticle (within 3°, or half its bracket) gives it that target's depth, held between 15 and 100 m and eased over 0.2 s ("your recommendation for the smaller version sounds like a plan to me") | always at infinity (the step 1 build; ragesaq kept it after the first headset test); snapping to the target's distance wherever it is, with a 25 m rest distance (a prompt from another assistant: the reticle shows where the guns point, so an off-axis target must not set its depth, and a 25 m rest brings it back toward the near HUD); collimated 15 to 30 m ahead, as Elite Dangerous does | ragesaq, 2026-11; revised 2026-11-25 | 2026-11-25 |
 | Target marker depth | the target's distance | infinity; a fixed HUD plane | ragesaq, 2026-11 | 2026-11-25 |
+| What zone C shows | the target pane alone, grown to fill the zone ("showing the secondary target screen is higher priority and it should get scaled up"); the port's lines and the target notices go beside the chat in zone B, widened to the flight block's width | the pane at the flat game's size with the port's lines beside it (the layer 4 build); the port's lines in zone D or E, which have no room for them | ragesaq, 2026-11-27 (the move to zone B proposed by Port) | 2026-11-27 |
 | Information panels | 2 m out, angled like cockpit displays ("1m is a little too close") | one flat sheet (milestone 2); panels fixed to the head; about 1 m (the first choice, 2026-11) | ragesaq, 2026-11; distance revised 2026-11-26 | 2026-11-26 |
 | Input | joystick and keyboard, or HOTAS and keyboard; no motion controllers, no wrist UI | motion-controller UI | ragesaq, 2026-11 | 2026-11-25 |
 | Target information split | marker, lock, lead and a short label at the target's depth with an angular floor; the target's details on a close panel | all target information at the target's depth | ragesaq, 2026-11 (proposed by Port, accepted 2026-11-25) | 2026-11-25 |
@@ -573,8 +574,8 @@ little too close"), so each quad is twice the size it would be at 1 m.
 | Zone | Across | Up and down | Depth | What it holds |
 |---|---|---|---|---|
 | A, flight block | -26° .. 26° | -22° .. 14° | 10 m | the ring gauge, the own-ship status, the speed (as now) |
-| B, comms | -16° .. 16° | 16° .. 30° | 2 m, facing the head | chat history and compose box, vote banner, critical and ordinary tips, warnings, base objectives, "NO X IN SECTOR", the keys hint, training callouts, the skin-switch toast |
-| C, target | -14° .. 14° | -24° .. -40° | 2 m | the target pane with its preview, the port's weapons and cargo lines (wrapped to the zone), the commandee and leader lines, the mouse-stick indicator and its notice |
+| B, comms | -26° .. 26° (-16° .. 16° until 2026-11-27) | 16° .. 30° | 2 m, facing the head | chat history and compose box, vote banner, critical tips, warnings, base objectives, "NO X IN SECTOR", the keys hint, training callouts, the skin-switch toast; since 2026-11-27 also the commandee and leader lines, the mouse-stick indicator and its notice, and the port's weapons and cargo lines |
+| C, target | -14° .. 14° | -24° .. -42° (-40° until 2026-11-27) | 2 m | the target pane with its preview, grown to fill the zone (since 2026-11-27; before, also the lines now in B), and the ordinary tips at the foot |
 | D, navigation | -42° .. -16° | -24° .. -42° | 2 m | the minimap, the location and turret lines, current orders, the lives and kills badges, the camera label, the command ship summary |
 | E, ship systems | 16° .. 42° | -24° .. -42° | 2 m | afterburner and power, weapon mode, mining, time dilation, the weapon status list or the inventory pane (F4) in its place |
 | Modal | centre | centre | 2 m | the expanded starmap (Tab), the death and lifepod overlays, the ripcord countdown, the command bar and command view, the scoreboard: shown alone, and the flight block is hidden while one is open |
@@ -595,6 +596,196 @@ drawn on its own quad at the zone's direction and depth, as the flight block is 
 A geometry test checks the zone table (no overlaps, the gaps, the reach) and each element's rectangle against its
 zone at 1280 by 720.
 
+## Layer 4 as built (branch `port/vr-hud-zones`)
+
+Built on 2026-11-26, stacked on PR #22. It builds the accepted zones for the Classic skin, the skin the VR HUD is built
+from. The flat game does not change.
+
+**How it is built** *(decided 2026-11 by Port while building, within the accepted zones; ragesaq to confirm in the
+headset)*. The plan above said each element would be laid out again in its zone's own region of the HUD image.
+Port took a smaller route that keeps almost all of the flat layout: the flat HUD is still drawn into one image,
+each element or group of elements is cut out of that image by its rectangle, and each cut-out is shown on a quad of
+its own in its zone (`Vr/VrHudZones.cs`). The quad is 2 m out and faces the head. Its rectangle comes from the
+flat layout's own rules (`TargetPaneLayout`, `MinimapGeometry` and fixed anchors). The rejected route was to move the
+anchor of each element in the HUD code. That touches dozens of draw sites in three skins, and every one of them
+would have to be kept in step with the flat game. Only three elements needed to move for the cut-outs to work.
+
+The cut-outs, for a HUD image of width w and height h (pixels from the top left):
+
+| Cut-out | Zone | Source rectangle | Holds |
+|---|---|---|---|
+| target notices | B, left of comms | 300 s centred (s the target pane's scale), from 144 s above the pane's name line (at least 144 px, for the unscaled mouse-stick notice 140 px above it) down to the top of the target cut-out | leader and commandee lines, mouse stick and its notice, which a VR eye frame keeps there with or without a target (`HudRenderer.NoticesAbovePane`) |
+| comms | B | 480 px centred, from the top to 0.40 h + 22 | chat pane and compose box, keys hint, vote banner, tips at the top, warnings, base objectives, "NO X IN SECTOR" |
+| port lines | B, right of comms | the lower left, from h - 302 to h - 34 | the port's weapons and cargo lines, which VR draws there, wrapped to 216 px |
+| target | C | 300 s centred, from the top of what the pane draws (its name line, or its model preview, 1.5 times its size in VR and grown upward, about 11 px higher at 1280 by 720; `VrHudZones.TargetPaneTopPixels`) to the foot, grown up to 2 times to fill the zone | the ordinary tips at the foot; the target pane and preview are drawn over it from their own image at twice the pixels, and the HUD image leaves them out (since the fifth look) |
+| minimap | D | the minimap's own rectangle | the minimap |
+| location | D | 200 px at the top right, from 30 to 106 | location and turret lines |
+| orders and badges | D | 330 px at the top left, from 24 to 196 | current orders, lives and kills badges |
+| camera | D | the foot's left 160 px | the camera label |
+| systems | E | from the comms strip's right edge, or the weapon status list's left edge if that is further left, from 120 down to the notices' cut-out's top | afterburner and power, weapon mode, mining, time dilation, the weapon status list down to the minimap's top (see the known gaps) |
+| systems low | E | right of the notices' and target cut-outs, down to the minimap's top | the rest of the weapons pane, or the inventory (F4) |
+
+A zone lays out its cut-outs in rows, pushed toward the flight block: comms down, the target zone up and centred,
+navigation up and right, systems up and left. Zone C grows the target pane to fill it, up to 2 times
+(`VrHudZones.TargetMaxScale`): at 1280 by 720 about 1.96 times, which makes it as wide as the zone. The two systems parts share their right edge and meet in the image,
+so they are stacked right-aligned with no gap and join as they were. The afterburner, power, weapon mode, mining
+and time dilation lines are drawn through the HUD's text layout, which keeps a 320 by 120 px box for them at the
+image's top and then moves them out of it, to about y 130 to 220, inside the systems cut-out. *(Review round 2
+read them at their nominal place, y 16 to 96, and Port added a cut-out there; round 3 showed, from the layout
+code and the committed capture `docs/reports/P1075_assets/desktop-afterburner-classic.png`, that nothing is drawn
+there, and the cut-out was withdrawn. A test now places the lines through the layout.)* A pixel covers about 0.045°, what it covered on
+the step 1 panel for a 1280-wide image, so the small font's 14 px line is about 0.63°. At 1280 by 720 every zone
+holds its content at that scale, and zone C grows the target pane.
+
+**Which image sizes get zones** *(review round 1 finding, 2026-11-26)*. The cut-outs follow the flat layout's
+anchors: some are fixed pixels (the 480 px comms strip, the 330 px orders block, the 200 px location box), some follow
+the image (comms down to 0.40 h, the target pane and the minimap). They hold together only near the 1280 by 720 image
+they were taken from. For a larger image, comms and systems grow past their zones, and fitting them would shrink the
+text under the 0.6° floor (at 1920 by 1080 a 14 px line would be about 0.36°), which rule 6 forbids. For a smaller one
+the cut-outs overlap, so an element would show in two zones. So before it uses the zones, the game checks the layout
+for the image's size (`VrHudZones.ClassicLayout`): every cut-out lies in the image, no two share pixels, and no zone
+scales its 14 px line under 0.6°. When the check fails, the whole HUD image is shown on one panel below the nose, as
+for another skin, and the game logs the reason once for that size (`[vr] HUD zones do not hold`). The default window,
+1280 by 720, gets zones. The check passes from 534 to 760 px high, and from 1275 px across up to between 1486 and
+1552 px (the limit grows with the height: 1486 px at 534 and 600 high, 1534 at 720, 1552 at 760). Below 1275 px the systems cut-out, which starts no further right than
+the weapon status list so as not to cut off its left side, meets the comms strip. Above the limit the systems zone would
+shrink its text. Under 534 px high comms meets the cut-outs below it, and over 760 px comms would shrink its
+text.
+
+**What moved in VR.** The port's text lines go to the image's lower left, which the flat layout leaves empty
+(`VrHudGeometry.PortTextTop`), so they can be cut out alone, and are shown in zone B. The keys hint is kept to the 480 px comms strip, so it
+stays clear of the weapons pane: a long hint is drawn smaller, as the flat game does for a narrow window. The target
+bearing arrow is left out, as the zone table says.
+
+**Modal screens.** While the expanded starmap, the scoreboard, pilot info, the team pane, the game-state pane (F7),
+the player pings, the spectator's sector map, the investment pane, help, credits, the main menu, the key bindings, the settings panel, the quick-chat menu, command view, the hangar, death or the lifepod, the
+ripcord countdown, the briefing or the game-over panel is up, or when the frame has no in-flight HUD, the whole HUD
+image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block is hidden
+(`Game1.VrHudModalOpen`). A skin other than Classic keeps the whole image on one panel below the nose at 2 m
+(`VrHudZones.FallbackPanel`); its text can still land on the ring, as on the step 2 panel.
+
+**Evidence.**
+- Build: 0 warnings.
+- Zone tests (`VrHudZonesTests`):
+  - The zone table keeps its gaps and reach.
+  - A quad faces the head at its depth and spans its angles.
+  - At four image sizes, the cut-outs lie in the image and no two overlap, and each is placed once, inside its
+    zone, at its own aspect, with no two placements overlapping.
+  - At 1280 by 720 nothing is scaled except the target pane, which zone C holds alone and grows by at least 1.5
+    times until it meets the zone's width or height (also at 1280 by 534 and 1440 by 740).
+  - The notices' cut-out ends where the pane's begins, so together they keep the strip the target cut-out had.
+  - The two systems parts join.
+  - A zone too small for its content scales it to fit.
+  - `ClassicLayout` gives zones at the range's edges: 1275 by 720, 1280 by 534, 1280 by 760, 1440 by 740,
+    1486 by 534, 1534 by 720 and 1552 by 760. It refuses 1487 by 534, 1535 by 720, 1553 by 760, 1600 by 900,
+    1920 by 1080, 2560 by 1440, 1280 by 761 and 1280 by 768 for the text floor. It refuses
+    800 by 480, 640 by 360, 1274 by 720 and 1280 by 533 for overlapping cut-outs, and 400 by 300 for a cut-out off
+    the image.
+  - Of 100 sizes from 640 by 360 to 1920 by 1080, the zones are used for exactly the 12 from 1280 to 1440 px
+    across and 534 to 720 px high. Wherever they are used, no two cut-outs share pixels and a 14 px line keeps
+    0.6°.
+  - The afterburner, power, weapon mode, mining and time dilation lines, placed through the HUD's text layout with
+    its reserved boxes, land in the systems cut-out. The test reserves only the two boxes next to the lines, the
+    chat pane's slot and the 320 by 120 box; the layout's other reservations are not modelled.
+  - The systems cut-out starts no further right than the weapon status list, or the zones are refused. No test
+    checks the list's height.
+  - There is no "status" cut-out (round 2's, withdrawn).
+  - The flight-path marker's strokes are the art's two brackets: their radius, span, taper and grey.
+  - The main pass draws the target pane unless VR draws it apart, and zone C samples the pane's own image at
+    twice the pixels over the same rectangle, half a texel of that image inside it (`VrTargetPaneImageTests`, with
+    the round 5 checks: zone C holds the enlarged preview and the notices end where it begins, at five sizes, and VR
+    keeps the notices above the pane's place without a target; 14 cases, run with the zone, geometry, centre-group,
+    dense-text and pane paint-order tests: 300 of 300). These test the helpers. The game's wiring (the pane-apart
+    flag set from the same test the compose step uses, the pane's image reaching zone C, the density transform
+    reaching the sprite batch) is read and was seen working in a VR run, but no test covers it *(review round 6)*.
+- The zone and geometry tests: 241 of 241, after the fourth look. The whole suite: 8 failures, in shader hashes, the voice catalog,
+  the mouse wheel, profile storage and the screenshot path, none in the VR HUD code; the same 8 as before
+  layer 4.
+- 31 mutants of the zone code, the text layout, the flight-path marker's shape and the target pane's image, each caught by a test (one added in round 4 lowers the floor to 0.595°; the nine
+  added for the fourth look: the target pane not grown, the notices or the port's lines put back in zone C, the
+  pane's cut-out given the notices' strip, zone B narrowed again, and four that change the marker's radius, span,
+  taper or colour; and, for the fifth look, three more: the main pass ignoring that the pane is drawn apart, the
+  pane image's density ignored, and the half-texel inset dropped; and two for review round 5: the cut-out's top
+  ignoring the preview, and the notices going to the foot in VR without a target). Three remove one check of
+  `ClassicLayout` each, one lowers its floor, one lets the text layout ignore its reserved boxes, and one drops
+  the systems cut-out's limit at the weapon status list. The first run had 11 mutants: 10 were caught, and the one left, a larger target margin, was a
+  valid layout, so the margin's lower bound got a test of its own.
+- A 60 s training run in VR under SteamVR, with nobody wearing the headset. The mirror window showed the minimap and
+  location in D at the left, the joined systems pane in E at the right, and the wrapped port lines in C (before the
+  fourth look moved them to B). Zone B
+  was above the view of the headset, which lay pitched 14° down.
+
+**Known gaps.**
+- The target pane's text is drawn at twice the pixels since the fifth look, but its bitmaps (the oval and its
+  words, the hull and shield gauges, the range icon, the kill-bonus medal) are the game's art, magnified about 2
+  times with it, and the model preview is a texture of its own size, so these stay softer than the text.
+- Zones only for an image near 1280 by 720: 1275 px across up to about 1490 to 1550, and 534 to 760 px high
+  (above). A larger window, such as
+  1920 by 1080 through `--window` or a resize, gets the whole image on one panel. There the text is smaller than
+  0.6°, as it was on the step 2 panel. Zones for every size would need cut-outs taken from each element's own drawn
+  rectangle at that size, rather than from fixed anchors.
+- The training callouts are drawn near the image's centre, which no cut-out holds, so VR does not show them.
+- In the flat game too, the weapon status list's panel is drawn after the power, weapon mode, mining and time
+  dilation lines that the text layout moves into its area, and its rows overlap them *(review round 3, read from
+  the draw order, not seen in a capture)*. The systems cut-out shows that as it is.
+- The weapon status list's panel starts at y 150 and grows by three lines, about 51 px, for each mounted system.
+  The joined systems cut-outs end at the minimap's top, y 486 at 1280 by 720 and y 355 at 1280 by 534. So with
+  about seven or more systems at 720 px high, or four or more at 534, the lower rows are not shown in zone E
+  *(review round 4, read from `HudRenderer.DrawWeaponStatusList` with a 17 px line, not seen in a capture)*.
+- In a VR eye frame the leader, commandee and mouse-stick lines stay above the pane's place even when the HUD is
+  one panel (another skin, or an image size the zones do not hold), so with no target they sit part way up that
+  panel, not at its foot *(review round 6)*. Gating this on the frame being zoned would fix it.
+- The ordinary tips at the foot of the image are cut out with the target zone, not with comms, so zone C grows them
+  with the pane, about two times the size of the other HUD lines, and from the HUD image's pixels, softer than the
+  pane's text. They are drawn below the pane's art *(review round 5)*.
+- The objectives' bearing arrows fall in the systems cut-out.
+- A vote banner or critical tip wider than 480 px is clipped at the strip's edges.
+- The keys hint, drawn smaller to fit, can fall just under the 0.6° floor.
+- The zones are fixed to the seat, as the flight block is. When the head moves off the seat's origin, the 2 m zones
+  shift against the 10 m flight block (by about 3° for 0.1 m). The smoke run's headset lay off the origin, so its
+  port lines sat beside the speed readout. The gap between the flight block and the lower zones is 2°, so a lean
+  toward them could bring them onto the ring's readouts. That is for ragesaq's headset look.
+
+## Layer 4 in the headset (2026-11-27, fourth look)
+
+ragesaq's notes at `c82dea6`, and what the same branch changed:
+
+- "panel distance looks good", "comms look good": no change.
+- "there is a text log on top of the secondary target screen below. showing hte secondary target screen is higher
+  priority and it should get scaled up". The text was the port's weapons and cargo lines. Zone C placed them
+  right beside the target pane, 0.2° apart, against its RANGE readout *(Port's printout of the placements at
+  1280 by 720: the pane's cut-out ended at 1.3°, the lines began at 1.5°)*. The pane itself filled only 284 by
+  118 px of its 318 by 331 px cut-out; the rest is the strip kept above it for the leader, commandee and
+  mouse-stick notices *(a dump of the VR HUD image, made with a local probe that was not committed)*. Zone C now
+  holds the pane alone and grows it to fill the zone, about 1.96 times at 1280 by 720. The notices' strip and the
+  port's lines go beside the chat in zone B, which is widened to -26° .. 26°, as wide as the flight block below it.
+  The decision table records the choice. In a 60 s run's mirror window the pane fills zone C and the lines sit at
+  the right of comms; the chat keeps its size.
+- "the update rate of the grey vector directional heading is a bit low, it looks choppy and low res". The
+  flight-path marker read the server's latest velocity, which changes only when an update arrives, about 20 times
+  a second, while the view it is drawn in follows the local prediction every frame. It now reads the prediction's
+  velocity, as the camera does (a boarded gunner still reads the carrier's) *(a local probe, not committed,
+  counted over 5 s: the marker's direction changed in 376 of 376 frames, the server velocity in 100)*. The flat
+  game's marker is unchanged. The marker was the 32 px `directionbmp` bitmap magnified about 3 times in the eye
+  image; it is now the same two grey brackets drawn as strokes at the eye image's resolution
+  (`VrHudGeometry.FlightPathMarkerStrokes`), at the same size and colour. Its sharpness is for the next look.
+
+## Layer 4 in the headset (2026-11-27, fifth look)
+
+ragesaq's notes at `2fac59a`, and what the same branch changed:
+
+- "flight path looks better": no change.
+- "the text looks soft and needs to be rendered at a higher resolution, the size looks good". Zone C grew the pane
+  by magnifying its pixels in the HUD image, about 1.96 times at 1280 by 720. The pane is now drawn into an image
+  of its own at twice the HUD image's pixels (`HudRenderer.DrawTargetPaneImage`, as the flight block's image is),
+  with its text from the 2x font bakes; the main pass leaves it out (`HudRenderer.TargetPaneApart`, set by the
+  game when the frame shows Classic in its zones), and zone C draws it over the HUD image's cut-out on the same
+  quad, so its size does not change. The additive pass of the oval art now takes the image's density, as the
+  flight block's gauges do. *(A local probe, not committed, in a 45 s training run with a station selected: the
+  HUD image was empty where the pane had been, the pane's image held it at 283 by 117 layout pixels, the place
+  and size of the fourth look's dump, with the text from the 2x bakes; the mirror window showed it once in zone
+  C.)*
+
 ## Open questions
 
 - Whether ragesaq accepts the layout criteria and zones above, and where layer 4 builds them. *(Answered
@@ -608,6 +799,8 @@ zone at 1280 by 720.
 - What the doubled elements in the milestone 2 screenshot are. They are not cockpit-model screens (none exist); a
   headset look with Classic, then Modern, would tell. *(Partly answered 2026-11-26: on the Classic panel they were
   the centre group and the target pane over each other, "Step 2 in the headset". Modern in VR is not looked at.)*
+- Whether the lower zones, 2° below the flight block and 8 m nearer, stay clear of the ring's readouts when the
+  head leans, or need a larger gap ("Layer 4 as built").
 - What the desktop window shows in VR mode. *(Answered in step 1: a mirror of the left eye.)*
 - How HUD pixels should be written to depth, if depth is ever submitted for reprojection *(read: SteamVR names
   `XR_KHR_composition_layer_depth`, [Steam partner docs](https://partner.steamgames.com/doc/steamframe/compat/perf_criteria);
@@ -628,6 +821,26 @@ zone at 1280 by 720.
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
+- 2026-11-27: review round 6 of layer 4 (PASS-WITH-CONDITIONS): round 5's findings fixed; the notices' place in
+  VR's one-panel fallback and the untested wiring are recorded as known gaps (`.hyperreview/README.md`).
+- 2026-11-27: review round 5 of layer 4 (WARN): zone C's cut-out now starts at the top of the enlarged preview, and
+  a VR eye frame keeps the notices above the pane's place without a target (`.hyperreview/README.md`).
+- 2026-11-27: ragesaq's fifth headset look (layer 4): the target pane is drawn at twice the pixels for zone C
+  (above).
+- 2026-11-27: ragesaq's fourth headset look (layer 4): the target pane gets zone C to itself and is grown, the
+  port's lines and the target notices move to zone B, and the flight-path marker follows the prediction every
+  frame and is drawn at the eye's resolution (above).
+- 2026-11-26: review round 4 of layer 4 (PASS-WITH-CONDITIONS): the upper width edge and the status cut-out's
+  removal are pinned by tests, and the note says how far down the weapon status list is shown (above).
+- 2026-11-26: review round 3 of layer 4 (WARN): round 2's finding was wrong, as the text layout moves those lines
+  into the systems cut-out; the status cut-out is withdrawn, and the systems cut-out keeps the weapon status
+  list whole (above).
+- 2026-11-26: review round 2 of layer 4 (WARN): the afterburner, weapon mode, mining and time dilation lines were
+  read as in no cut-out, and got one of their own in the systems zone (withdrawn in round 3).
+- 2026-11-26: review round 1 of layer 4 (WARN): the zones are used only for the image sizes whose layout they hold,
+  and four more in-flight full panes are shown whole (above).
+- 2026-11-26: Port built layer 4, the zones, for the Classic skin on `port/vr-hud-zones` (above), stacked on
+  PR #22.
 - 2026-11-26: ragesaq found the panel's text on the ring and asked for layout criteria covering every element;
   ragesaq accepted Port's zones with the panels at 2 m, to be built as layer 4 in its own pull request.
 - 2026-11-26: ragesaq's third look at step 2 (above): the box floor lowered, boxes upright to the ship, the

@@ -207,6 +207,10 @@ public class HudRenderer
         // pane itself is drawn a few steps later.
         float paneTop = model.TargetPaneVisible && context.TargetPane is { Present: true }
             ? TargetPaneLayout.TopY(w, h) : h;
+        // Where the leader, commandee and mouse-stick lines go: above the pane's
+        // place, or at the foot when no pane is shown (NoticesAbovePane).
+        bool noticesAbove = NoticesAbovePane(model);
+        float noticeTop = noticesAbove ? TargetPaneLayout.TopY(w, h) : h;
 
         BeginBatch();
         try
@@ -331,7 +335,9 @@ public class HudRenderer
             // INCLUDING when the target itself is off-screen (that is exactly when
             // it matters most — the bracket above is null out of view). Applies to
             // every target kind (ship/station/asteroid/warp): pure directional math.
-            if (model.IndicatorsVisible && context.TargetBearing is { } tb)
+            // Left out in VR, where the off-view arrows point at the target in the
+            // world (knowledge/vr-hud-design.md, "The zones").
+            if (model.IndicatorsVisible && context.TargetBearing is { } tb && !context.FlightReferenceInWorld)
                 DrawTargetBearingArrow(new(tb.X, tb.Y), viewport);
 
             // HUD-5 — radar overlays/labels (native radarimage.cpp:1199-1416);
@@ -378,7 +384,7 @@ public class HudRenderer
             // line under the weapon readout; absent for a non-leader (nothing to
             // draw — the gate is enforced upstream in ResolveLeaderBotCommand).
             if (leaderCommand is { } lc)
-                DrawLeaderCommand(lc.Label, w, model.TargetPaneVisible ? paneTop - 70f : h - 140f);
+                DrawLeaderCommand(lc.Label, w, noticesAbove ? noticeTop - 70f : h - 140f);
 
             // P425 — the commanded-ship (commandee) readout: a compact line above
             // the leader-command slot naming the ship/drone the pilot is currently
@@ -387,7 +393,7 @@ public class HudRenderer
             // an idle pilot sees nothing extra. Distinct colour from the leader
             // prompt so the two command affordances read apart.
             if (commandeeLabel is not null)
-                DrawCommandee(commandeeLabel, w, model.TargetPaneVisible ? paneTop - 96f : h - 164f);
+                DrawCommandee(commandeeLabel, w, noticesAbove ? noticeTop - 96f : h - 164f);
 
             DrawWarnings(model.Warnings, w, h);
             if (model.Warnings.Count > 0) ElementDrawn("Boundary and crowd warnings");
@@ -403,8 +409,10 @@ public class HudRenderer
             {
                 var hintFont = NativeFontAt(NativeFont.MedVerdana);
                 float measured = hintFont.MeasureString(hintLine).X;
+                // VR keeps it within the comms strip it is cut out with.
+                float hintRoom = context.FlightReferenceInWorld ? 2f * Vr.VrHudZones.CommsHalfWidthPixels : w - 32f;
                 float hintScale = MathF.Min(TextScale,
-                    MathF.Max(0.65f, (w - 32f) / MathF.Max(1f, measured)));
+                    MathF.Max(0.65f, hintRoom / MathF.Max(1f, measured)));
                 DrawMeasuredText(hintFont, hintLine,
                     new Vector2(w / 2f - measured * hintScale / 2f, ChatPaneLayout.BottomFromTop + 6f),
                     TextMain, drawScale: hintScale);
@@ -415,7 +423,7 @@ public class HudRenderer
             // HUD-3 — the native bottom target pane (dialog.mdl:5402, shown in
             // cockpit/chase). Present for a selected target even when the
             // projected in-world selection bracket is out of view.
-            if (model.TargetPaneVisible && context.TargetPane is { Present: true })
+            if (TargetPaneOnMainPass(model, TargetPaneApart))
                 DrawTargetPane(model, viewport);
 
             // HUD-7 — the native flight equipment/inventory pane (F4) does not
@@ -509,7 +517,7 @@ public class HudRenderer
             // stick is centred inside the deadzone so the ship holds steady.
             if (model.MouseStickVisible && f.MouseStick is { } ms)
                 {
-                    DrawMouseStick(ms, w, model.TargetPaneVisible ? paneTop - 90f : h - 140f);
+                    DrawMouseStick(ms, w, noticesAbove ? noticeTop - 90f : h - 140f);
                     ElementDrawn("Joystick turning indicator");
                 }
 
@@ -518,7 +526,7 @@ public class HudRenderer
             // Draw, so both styles show the same text at the same place. Drawn
             // above the virtual-stick reticle so it never overlaps its caption.
             if (model.MouseNoticeVisible && f.MouseNotice is { } mouseNotice)
-                DrawMouseOptionNotice(mouseNotice, w, model.TargetPaneVisible ? paneTop - 140f : h - 190f);
+                DrawMouseOptionNotice(mouseNotice, w, noticesAbove ? noticeTop - 140f : h - 190f);
 
             // P245 — warp-transit flash, drawn LAST so it blacks out the whole
             // frame (HUD and all) at the moment the local ship changes sector.
@@ -550,7 +558,19 @@ public class HudRenderer
     /// is drawn: 1.5 in a VR eye frame, where the HUD is a panel at arm's length
     /// and the native square is too small to read (ragesaq's headset test of
     /// 2026-11-26); 1 in the flat game.</summary>
-    public static float TargetPreviewEnlargement(HudModel model) => model.Context.FlightReferenceInWorld ? 1.5f : 1f;
+    public static float TargetPreviewEnlargement(HudModel model) =>
+        model.Context.FlightReferenceInWorld ? VrTargetPreviewEnlargement : 1f;
+
+    /// <summary>How many times its native size a VR eye frame draws the target
+    /// pane's model preview (<see cref="TargetPreviewEnlargement"/>).</summary>
+    public const float VrTargetPreviewEnlargement = 1.5f;
+
+    /// <summary>Whether the leader, commandee and mouse-stick lines are drawn
+    /// above the target pane's place: when a pane is shown, and always in a VR
+    /// eye frame, whose zones cut them out there (zone B) and give the pane's
+    /// place, grown, to zone C; otherwise they sit at the foot.</summary>
+    public static bool NoticesAbovePane(HudModel model) =>
+        model.TargetPaneVisible || model.Context.FlightReferenceInWorld;
 
     // Set from the model at the start of each Draw.
     private float _targetPreviewEnlargement = 1f;
@@ -594,8 +614,49 @@ public class HudRenderer
         }
     }
 
+    /// <summary>VR: the main pass leaves the target pane out, because the VR
+    /// client shows it from its own, denser image (<see cref="DrawTargetPaneImage"/>).
+    /// Set by the game before each HUD pass; false in the flat game.</summary>
+    public bool TargetPaneApart { get; set; }
+
+    /// <summary>Whether the main pass draws the target pane: when one is shown,
+    /// unless the VR client draws it apart (<paramref name="apart"/>,
+    /// <see cref="TargetPaneApart"/>).</summary>
+    public static bool TargetPaneOnMainPass(HudModel model, bool apart) =>
+        !apart && model.TargetPaneVisible && model.Context.TargetPane is { Present: true };
+
+    /// <summary>VR: only the target pane, where the main pass draws it, for the
+    /// VR client to show in zone C, grown, from an image with <paramref name="density"/>
+    /// times the pixels each way (as <see cref="DrawFlightReference"/>), so its
+    /// text stays sharp. <paramref name="viewport"/> is the layout's size.</summary>
+    public void DrawTargetPaneImage(HudModel model, Viewport viewport, float density = 1f)
+    {
+        if (!model.Visible || !model.TargetPaneVisible || model.Context.TargetPane is not { Present: true }) return;
+        _viewportWidth = viewport.Width;
+        _viewportHeight = viewport.Height;
+        Layout.Reset(viewport.Width, viewport.Height);
+        _targetPreviewEnlargement = TargetPreviewEnlargement(model);
+        _density = density;
+        try
+        {
+            BeginBatch();
+            try
+            {
+                DrawTargetPane(model, viewport);
+            }
+            finally
+            {
+                _sb.End();
+            }
+        }
+        finally
+        {
+            _density = 1f;
+        }
+    }
+
     // Pixels per layout pixel in the image being drawn: 1 except inside a
-    // DrawFlightReference with a density.
+    // DrawFlightReference or DrawTargetPaneImage with a density.
     private float _density = 1f;
     private Matrix? DensityTransform => _density == 1f ? null : Matrix.CreateScale(_density, _density, 1f);
 
@@ -2729,7 +2790,7 @@ public class HudRenderer
     protected virtual void BeginAdditiveSpritePass()
     {
         _sb.End();
-        _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne);
+        _sb.Begin(SpriteSortMode.Deferred, AdditiveOneOne, transformMatrix: DensityTransform);
     }
 
     /// <summary>Restore the HUD's normal alpha-blend batch after an additive
@@ -2737,7 +2798,7 @@ public class HudRenderer
     protected virtual void EndAdditiveSpritePass()
     {
         _sb.End();
-        _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+        _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, transformMatrix: DensityTransform);
     }
 
     /// <summary>

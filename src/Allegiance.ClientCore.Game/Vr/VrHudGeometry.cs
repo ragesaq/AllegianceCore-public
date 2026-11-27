@@ -162,15 +162,16 @@ public static class VrHudGeometry
     }
 
     /// <summary>Where VR puts the top of the port's weapons and cargo text
-    /// lines on the HUD panel, in pixels from the image's top: under the chat
-    /// pane (top centre, its foot at about 125) and the keys hint below it, at
-    /// the left. At the foot they ran across the target pane, and in the
-    /// middle across the panel's centre (ragesaq, 2026-11-26).</summary>
-    public const float PortTextTopPixels = 152f;
+    /// lines in the HUD image, in pixels from the image's top: in the lower
+    /// left, which the flat layout leaves empty, so the lines can be cut out on
+    /// their own and shown in the target zone beside the target pane
+    /// (<see cref="VrHudZones.ClassicCutouts"/>). Room for nine wrapped lines
+    /// above the camera label.</summary>
+    public static float PortTextTop(float imageHeight) => imageHeight - 294f;
 
-    /// <summary>How wide VR lets the port's text lines run before they wrap:
-    /// about two thirds of the image, short of the weapons pane at the right.</summary>
-    public static float PortTextWrapWidth(float imageWidth) => imageWidth * 0.65f;
+    /// <summary>How wide VR lets the port's text lines run before they wrap, in
+    /// pixels: what the target zone has left beside the target pane.</summary>
+    public const float PortTextWrapPixels = 216f;
 
     /// <summary>A line broken at its spaces into lines no wider than
     /// <paramref name="maxWidth"/> by <paramref name="measure"/>. A word wider
@@ -228,6 +229,38 @@ public static class VrHudGeometry
         float speed = velocity.Length();
         if ((int)(speed + 0.5f) == 0) return null;
         return velocity / speed;
+    }
+
+    /// <summary>The original game's flight-path marker art (<c>directionbmp</c>)
+    /// is this many pixels across; the VR marker keeps the size it was drawn at.</summary>
+    public const float FlightPathArtPixels = 32f;
+
+    /// <summary>The art's grey (0x7BEF in its 16-bit pixels).</summary>
+    public static readonly Color FlightPathColour = new(123, 125, 123);
+
+    /// <summary>The shape of <c>directionbmp</c>: two brackets, "( )", on a
+    /// circle of about 12 art pixels' radius, each 36° either side of level,
+    /// 4 px thick at the middle and 2 px at the ends. As strokes in art pixels
+    /// about the centre (x right, y down), so the eye image draws the marker at
+    /// its own resolution instead of magnifying the 32 px bitmap about three
+    /// times (ragesaq's fourth headset look, 2026-11-27: "choppy and low res").</summary>
+    public static IReadOnlyList<(Vector2 From, Vector2 To, float Width)> FlightPathMarkerStrokes(int segmentsPerBracket = 16)
+    {
+        const float radius = 12f, halfSpanDegrees = 36f, middleWidth = 4f, endWidth = 2f;
+        var strokes = new List<(Vector2, Vector2, float)>(2 * segmentsPerBracket);
+        foreach (float side in new[] { -1f, 1f })
+            for (int i = 0; i < segmentsPerBracket; i++)
+            {
+                float t0 = -1f + 2f * i / segmentsPerBracket, t1 = -1f + 2f * (i + 1) / segmentsPerBracket;
+                Vector2 At(float t)
+                {
+                    float a = MathHelper.ToRadians(halfSpanDegrees * t);
+                    return new Vector2(side * radius * MathF.Cos(a), radius * MathF.Sin(a));
+                }
+                float mid = MathF.Abs((t0 + t1) / 2f);
+                strokes.Add((At(t0), At(t1), middleWidth + (endWidth - middleWidth) * mid));
+            }
+        return strokes;
     }
 
     /// <summary>A seat-space view for one eye: the eye's pose in the local

@@ -170,7 +170,7 @@ public sealed partial class Game1
         if (model.Context.FlightReferenceInWorld)
         {
             // VR: under the weapons line, both wrapped (DrawFlightPartsHud).
-            y = Vr.VrHudGeometry.PortTextTopPixels;
+            y = Vr.VrHudGeometry.PortTextTop(h);
             if (model.Context.FlightPartsLine is { } parts) y += VrPortTextLines(parts).Count * _hudSmall.LineSpacing + 10f;
             lines = VrPortTextLines(line);
         }
