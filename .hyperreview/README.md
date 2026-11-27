@@ -4,6 +4,33 @@ One folder per cross-family review, newest first. Each folder holds the reviewer
 `receipt.md`. The reviewer's activity logs and wrapper state stay on the reviewing host (`GROUND_RULES.md` rule 3), and
 `.gitignore` keeps them out. The route is set in `AGENTS.md`, "Cross-family review route".
 
+## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 3
+
+- Record: [summary](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/summary.md), [receipt](patch-review-2026-11-27T00-30-00Z-allegiancecore-vr-hud-zones-r3/receipt.md)
+- The committed summary is the reviewer's text, unchanged. The receipt is Port's path-free record of the launch.
+- Delta patch review of `b4ba3d0..dafc2b3`, head `dafc2b3`, tree `0cab8c5`, in a standalone clone with no remote.
+  Reviewer `deepseek-v4.1-flash` via OpenCode Go at `high`, explicit selection, matrix 4.14.0.
+- Verdict: WARN.
+  1. Round 2's N1, not resolved: its premise was wrong. The afterburner, power, weapon mode, mining and time
+     dilation lines are placed through the HUD's text layout, which keeps a 320 by 120 px box for them at the top
+     and then moves them out of it, to about y 130 to 220, inside the systems cut-out. Port checked this against
+     `HudTextLayout.Place` and the committed capture `docs/reports/P1075_assets/desktop-afterburner-classic.png`
+     (the lines at y 134 to 179). The round 2 change is withdrawn: the "status" cut-out showed an empty box and cost
+     zone E width. The comment at the systems cut-out says where the lines really are. A new test places the five
+     lines through `HudTextLayout` with the reserved boxes and asserts they land in the systems cut-out; a mutant
+     that lets the layout ignore its reserved boxes fails it. The reviewer's other suggestion, drawing the lines as
+     fixed anchors, is not taken: it would change the flat game.
+  2. Round 2's N2: resolved.
+  3. New, low (on images under 1280 px across the systems cut-out cut off the weapon status list's left edge):
+     fixed. The systems cut-out starts no further right than the list (`VrHudZones.WeaponListLeft`); where that
+     meets the comms strip, under 1275 px across, the zones are refused. Tested at four sizes.
+  4. New, low (the systems join test ran at no small height): fixed, it also runs at 1280 by 534.
+  5. Record note (the lowest accepted height): the note now gives the range's edges, 534 to 760 px high and
+     1275 px across up to about 1490 to 1550, each pinned by a test.
+  - Noted, outside the change: in the flat game the weapon status list's panel is drawn over the lines the text
+    layout moves into its area. Recorded as a known gap in the note.
+- The fixes change code, so they are re-reviewed in round 4.
+
 ## 2026-11-26: PR #23 VR HUD layer 4 (the zones), round 2
 
 - Record: [summary](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/summary.md), [receipt](patch-review-2026-11-27T00-00-00Z-allegiancecore-vr-hud-zones-r2/receipt.md)

@@ -620,15 +620,17 @@ The cut-outs, for a HUD image of width w and height h (pixels from the top left)
 | location | D | 200 px at the top right, from 30 to 106 | location and turret lines |
 | orders and badges | D | 330 px at the top left, from 24 to 196 | current orders, lives and kills badges |
 | camera | D | the foot's left 160 px | the camera label |
-| status | E | 158 px centred 321 px right of the middle, from 12 to 120 | afterburner and power, weapon mode, mining, time dilation |
-| systems | E | right of the comms strip, from 120 down to the target cut-out's top | the weapon status list, the weapons pane |
+| systems | E | from the comms strip's right edge, or the weapon status list's left edge if that is further left, from 120 down to the target cut-out's top | afterburner and power, weapon mode, mining, time dilation, the weapon status list |
 | systems low | E | right of the target cut-out, down to the minimap's top | the rest of the weapons pane, or the inventory (F4) |
 
 A zone lays out its cut-outs in rows, pushed toward the flight block: comms down, the target zone up and centred,
 navigation up and right, systems up and left. The two systems parts share their right edge and meet in the image,
-so they are stacked right-aligned with no gap and join as they were. The status lines sit above the systems
-cut-out in the image; the zone has no height to spare for them there, so they are shown beside it, to its left
-*(review round 2 finding, 2026-11-26: before, no cut-out held them, and VR did not show them)*. A pixel covers about 0.045°, what it covered on
+so they are stacked right-aligned with no gap and join as they were. The afterburner, power, weapon mode, mining
+and time dilation lines are drawn through the HUD's text layout, which keeps a 320 by 120 px box for them at the
+image's top and then moves them out of it, to about y 130 to 220, inside the systems cut-out. *(Review round 2
+read them at their nominal place, y 16 to 96, and Port added a cut-out there; round 3 showed, from the layout
+code and the committed capture `docs/reports/P1075_assets/desktop-afterburner-classic.png`, that nothing is drawn
+there, and the cut-out was withdrawn. A test now places the lines through the layout.)* A pixel covers about 0.045°, what it covered on
 the step 1 panel for a 1280-wide image, so the small font's 14 px line is about 0.63°. At 1280 by 720 every zone
 holds its content at that scale.
 
@@ -641,10 +643,11 @@ the cut-outs overlap, so an element would show in two zones. So before it uses t
 for the image's size (`VrHudZones.ClassicLayout`): every cut-out lies in the image, no two share pixels, and no zone
 scales its 14 px line under 0.6°. When the check fails, the whole HUD image is shown on one panel below the nose, as
 for another skin, and the game logs the reason once for that size (`[vr] HUD zones do not hold`). The default window,
-1280 by 720, gets zones. Of the sizes the tests try, it passes from 1200 to 1366 px across and from 534 to 740 px
-high (comms reaches the floor at about 760 px high). It fails at 1140 px across or less, where the status cut-out
-meets the location box, at 1440 px or more, where the systems zone would shrink its text, at 480 px high or less, and
-at 768 px high or more.
+1280 by 720, gets zones. The check passes from 534 to 760 px high, and from 1275 px across up to between 1486 and
+1552 px (the limit grows with the height). Below 1275 px the systems cut-out, which starts no further right than
+the weapon status list so as not to cut it off, meets the comms strip. Above the limit the systems zone would
+shrink its text. Under 534 px high comms meets the cut-outs below it, and over 760 px comms would shrink its
+text.
 
 **What moved in VR.** The port's text lines go to the image's lower left, which the flat layout leaves empty
 (`VrHudGeometry.PortTextTop`), so they can be cut out alone. The keys hint is kept to the 480 px comms strip, so it
@@ -668,31 +671,37 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
   - At 1280 by 720 nothing is scaled.
   - The two systems parts join.
   - A zone too small for its content scales it to fit.
-  - `ClassicLayout` gives zones for 1280 by 720, 1280 by 740, 1200 by 740 and 1366 by 740. It refuses
-    1600 by 900, 1920 by 1080, 2560 by 1440, 1440 by 720 and 1280 by 768 for the text floor. It refuses
-    800 by 480, 640 by 360 and 1140 by 720 for overlapping cut-outs, and 400 by 300 for a cut-out off the image.
-  - Of 100 sizes from 640 by 360 to 1920 by 1080, the zones are used for exactly the 12 from 1200 to 1366 px
+  - `ClassicLayout` gives zones at the range's edges: 1275 by 720, 1280 by 534, 1280 by 760, 1440 by 740. It
+    refuses 1600 by 900, 1920 by 1080, 2560 by 1440, 1280 by 761 and 1280 by 768 for the text floor. It refuses
+    800 by 480, 640 by 360, 1274 by 720 and 1280 by 533 for overlapping cut-outs, and 400 by 300 for a cut-out off
+    the image.
+  - Of 100 sizes from 640 by 360 to 1920 by 1080, the zones are used for exactly the 12 from 1280 to 1440 px
     across and 534 to 720 px high. Wherever they are used, no two cut-outs share pixels and a 14 px line keeps
     0.6°.
-  - The status cut-out holds the afterburner, weapon mode, mining and time dilation lines, at the place the
-    Classic HUD draws them.
-- The zone and geometry tests: 233 of 233. The whole suite: 8 failures, in shader hashes, the voice catalog,
+  - The afterburner, power, weapon mode, mining and time dilation lines, placed through the HUD's text layout with
+    its reserved boxes, land in the systems cut-out.
+  - The systems cut-out starts no further right than the weapon status list, or the zones are refused.
+- The zone and geometry tests: 237 of 237. The whole suite: 8 failures, in shader hashes, the voice catalog,
   the mouse wheel, profile storage and the screenshot path, none in the VR HUD code; the same 8 as before
   layer 4.
-- 16 mutants of the zone code, each caught by a test. Three remove one check of `ClassicLayout` each, one
-  lowers its floor, one drops the status cut-out and one moves it. The first run had 11 mutants: 10 were caught, and the one left, a larger target margin, was a
+- 16 mutants of the zone code and the text layout, each caught by a test. Three remove one check of
+  `ClassicLayout` each, one lowers its floor, one lets the text layout ignore its reserved boxes, and one drops
+  the systems cut-out's limit at the weapon status list. The first run had 11 mutants: 10 were caught, and the one left, a larger target margin, was a
   valid layout, so the margin's lower bound got a test of its own.
 - A 60 s training run in VR under SteamVR, with nobody wearing the headset. The mirror window showed the minimap and
   location in D at the left, the joined systems pane in E at the right, and the wrapped port lines in C. Zone B
   was above the view of the headset, which lay pitched 14° down.
 
 **Known gaps.**
-- Zones only for an image near 1280 by 720: of the sizes tried, 1200 to 1366 px across and 534 to 740 px high
+- Zones only for an image near 1280 by 720: 1275 px across up to about 1490 to 1550, and 534 to 760 px high
   (above). A larger window, such as
   1920 by 1080 through `--window` or a resize, gets the whole image on one panel. There the text is smaller than
   0.6°, as it was on the step 2 panel. Zones for every size would need cut-outs taken from each element's own drawn
   rectangle at that size, rather than from fixed anchors.
 - The training callouts are drawn near the image's centre, which no cut-out holds, so VR does not show them.
+- In the flat game too, the weapon status list's panel is drawn after the power, weapon mode, mining and time
+  dilation lines that the text layout moves into its area, and its rows overlap them *(review round 3, read from
+  the draw order, not seen in a capture)*. The systems cut-out shows that as it is.
 - The ordinary tips at the foot of the image are cut out with the target zone, not with comms.
 - The objectives' bearing arrows fall in the systems cut-out.
 - A vote banner or critical tip wider than 480 px is clipped at the strip's edges.
@@ -737,8 +746,11 @@ image is shown on one panel ahead, 2 m out and 2.2 m wide, and the flight block 
 - 2026-11-26: Port built step 2 (layers 1 and 3, Jet only) on `port/vr-hud-step2` (above).
 - 2026-11-26: ragesaq chose Classic's ring gauge for the flight block, whatever skin is active; step 2 was rebuilt on
   it and the Jet-based block removed.
-- 2026-11-26: review round 2 of layer 4 (WARN): the afterburner, weapon mode, mining and time dilation lines,
-  which no cut-out held, get one of their own in the systems zone (above).
+- 2026-11-26: review round 3 of layer 4 (WARN): round 2's finding was wrong, as the text layout moves those lines
+  into the systems cut-out; the status cut-out is withdrawn, and the systems cut-out keeps the weapon status
+  list whole (above).
+- 2026-11-26: review round 2 of layer 4 (WARN): the afterburner, weapon mode, mining and time dilation lines were
+  read as in no cut-out, and got one of their own in the systems zone (withdrawn in round 3).
 - 2026-11-26: review round 1 of layer 4 (WARN): the zones are used only for the image sizes whose layout they hold,
   and four more in-flight full panes are shown whole (above).
 - 2026-11-26: Port built layer 4, the zones, for the Classic skin on `port/vr-hud-zones` (above), stacked on

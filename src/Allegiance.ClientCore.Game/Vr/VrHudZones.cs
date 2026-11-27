@@ -153,12 +153,13 @@ public static class VrHudZones
         list.Add(new Cutout("camera", ZoneId.Navigation, 1, new Rectangle(0, h - CameraStripPixels, 160, CameraStripPixels)));
 
         // E: the afterburner, power, weapon mode, mining and time dilation
-        // lines, centred right of the chat pane at the image's top; beside
-        // them, the rest of the ship's status lines and the weapons pane, or
-        // the inventory (F4) in its place. Below the target cut-out's top
-        // that part starts right of the target cut-out.
-        list.Add(new Cutout("status", ZoneId.Systems, 0, StatusLines(w)));
-        int systemsLeft = cx + CommsHalfWidthPixels + 2;
+        // lines (the text layout keeps a 320 by 120 px box for them at the top,
+        // right of the chat pane, and then moves them out of it, to about y 130
+        // to 220), the weapon status list or the inventory (F4) in its place.
+        // It starts no further right than the weapon status list, so a narrow
+        // image, where that would meet the comms strip, gets no zones. Below
+        // the target cut-out's top it starts right of that cut-out.
+        int systemsLeft = Math.Min(cx + CommsHalfWidthPixels + 2, WeaponListLeft(w));
         int systemsSplit = paneTop - 2;
         list.Add(new Cutout("systems", ZoneId.Systems, 0,
             new Rectangle(systemsLeft, SystemsTopPixels, w - systemsLeft, systemsSplit - SystemsTopPixels)));
@@ -178,21 +179,11 @@ public static class VrHudZones
     /// of the weapons pane (from about 882 px in a 1280-wide image).</summary>
     public const int CommsHalfWidthPixels = 240;
 
-    /// <summary>Where the afterburner, power, weapon mode, mining and time
-    /// dilation lines are centred: this far right of the image's middle
-    /// (<c>HudRenderer.TopStatusCenterX</c>, Classic's text unscaled), from
-    /// y 16 to about 96.</summary>
-    public const int StatusCentrePixels = 321;
-
-    /// <summary>Half the width kept for those lines: their widest,
-    /// "AFTERBURNER ACTIVE" or "TIME DILATION 100%" in the medium Verdana, is
-    /// about 130 px; this keeps 158, up to the comms strip's edge.</summary>
-    public const int StatusHalfWidthPixels = 79;
-
-    /// <summary>The status lines' cut-out, from y 12 down to the systems
-    /// cut-out's top.</summary>
-    public static Rectangle StatusLines(int imageWidth) =>
-        new(imageWidth / 2 + StatusCentrePixels - StatusHalfWidthPixels, 12, 2 * StatusHalfWidthPixels, SystemsTopPixels - 12);
+    /// <summary>The weapon status list's left edge: its panel is 0.34 of the
+    /// width, at most 380 px, 18 px in from the right
+    /// (<c>HudRenderer.DrawWeaponStatusList</c>, Classic's text unscaled).</summary>
+    public static int WeaponListLeft(int imageWidth) =>
+        (int)MathF.Floor(imageWidth - MathF.Min(imageWidth * .34f, 380f) - 18f);
 
     /// <summary>Where the systems cut-out starts down the image: under the
     /// location and turret lines.</summary>

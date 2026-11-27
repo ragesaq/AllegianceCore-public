@@ -160,7 +160,6 @@ public sealed class VrHudZonesTests
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["location"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["orders and badges"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["camera"]);
-        Assert.Equal(VrHudZones.ZoneId.Systems, byName["status"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems"]);
         Assert.Equal(VrHudZones.ZoneId.Systems, byName["systems low"]);
     }
@@ -191,6 +190,7 @@ public sealed class VrHudZonesTests
 
     [Theory]
     [MemberData(nameof(ImageSizes))]
+    [InlineData(1280, 534)]
     public void The_two_systems_parts_join_in_the_zone_as_they_meet_in_the_image(int width, int height)
     {
         VrHudZones.Placement upper = default, lower = default;
@@ -280,45 +280,68 @@ public sealed class VrHudZonesTests
     [Fact]
     public void Of_the_sweep_the_zones_are_used_for_exactly_the_sizes_the_note_gives()
     {
-        // knowledge/vr-hud-design.md, "Which image sizes get zones": of the
-        // sizes tried, 1200 to 1366 px across and 534 to 740 px high.
+        // knowledge/vr-hud-design.md, "Which image sizes get zones".
         var used = new List<string>();
         foreach (var row in SweepSizes())
             if (VrHudZones.ClassicLayout((int)row[0], (int)row[1], out _) is not null) used.Add($"{row[0]}x{row[1]}");
-        Assert.Equal(new[] { "1200x534", "1200x600", "1200x680", "1200x720", "1280x534", "1280x600", "1280x680", "1280x720",
-            "1366x534", "1366x600", "1366x680", "1366x720" }, used);
-        foreach (var (w, h) in new[] { (1200, 740), (1366, 740) })
+        Assert.Equal(new[] { "1280x534", "1280x600", "1280x680", "1280x720", "1366x534", "1366x600", "1366x680", "1366x720",
+            "1440x534", "1440x600", "1440x680", "1440x720" }, used);
+        // The edges: 1275 px across (the systems cut-out, kept left of the
+        // weapon status list, meets comms below it) and 534 to 760 px high.
+        foreach (var (w, h) in new[] { (1275, 720), (1280, 760), (1440, 740) })
             Assert.True(VrHudZones.ClassicLayout(w, h, out var reason) is not null, $"{w}x{h}: {reason}");
-        Assert.Null(VrHudZones.ClassicLayout(1140, 720, out var narrow));
-        Assert.Contains("'status'", narrow);
-        Assert.Null(VrHudZones.ClassicLayout(1440, 720, out var wide));
-        Assert.Contains("floor", wide);
-    }
-
-    [Fact]
-    public void The_status_lines_are_centred_where_the_classic_hud_draws_them()
-    {
-        // HudRenderer.TopStatusCenterX: right of the chat pane's right edge,
-        // then 16 px and 110 px at Classic's unscaled text.
-        Assert.Equal(Rendering.ChatPaneLayout.Width - Rendering.ChatPaneLayout.LeftFromCentre + 16 + 110,
-            VrHudZones.StatusCentrePixels);
+        Assert.Null(VrHudZones.ClassicLayout(1274, 720, out var narrow));
+        Assert.Contains("share pixels", narrow);
+        Assert.Null(VrHudZones.ClassicLayout(1280, 533, out var low));
+        Assert.Contains("share pixels", low);
+        Assert.Null(VrHudZones.ClassicLayout(1280, 761, out var tall));
+        Assert.Contains("floor", tall);
     }
 
     [Theory]
     [InlineData(1280, 720)]
-    [InlineData(1200, 534)]
-    [InlineData(1366, 740)]
-    public void The_status_cutout_holds_the_afterburner_weapon_mode_mining_and_time_dilation_lines(int width, int height)
+    [InlineData(1280, 534)]
+    [InlineData(1440, 740)]
+    public void The_text_layout_puts_the_status_lines_in_the_systems_cutout(int width, int height)
     {
-        // Drawn at y 16, 20 plus a line, 58 and 82 in the medium Verdana
-        // (12 px lines), centred on StatusCentrePixels; the widest, about
-        // 130 px, is "AFTERBURNER ACTIVE".
-        var lines = new Rectangle(width / 2 + VrHudZones.StatusCentrePixels - 65, 16, 130, 96 - 16);
+        // HudRenderer.PrepareLayout keeps the chat pane's slot and a 320 by
+        // 120 px box at the top for the afterburner, power, weapon mode,
+        // mining and time dilation lines; the lines are then placed through
+        // the layout (not as fixed anchors), so it moves them out of that box.
+        var layout = new Rendering.HudTextLayout();
+        layout.Reset(width, height);
+        int lines = Rendering.ChatPaneLayout.DefaultLines;
+        layout.Reserve(new Rectangle(Rendering.ChatPaneLayout.Left(width), Rendering.ChatPaneLayout.Top(lines),
+            Rendering.ChatPaneLayout.Width, Rendering.ChatPaneLayout.Height(lines)));
+        float centre = width / 2f + Rendering.ChatPaneLayout.Width - Rendering.ChatPaneLayout.LeftFromCentre + 16f + 110f;
+        layout.Reserve(new Rectangle((int)(centre - 160f), 6, 320, 120));
+        var systems = VrHudZones.ClassicCutouts(width, height).Single(c => c.Name == "systems").Source;
+        // The widest of each, in the medium Verdana (12 px lines).
+        foreach (var (text, wide, y) in new[] { ("AFTERBURNER ACTIVE", 130f, 20f), ("PWR 100%", 60f, 34f),
+                     ("WEAPONS: MOUNT 4", 115f, 58f), ("MINING", 48f, 82f), ("TIME DILATION 100%", 130f, 16f) })
+        {
+            var box = layout.Place(text, new Vector2(wide, 12f), new Vector2(centre - wide / 2f, y));
+            Assert.True(systems.Contains(box), $"{text} at {box} is not in the systems cut-out {systems}");
+        }
+    }
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1366, 720)]
+    [InlineData(1440, 740)]
+    [InlineData(1180, 720)]
+    public void The_systems_cutout_holds_the_weapon_status_list_or_the_zones_are_refused(int width, int height)
+    {
+        // The flat game draws the list's panel from here at 1280 across.
+        Assert.Equal(1280 - 380 - 18, VrHudZones.WeaponListLeft(1280));
         var placements = VrHudZones.ClassicLayout(width, height, out var reason);
-        Assert.True(placements is not null, reason);
-        var status = placements!.Single(p => p.Cutout.Name == "status");
-        Assert.Equal(VrHudZones.ZoneId.Systems, status.Cutout.Zone);
-        Assert.True(status.Cutout.Source.Contains(lines), $"{status.Cutout.Source} does not hold {lines}");
+        if (placements is null)
+        {
+            Assert.Contains("share pixels", reason);
+            return;
+        }
+        var systems = placements.Single(p => p.Cutout.Name == "systems").Cutout.Source;
+        Assert.True(systems.Left <= VrHudZones.WeaponListLeft(width), $"{systems} starts right of the list");
     }
 
     public static TheoryData<int, int> SweepSizes()
