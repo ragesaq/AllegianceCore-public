@@ -119,7 +119,7 @@ public sealed partial class Game1
         _vrAimReticle = indicators && _cameraMode == CameraMode.Cockpit;
         // The flight-path marker follows the flat velocity marker's gate: the
         // cockpit, and a rounded source speed that is not zero.
-        _vrFlightPath = _vrAimReticle && TrySourcePose(out _, out _, out var velocity)
+        _vrFlightPath = _vrAimReticle && VrFlightPathVelocity(out var velocity)
             ? VrHudGeometry.FlightPathDirection(PoseConverter.ToXna(velocity)) : null;
 
         if (flight)
@@ -769,32 +769,35 @@ public sealed partial class Game1
         VrLine(at + new Vector2(0, gap), at + new Vector2(0, half), line, VrReticleColour);
     }
 
-    // The flight-path marker's circle when the native art is missing: about
-    // the size of Jet's (7 px at scale 1).
-    private static readonly float VrFlightPathRadiusRadians = MathHelper.ToRadians(0.6f);
-    private static readonly Color VrFlightPathFallbackColour = new(160, 160, 160);
-
     /// <summary>The flight-path marker: the original game's velocity marker
-    /// (<c>directionbmp</c>, untinted, as the flat game draws it), at the flight
-    /// block's angle per pixel, so it keeps its size beside the ring. Without
-    /// the art, a grey circle with two side wings and a tail above.</summary>
+    /// (<c>directionbmp</c>, its grey brackets), at the flight block's angle per
+    /// pixel, so it keeps its size beside the ring. It is drawn as strokes at
+    /// the eye image's resolution (<see cref="VrHudGeometry.FlightPathMarkerStrokes"/>).</summary>
     private void DrawVrFlightPathMarker(Vector2 at, Matrix proj, int width, int height)
     {
-        if (_indicatorTextures?.VelocityMarker is { } art)
-        {
-            float radiansPerPixel = VrFlightBlock.WidthRadians / VrHudGeometry.FlightBlockReferencePixels;
-            float pixels = VrHudGeometry.PixelsForAngleAt(art.Width * radiansPerPixel, at, proj, width, height);
-            _spriteBatch.Draw(art, at, null, Color.White, 0f, new Vector2(art.Width / 2f, art.Height / 2f), pixels / art.Width,
-                SpriteEffects.None, 0f);
-            return;
-        }
-        float radius = VrHudGeometry.PixelsForAngleAt(VrFlightPathRadiusRadians, at, proj, width, height);
-        float line = VrLineWidth(proj, height);
-        float wing = radius * 12f / 7f, tail = radius * 9f / 7f;
-        VrPolygon(at, radius, 16, 0f, line, VrFlightPathFallbackColour);
-        VrLine(at - new Vector2(radius + wing, 0), at - new Vector2(radius, 0), line, VrFlightPathFallbackColour);
-        VrLine(at + new Vector2(radius, 0), at + new Vector2(radius + wing, 0), line, VrFlightPathFallbackColour);
-        VrLine(at - new Vector2(0, radius + tail), at - new Vector2(0, radius), line, VrFlightPathFallbackColour);
+        float radiansPerPixel = VrFlightBlock.WidthRadians / VrHudGeometry.FlightBlockReferencePixels;
+        float perArtPixel = VrHudGeometry.PixelsForAngleAt(VrHudGeometry.FlightPathArtPixels * radiansPerPixel, at, proj,
+            width, height) / VrHudGeometry.FlightPathArtPixels;
+        foreach (var (from, to, stroke) in VrHudGeometry.FlightPathMarkerStrokes())
+            VrLine(at + from * perArtPixel, at + to * perArtPixel, MathF.Max(1f, stroke * perArtPixel),
+                VrHudGeometry.FlightPathColour);
+    }
+
+    /// <summary>The velocity the flight-path marker follows: the local
+    /// prediction's, which the camera flies and which moves every frame, so the
+    /// marker moves with the view. The server's latest velocity, which the flat
+    /// marker reads, changes only when an update arrives, and the marker stepped
+    /// against the view (ragesaq's fourth headset look, 2026-11-27: "choppy").
+    /// A boarded gunner reads the carrier's, as the flat marker does.</summary>
+    private bool VrFlightPathVelocity(out Allegiance.Core.Collision.Vector3 velocity)
+    {
+        if (!TrySourcePose(out _, out _, out velocity)) return false;
+        bool boarded;
+        lock (_session.Gate)
+            boarded = RenderShipId(_session.World) is { } me && _session.World.Ships.TryGetValue(me, out var mine)
+                && mine.ParentId >= 0;
+        if (!boarded && TryOwnPose(out _, out _, out var own)) velocity = own;
+        return true;
     }
 
     private void VrPolygon(Vector2 centre, float radius, int sides, float phase, float line, Color colour)

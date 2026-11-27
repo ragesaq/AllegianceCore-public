@@ -231,6 +231,38 @@ public static class VrHudGeometry
         return velocity / speed;
     }
 
+    /// <summary>The original game's flight-path marker art (<c>directionbmp</c>)
+    /// is this many pixels across; the VR marker keeps the size it was drawn at.</summary>
+    public const float FlightPathArtPixels = 32f;
+
+    /// <summary>The art's grey (0x7BEF in its 16-bit pixels).</summary>
+    public static readonly Color FlightPathColour = new(123, 125, 123);
+
+    /// <summary>The shape of <c>directionbmp</c>: two brackets, "( )", on a
+    /// circle of about 12 art pixels' radius, each 36° either side of level,
+    /// 4 px thick at the middle and 2 px at the ends. As strokes in art pixels
+    /// about the centre (x right, y down), so the eye image draws the marker at
+    /// its own resolution instead of magnifying the 32 px bitmap about three
+    /// times (ragesaq's fourth headset look, 2026-11-27: "choppy and low res").</summary>
+    public static IReadOnlyList<(Vector2 From, Vector2 To, float Width)> FlightPathMarkerStrokes(int segmentsPerBracket = 16)
+    {
+        const float radius = 12f, halfSpanDegrees = 36f, middleWidth = 4f, endWidth = 2f;
+        var strokes = new List<(Vector2, Vector2, float)>(2 * segmentsPerBracket);
+        foreach (float side in new[] { -1f, 1f })
+            for (int i = 0; i < segmentsPerBracket; i++)
+            {
+                float t0 = -1f + 2f * i / segmentsPerBracket, t1 = -1f + 2f * (i + 1) / segmentsPerBracket;
+                Vector2 At(float t)
+                {
+                    float a = MathHelper.ToRadians(halfSpanDegrees * t);
+                    return new Vector2(side * radius * MathF.Cos(a), radius * MathF.Sin(a));
+                }
+                float mid = MathF.Abs((t0 + t1) / 2f);
+                strokes.Add((At(t0), At(t1), middleWidth + (endWidth - middleWidth) * mid));
+            }
+        return strokes;
+    }
+
     /// <summary>A seat-space view for one eye: the eye's pose in the local
     /// space, with no game camera in it. The panel and the aim reticle are drawn
     /// with it, so they stay fixed to the seat while the head moves.</summary>

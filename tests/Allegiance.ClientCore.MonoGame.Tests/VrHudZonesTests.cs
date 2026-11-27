@@ -131,7 +131,8 @@ public sealed class VrHudZonesTests
             var zone = VrHudZones.Get(p.Cutout.Zone);
             Assert.NotEqual(VrHudZones.ZoneId.FlightBlock, zone.Id);
             Assert.True(p.Where.Within(zone), $"{p.Cutout.Name} at {p.Where} leaves {zone}");
-            Assert.True(p.Scale > 0f && p.Scale <= 1f, p.Cutout.Name);
+            float most = zone.Id == VrHudZones.ZoneId.Target ? VrHudZones.TargetMaxScale : 1f;
+            Assert.True(p.Scale > 0f && p.Scale <= most, $"{p.Cutout.Name} at scale {p.Scale}");
             // Shown at its own aspect.
             Assert.Equal((float)p.Cutout.Source.Width / p.Cutout.Source.Height, p.Where.Width / p.Where.Height, 2);
         }
@@ -142,10 +143,30 @@ public sealed class VrHudZonesTests
     }
 
     [Fact]
-    public void At_1280_by_720_every_zone_fits_its_content_unscaled()
+    public void At_1280_by_720_every_zone_but_the_target_fits_its_content_unscaled()
     {
         foreach (var p in VrHudZones.Place(VrHudZones.ClassicCutouts(1280, 720)))
-            Assert.True(p.Scale == 1f, $"{p.Cutout.Name} needed scale {p.Scale}");
+            if (p.Cutout.Zone != VrHudZones.ZoneId.Target)
+                Assert.True(p.Scale == 1f, $"{p.Cutout.Name} needed scale {p.Scale}");
+    }
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1280, 534)]
+    [InlineData(1440, 740)]
+    public void The_target_pane_alone_fills_its_zone_grown_to_at_least_one_and_a_half(int width, int height)
+    {
+        // ragesaq, 2026-11-27: the target pane has priority and is scaled up.
+        var placements = VrHudZones.ClassicLayout(width, height, out var reason);
+        Assert.True(placements is not null, reason);
+        var inTarget = placements!.Where(p => p.Cutout.Zone == VrHudZones.ZoneId.Target).ToList();
+        var pane = Assert.Single(inTarget);
+        Assert.Equal("target", pane.Cutout.Name);
+        Assert.True(pane.Scale >= 1.5f, $"scale {pane.Scale}");
+        var zone = VrHudZones.Get(VrHudZones.ZoneId.Target);
+        // Grown until it meets the zone across or up and down, or reaches the cap.
+        Assert.True(pane.Scale == VrHudZones.TargetMaxScale || Math.Abs(pane.Where.Width - zone.Width) < 1e-2f
+            || Math.Abs(pane.Where.Height - zone.Height) < 1e-2f, $"{pane.Where} in {zone}");
     }
 
     [Fact]
@@ -155,7 +176,8 @@ public sealed class VrHudZonesTests
         foreach (var c in VrHudZones.ClassicCutouts(1280, 720)) byName[c.Name] = c.Zone;
         Assert.Equal(VrHudZones.ZoneId.Comms, byName["comms"]);
         Assert.Equal(VrHudZones.ZoneId.Target, byName["target"]);
-        Assert.Equal(VrHudZones.ZoneId.Target, byName["port lines"]);
+        Assert.Equal(VrHudZones.ZoneId.Comms, byName["port lines"]);
+        Assert.Equal(VrHudZones.ZoneId.Comms, byName["target notices"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["minimap"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["location"]);
         Assert.Equal(VrHudZones.ZoneId.Navigation, byName["orders and badges"]);
@@ -212,9 +234,15 @@ public sealed class VrHudZonesTests
     public void The_target_cutout_holds_the_mouse_stick_notice_above_the_pane(int width, int height)
     {
         // HudRenderer draws the notice 140 px above the pane's top, unscaled.
+        // The notices' cut-out ends where the pane's begins.
         float paneTop = Rendering.TargetPaneLayout.TopY(width, height);
-        foreach (var c in VrHudZones.ClassicCutouts(width, height))
-            if (c.Name == "target") Assert.True(c.Source.Top <= paneTop - 142f, $"top {c.Source.Top}, pane {paneTop}");
+        var cutouts = VrHudZones.ClassicCutouts(width, height);
+        var notices = cutouts.Single(c => c.Name == "target notices").Source;
+        var pane = cutouts.Single(c => c.Name == "target").Source;
+        Assert.True(notices.Top <= paneTop - 142f, $"top {notices.Top}, pane {paneTop}");
+        Assert.Equal(notices.Bottom, pane.Top);
+        Assert.True(pane.Top <= paneTop, $"pane cut-out {pane.Top}, pane {paneTop}");
+        Assert.Equal(height, pane.Bottom);
         Assert.True(VrHudZones.TargetMarginPixels(0.9f) >= 142f);
     }
 

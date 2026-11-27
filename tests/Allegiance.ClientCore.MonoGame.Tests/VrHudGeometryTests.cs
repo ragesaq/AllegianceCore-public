@@ -683,6 +683,36 @@ public sealed class VrHudGeometryTests
         Near3(Vector3.Normalize(velocity), VrHudGeometry.FlightPathDirection(velocity)!.Value, 1e-6f);
     }
 
+    [Fact]
+    public void The_flight_path_marker_is_the_two_brackets_of_the_original_art()
+    {
+        // directionbmp, 32 px: a bracket each side of the centre, about 12 px
+        // out, rows 9 to 22 (within 7 px of level), 4 px thick at the middle and
+        // 2 px at the ends; nothing above, below or at the centre.
+        var strokes = VrHudGeometry.FlightPathMarkerStrokes();
+        Assert.Equal(32, strokes.Count);
+        var left = strokes.Where(s => s.From.X < 0f).ToList();
+        var right = strokes.Where(s => s.From.X > 0f).ToList();
+        Assert.Equal(16, left.Count);
+        Assert.Equal(16, right.Count);
+        foreach (var (from, to, width) in strokes)
+            foreach (var p in new[] { from, to })
+            {
+                Assert.InRange(p.Length(), 11.99f, 12.01f);
+                Assert.InRange(MathF.Abs(p.Y), 0f, 7.06f);
+                Assert.InRange(MathF.Abs(p.X), 9.7f, 12.01f);
+                Assert.InRange(width, 2f, 4f);
+            }
+        // Each bracket runs from 36° above level to 36° below without a break.
+        for (int i = 1; i < left.Count; i++) Assert.Equal(left[i - 1].To, left[i].From);
+        Assert.InRange(left[0].From.Y, -7.06f, -7.0f);
+        Assert.InRange(left[^1].To.Y, 7.0f, 7.06f);
+        // Thickest at the middle, thinnest at the ends, mirrored left to right.
+        Assert.True(left[7].Width > 3.8f && left[0].Width < 2.2f && left[^1].Width < 2.2f);
+        for (int i = 0; i < left.Count; i++) Assert.Equal(-left[i].From.X, right[i].From.X, 4);
+        Assert.Equal(new Color(123, 125, 123), VrHudGeometry.FlightPathColour);
+    }
+
     // An object 60 m away and 40° off the eye's axis, of radius 15 m: the head has
     // turned away from it (ragesaq's headset report, 2026-11-26).
     private static readonly Vector3 OffAxisObject =

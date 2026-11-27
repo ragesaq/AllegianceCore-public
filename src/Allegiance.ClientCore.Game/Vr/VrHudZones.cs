@@ -37,8 +37,11 @@ public static class VrHudZones
     public static readonly IReadOnlyList<Zone> Zones = new[]
     {
         new Zone(ZoneId.FlightBlock, -26f, 26f, -22f, 14f, VrHudGeometry.FlightBlockDistanceMetres),
-        new Zone(ZoneId.Comms, -16f, 16f, 16f, 30f, PanelDistanceMetres),
-        new Zone(ZoneId.Target, -14f, 14f, -40f, -24f, PanelDistanceMetres),
+        // B is as wide as the flight block below it, to hold the port's lines
+        // and the target notices beside the chat (ragesaq's fourth headset
+        // look, 2026-11-27: the target pane has priority in C).
+        new Zone(ZoneId.Comms, -26f, 26f, 16f, 30f, PanelDistanceMetres),
+        new Zone(ZoneId.Target, -14f, 14f, -42f, -24f, PanelDistanceMetres),
         new Zone(ZoneId.Navigation, -42f, -16f, -42f, -24f, PanelDistanceMetres),
         new Zone(ZoneId.Systems, 16f, 42f, -42f, -24f, PanelDistanceMetres),
     };
@@ -86,19 +89,28 @@ public static class VrHudZones
     /// <summary>How a zone lays out its cut-outs: the block of rows is pushed
     /// toward the flight block (comms down, the lower zones up, the side zones
     /// in), each row is aligned across within the block by
-    /// <paramref name="RowAcross"/>, and rows are this many pixels apart.</summary>
-    public readonly record struct ZoneLayout(ZoneId Zone, Align Across, Align UpDown, int RowGapPixels, Align RowAcross);
+    /// <paramref name="RowAcross"/>, and rows are this many pixels apart. A
+    /// zone shrinks content larger than itself; it grows smaller content up to
+    /// <paramref name="MaxScale"/>.</summary>
+    public readonly record struct ZoneLayout(ZoneId Zone, Align Across, Align UpDown, int RowGapPixels, Align RowAcross,
+        float MaxScale = 1f);
 
     public static readonly IReadOnlyList<ZoneLayout> Layouts = new[]
     {
         // Comms' two parts are one strip of the image cut in two.
         new ZoneLayout(ZoneId.Comms, Align.Centre, Align.End, 0, Align.Centre),
-        new ZoneLayout(ZoneId.Target, Align.Centre, Align.Start, 6, Align.Centre),
+        // The target pane has C to itself and is grown to fill it (ragesaq,
+        // 2026-11-27: "showing the secondary target screen is higher priority
+        // and it should get scaled up").
+        new ZoneLayout(ZoneId.Target, Align.Centre, Align.Start, 6, Align.Centre, TargetMaxScale),
         new ZoneLayout(ZoneId.Navigation, Align.End, Align.Start, 6, Align.End),
         // Systems' two parts share their right edge and meet in the image, so
         // they are stacked right-aligned with no gap: they join as they were.
         new ZoneLayout(ZoneId.Systems, Align.Start, Align.Start, 0, Align.End),
     };
+
+    /// <summary>How far zone C may grow the target pane.</summary>
+    public const float TargetMaxScale = 2f;
 
     /// <summary>Pixels between cut-outs side by side in a row.</summary>
     public const int ColumnGapPixels = 4;
@@ -126,22 +138,27 @@ public static class VrHudZones
         int w = imageWidth, h = imageHeight, cx = w / 2;
         var list = new List<Cutout>();
 
-        // B: the chat pane, its filter tag and compose box, the keys hint, the
-        // vote banner, tips, warnings, base objectives and "NO X IN SECTOR"
-        // (0.40 of the height): the top centre strip.
+        // B, left to right: the leader, commandee and mouse-stick lines drawn
+        // above the target pane; the chat pane, its filter tag and compose
+        // box, the keys hint, the vote banner, tips, warnings, base objectives
+        // and "NO X IN SECTOR" (0.40 of the height, the top centre strip); the
+        // port's text lines, which VR draws in the image's lower left.
+        float s = Rendering.TargetPaneLayout.Scale(w, h);
+        int paneTextTop = (int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h));
+        int paneTop = (int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h) - TargetMarginPixels(s));
+        int paneHalf = (int)MathF.Ceiling(150f * s);
+        list.Add(new Cutout("target notices", ZoneId.Comms, 0,
+            new Rectangle(cx - paneHalf, paneTop, 2 * paneHalf, paneTextTop - paneTop)));
         int commsBottom = Math.Max(150, (int)MathF.Ceiling(0.40f * h + 22f));
         list.Add(new Cutout("comms", ZoneId.Comms, 0,
             new Rectangle(cx - CommsHalfWidthPixels, 0, 2 * CommsHalfWidthPixels, commsBottom)));
-
-        // C: the target pane with its preview, the leader, commandee and
-        // mouse-stick lines above it; and the port's text lines beside it.
-        float s = Rendering.TargetPaneLayout.Scale(w, h);
-        int paneTop = (int)MathF.Floor(Rendering.TargetPaneLayout.TopY(w, h) - TargetMarginPixels(s));
-        int paneHalf = (int)MathF.Ceiling(150f * s);
-        list.Add(new Cutout("target", ZoneId.Target, 0, new Rectangle(cx - paneHalf, paneTop, 2 * paneHalf, h - paneTop)));
         int portTop = (int)VrHudGeometry.PortTextTop(h) - 8;
-        list.Add(new Cutout("port lines", ZoneId.Target, 0,
+        list.Add(new Cutout("port lines", ZoneId.Comms, 0,
             new Rectangle(0, portTop, (int)VrHudGeometry.PortTextWrapPixels + 40, h - CameraStripPixels - portTop)));
+
+        // C: the target pane with its preview, alone.
+        list.Add(new Cutout("target", ZoneId.Target, 0,
+            new Rectangle(cx - paneHalf, paneTextTop, 2 * paneHalf, h - paneTextTop)));
 
         // D: the minimap, the location and turret lines (top right), the
         // orders and the lives and kills badges (top left), the camera label.
@@ -194,7 +211,8 @@ public static class VrHudZones
 
     /// <summary>Lays the cut-outs out in their zones (<see cref="Layouts"/>):
     /// rows of cut-outs side by side, at <see cref="DegreesPerPixel"/>, scaled
-    /// down as a whole when a zone's content is larger than the zone.</summary>
+    /// down as a whole when a zone's content is larger than the zone, and up to
+    /// the zone's <see cref="ZoneLayout.MaxScale"/> when it is smaller.</summary>
     public static IReadOnlyList<Placement> Place(IReadOnlyList<Cutout> cutouts)
     {
         var placements = new List<Placement>(cutouts.Count);
@@ -218,7 +236,7 @@ public static class VrHudZones
             }
             contentH += layout.RowGapPixels * (rows.Count - 1);
             float zoneW = zone.Width / DegreesPerPixel, zoneH = zone.Height / DegreesPerPixel;
-            float scale = MathF.Min(1f, MathF.Min(zoneW / contentW, zoneH / contentH));
+            float scale = MathF.Min(layout.MaxScale, MathF.Min(zoneW / contentW, zoneH / contentH));
             float deg = DegreesPerPixel * scale;
 
             float blockLeft = zone.Left + Offset(layout.Across, zone.Width, contentW * deg);
@@ -261,21 +279,19 @@ public static class VrHudZones
     {
         var cutouts = ClassicCutouts(imageWidth, imageHeight);
         var image = new Rectangle(0, 0, imageWidth, imageHeight);
-        for (int i = 0; i < cutouts.Count; i++)
-        {
-            var a = cutouts[i];
+        foreach (var a in cutouts)
             if (a.Source.Width <= 0 || a.Source.Height <= 0 || !image.Contains(a.Source))
             {
                 reason = $"'{a.Name}' {a.Source} is not inside the image";
                 return null;
             }
+        for (int i = 0; i < cutouts.Count; i++)
             for (int j = i + 1; j < cutouts.Count; j++)
-                if (a.Source.Intersects(cutouts[j].Source))
+                if (cutouts[i].Source.Intersects(cutouts[j].Source))
                 {
-                    reason = $"'{a.Name}' and '{cutouts[j].Name}' share pixels";
+                    reason = $"'{cutouts[i].Name}' and '{cutouts[j].Name}' share pixels";
                     return null;
                 }
-        }
         var placements = Place(cutouts);
         foreach (var p in placements)
             if (p.Scale < MinimumScale)
